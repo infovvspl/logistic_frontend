@@ -13,7 +13,11 @@ import {
     MdSearch,
     MdMenuOpen,
     MdChevronLeft,
-    MdDescription
+    MdDescription,
+    MdCategory,
+    MdInventory,
+    MdSwapHoriz,
+    MdShoppingCart
 } from 'react-icons/md';
 
 const SidebarItem = ({ to, icon: Icon, label, collapsed }) => {
@@ -47,12 +51,17 @@ const DashboardLayout = () => {
     const [collapsed, setCollapsed] = useState(false);
     const location = useLocation();
     const navigate = useNavigate();
+    const userName = localStorage.getItem('userName') || 'Johnathan Doe';
 
     const handleLogout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('isAuthenticated');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userName');
         navigate('/auth/login');
     };
+
+    const avatarUrl = `https://ui-avatars.com/api/?name=${userName.replace(/ /g, '+')}&background=2563eb&color=fff&bold=true`;
 
     return (
         <div className="flex h-screen bg-[#F8FAFC] gradient-mesh">
@@ -92,12 +101,21 @@ const DashboardLayout = () => {
                         {!collapsed && <p className="text-[11px] font-black text-slate-300 uppercase tracking-[3px]">Management</p>}
                     </div>
 
+                    {localStorage.getItem('userRole') === 'superadmin' && (
+                        <SidebarItem to="/dashboard/create-admin" icon={MdSupervisorAccount} label="Create Admin" collapsed={collapsed} />
+                    )}
                     <SidebarItem to="/dashboard/drivers" icon={MdPeople} label="Drivers" collapsed={collapsed} />
                     <SidebarItem to="/dashboard/helpers" icon={MdSupervisorAccount} label="Helpers" collapsed={collapsed} />
                     <SidebarItem to="/dashboard/vehicles" icon={MdDirectionsCar} label="Vehicles" collapsed={collapsed} />
                     <SidebarItem to="/dashboard/clients" icon={MdBusiness} label="Clients" collapsed={collapsed} />
                     <SidebarItem to="/dashboard/assignments" icon={MdAssignment} label="Assignments" collapsed={collapsed} />
                     <SidebarItem to="/dashboard/reports" icon={MdDescription} label="Daily Report" collapsed={collapsed} />
+
+                    <div className="mt-8 mb-3 px-8">
+                        {!collapsed && <p className="text-[11px] font-black text-slate-300 uppercase tracking-[3px]">Inventory</p>}
+                    </div>
+
+                    <SidebarItem to="/dashboard/inventory" icon={MdInventory} label="Inventory Hub" collapsed={collapsed} />
                 </nav>
 
                 <div className="p-6 border-t border-slate-50">
@@ -137,11 +155,13 @@ const DashboardLayout = () => {
 
                         <div className="flex items-center space-x-4 cursor-pointer group">
                             <div className="text-right hidden sm:block">
-                                <p className="text-sm font-black text-slate-800 leading-none group-hover:text-primary-600 transition-colors">Johnathan Doe</p>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Fleet Administrator</p>
+                                <p className="text-sm font-black text-slate-800 leading-none group-hover:text-primary-600 transition-colors">{userName}</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                                    {localStorage.getItem('userRole') === 'superadmin' ? 'Super Administrator' : 'Fleet Administrator'}
+                                </p>
                             </div>
                             <div className="w-11 h-11 rounded-[14px] bg-primary-100 border-2 border-white shadow-premium overflow-hidden group-hover:scale-105 transition-all">
-                                <img src="https://ui-avatars.com/api/?name=John+Doe&background=2563eb&color=fff&bold=true" alt="Profile" />
+                                <img src={avatarUrl} alt={userName} />
                             </div>
                         </div>
                     </div>

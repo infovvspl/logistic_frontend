@@ -44,6 +44,8 @@ axiosInstance.interceptors.response.use(
 
       localStorage.removeItem('token');
       localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userName');
 
       if (wasAuthenticated && !window.location.pathname.includes('/auth/login')) {
         window.location.href = '/auth/login';

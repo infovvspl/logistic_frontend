@@ -26,15 +26,27 @@ const Login = () => {
                 // Set a manual flag for ProtectedRoute since we use cookies
                 localStorage.setItem('isAuthenticated', 'true');
 
-                // Capture token from various possible keys (token, accessToken, access_token)
                 const token = response.data?.token || response.data?.accessToken || response.data?.access_token || response.data?.data?.token;
+                const role = response.data?.role || response.data?.user?.role || response.data?.data?.user?.role || response.data?.data?.role;
+                const name = response.data?.name || response.data?.user?.name || response.data?.data?.user?.name || response.data?.data?.name;
+
                 console.log('Login Response Data:', response.data);
+
                 if (token) {
                     console.log('Token Captured and Saved:', token);
                     localStorage.setItem('token', token);
-                } else {
-                    console.warn('No token found in response data. Relying on cookies?');
                 }
+
+                if (role) {
+                    console.log('Role Captured and Saved:', role);
+                    localStorage.setItem('userRole', role);
+                }
+
+                if (name) {
+                    console.log('Name Captured and Saved:', name);
+                    localStorage.setItem('userName', name);
+                }
+
                 window.location.href = '/dashboard';
             }
         } catch (error) {
