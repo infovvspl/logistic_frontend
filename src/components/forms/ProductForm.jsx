@@ -6,18 +6,18 @@ import Input from '../ui/Input';
 import { MdInventory, MdCategory, MdNumbers, MdBusiness, MdCloudUpload, MdClose } from 'react-icons/md';
 import { FaRupeeSign } from 'react-icons/fa';
 
-const ItemForm = ({ initialData, onSubmit, onCancel, loading }) => {
+const ProductForm = ({ initialData, onSubmit, onCancel, loading }) => {
     const { categories, suppliers } = useSelector((state) => state.inventory);
-    const [imagePreview, setImagePreview] = useState(initialData?.item_image || null);
+    const [imagePreview, setImagePreview] = useState(initialData?.product_image || null);
 
     const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm({
         defaultValues: initialData || {
-            item_name: '',
+            product_name: '',
             category_id: '',
             unit_price: '',
             quantity_in_stock: '',
             supplier_id: '',
-            item_image: ''
+            product_image: ''
         }
     });
 
@@ -27,7 +27,7 @@ const ItemForm = ({ initialData, onSubmit, onCancel, loading }) => {
             const reader = new FileReader();
             reader.onloadend = () => {
                 setImagePreview(reader.result);
-                setValue('item_image', reader.result); // Using base64 for prototyping
+                setValue('product_image', reader.result); // Using base64 for prototyping
             };
             reader.readAsDataURL(file);
         }
@@ -37,11 +37,11 @@ const ItemForm = ({ initialData, onSubmit, onCancel, loading }) => {
         <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6">
             <div className="md:col-span-2">
                 <Input
-                    label="Item Name"
+                    label="Product Name"
                     placeholder="e.g. Engine Oil 5W-30"
                     icon={MdInventory}
-                    {...register('item_name', { required: 'Item name is required' })}
-                    error={errors.item_name?.message}
+                    {...register('product_name', { required: 'Product name is required' })}
+                    error={errors.product_name?.message}
                 />
             </div>
 
@@ -121,7 +121,7 @@ const ItemForm = ({ initialData, onSubmit, onCancel, loading }) => {
                                 type="button"
                                 onClick={() => {
                                     setImagePreview(null);
-                                    setValue('item_image', '');
+                                    setValue('product_image', '');
                                 }}
                                 className="absolute top-2 right-2 p-1.5 bg-rose-500 text-white rounded-xl shadow-lg hover:bg-rose-600 transition-colors"
                             >
@@ -160,11 +160,11 @@ const ItemForm = ({ initialData, onSubmit, onCancel, loading }) => {
                     className="flex-1 shadow-xl shadow-primary-500/20"
                     loading={loading}
                 >
-                    {initialData ? 'Update Item' : 'Add Item'}
+                    {initialData ? 'Update Product' : 'Add Product'}
                 </Button>
             </div>
         </form>
     );
 };
 
-export default ItemForm;
+export default ProductForm;

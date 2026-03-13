@@ -2,27 +2,8 @@ import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
     categories: [],
-    suppliers: [
-        {
-            supplier_id: 1,
-            supplier_name: 'TechCorp',
-            contact_person: 'John Smith',
-            phone: '+919876543210',
-            email: 'sales@techcorp.com',
-            address: 'Industrial Area, Phase 1'
-        }
-    ],
-    items: [
-        {
-            item_id: 1,
-            item_name: 'Laptop L50',
-            item_image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?q=80&w=2071&auto=format&fit=crop',
-            category_id: 1,
-            unit_price: 45000.00,
-            quantity_in_stock: 15,
-            supplier_id: 1
-        }
-    ],
+    suppliers: [],
+    products: [],
     transactions: [],
     purchases: [],
     loading: false,
@@ -46,8 +27,11 @@ const inventorySlice = createSlice({
         deleteCategory: (state, action) => {
             state.categories = state.categories.filter(c => c.category_id !== action.payload);
         },
+        setSuppliers: (state, action) => {
+            state.suppliers = action.payload;
+        },
         addSupplier: (state, action) => {
-            state.suppliers.push({ ...action.payload, supplier_id: state.suppliers.length + 1 });
+            state.suppliers.push(action.payload);
         },
         updateSupplier: (state, action) => {
             const index = state.suppliers.findIndex(s => s.supplier_id === action.payload.supplier_id);
@@ -56,27 +40,33 @@ const inventorySlice = createSlice({
         deleteSupplier: (state, action) => {
             state.suppliers = state.suppliers.filter(s => s.supplier_id !== action.payload);
         },
-        addItem: (state, action) => {
-            state.items.push({ ...action.payload, item_id: state.items.length + 1 });
+        setProducts: (state, action) => {
+            state.products = action.payload;
         },
-        updateItem: (state, action) => {
-            const index = state.items.findIndex(i => i.item_id === action.payload.item_id);
-            if (index !== -1) state.items[index] = action.payload;
+        addProduct: (state, action) => {
+            state.products.push(action.payload);
         },
-        deleteItem: (state, action) => {
-            state.items = state.items.filter(i => i.item_id !== action.payload);
+        updateProduct: (state, action) => {
+            const index = state.products.findIndex(i => i.product_id === action.payload.product_id);
+            if (index !== -1) state.products[index] = action.payload;
+        },
+        deleteProduct: (state, action) => {
+            state.products = state.products.filter(i => i.product_id !== action.payload);
+        },
+        setTransactions: (state, action) => {
+            state.transactions = action.payload;
         },
         addTransaction: (state, action) => {
             const transaction = { ...action.payload, transaction_id: state.transactions.length + 1, transaction_date: new Date().toISOString() };
             state.transactions.push(transaction);
 
             // Update stock quantity
-            const itemIndex = state.items.findIndex(i => i.item_id === transaction.item_id);
-            if (itemIndex !== -1) {
+            const productIndex = state.products.findIndex(i => i.product_id === transaction.product_id);
+            if (productIndex !== -1) {
                 if (transaction.transaction_type === 'IN') {
-                    state.items[itemIndex].quantity_in_stock += Number(transaction.quantity);
+                    state.products[productIndex].quantity_in_stock += Number(transaction.quantity);
                 } else {
-                    state.items[itemIndex].quantity_in_stock -= Number(transaction.quantity);
+                    state.products[productIndex].quantity_in_stock -= Number(transaction.quantity);
                 }
             }
         },
@@ -88,9 +78,9 @@ const inventorySlice = createSlice({
 
 export const {
     setCategories, addCategory, updateCategory, deleteCategory,
-    addSupplier, updateSupplier, deleteSupplier,
-    addItem, updateItem, deleteItem,
-    addTransaction, addPurchase
+    setSuppliers, addSupplier, updateSupplier, deleteSupplier,
+    setProducts, addProduct, updateProduct, deleteProduct,
+    setTransactions, addTransaction, addPurchase
 } = inventorySlice.actions;
 
 export default inventorySlice.reducer;

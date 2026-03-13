@@ -1,32 +1,23 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice } from '@reduxjs/toolkit'
+
+const initialState = {
+  search: '',
+  selectedId: null,
+}
 
 const clientSlice = createSlice({
-    name: 'clients',
-    initialState: { list: [], loading: false, error: null },
-    reducers: {
-        setClients: (state, action) => {
-            state.list = action.payload;
-        },
-        addClient: (state, action) => {
-            state.list.unshift(action.payload);
-        },
-        updateClient: (state, action) => {
-            const index = state.list.findIndex(c => c._id === action.payload._id);
-            if (index !== -1) {
-                state.list[index] = { ...state.list[index], ...action.payload };
-            }
-        },
-        deleteClient: (state, action) => {
-            state.list = state.list.filter(c => c._id !== action.payload);
-        },
-        setLoading: (state, action) => {
-            state.loading = action.payload;
-        },
-        setError: (state, action) => {
-            state.error = action.payload;
-        }
+  name: 'clients',
+  initialState,
+  reducers: {
+    setSearch(state, action) {
+      state.search = action.payload ?? ''
     },
-});
+    setSelectedId(state, action) {
+      state.selectedId = action.payload ?? null
+    },
+  },
+})
 
-export const { setClients, addClient, updateClient, deleteClient, setLoading, setError } = clientSlice.actions;
-export default clientSlice.reducer;
+export const { setSearch, setSelectedId } = clientSlice.actions
+export default clientSlice.reducer
+

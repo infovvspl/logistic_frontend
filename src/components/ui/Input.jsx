@@ -1,42 +1,30 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import { cn } from '../../utils/helpers.js'
 
-const Input = ({ label, type = 'text', placeholder, value, onChange, error, name, icon: Icon, ...props }) => {
-    return (
-        <div className="w-full">
-            {label && (
-                <label className="block text-sm font-bold text-slate-700 mb-2 ml-1">
-                    {label}
-                </label>
-            )}
-            <div className="relative group">
-                {Icon && (
-                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary-600 transition-colors">
-                        <Icon size={20} />
-                    </div>
-                )}
-                <input
-                    type={type}
-                    name={name}
-                    placeholder={placeholder}
-                    value={value}
-                    onChange={onChange}
-                    className={`block w-full transition-all duration-300 ${Icon ? 'pl-12' : 'pl-4'} pr-4 py-3.5 bg-slate-50 border rounded-2xl text-sm placeholder:text-slate-400 focus:outline-none focus:bg-white focus:ring-4 focus:ring-primary-50 focus:border-primary-500 ${error ? 'border-rose-300 bg-rose-50 ring-rose-50' : 'border-slate-100 group-hover:border-slate-200'
-                        }`}
-                    {...props}
-                />
-            </div>
-            {error && (
-                <motion.p
-                    initial={{ opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mt-2 ml-1 text-xs font-bold text-rose-500"
-                >
-                    {error}
-                </motion.p>
-            )}
+export default function Input({
+  label,
+  hint,
+  error,
+  className,
+  inputClassName,
+  ...props
+}) {
+  return (
+    <label className={cn('block', className)}>
+      {label ? (
+        <div className="mb-1 flex items-baseline justify-between gap-3">
+          <span className="text-sm font-medium text-zinc-800">{label}</span>
+          {hint ? <span className="text-xs text-zinc-500">{hint}</span> : null}
         </div>
-    );
-};
-
-export default Input;
+      ) : null}
+      <input
+        {...props}
+        className={cn(
+          'w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15',
+          error ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/15' : '',
+          inputClassName,
+        )}
+      />
+      {error ? <div className="mt-1 text-xs text-rose-600">{error}</div> : null}
+    </label>
+  )
+}

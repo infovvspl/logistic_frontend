@@ -1,11 +1,10 @@
-import React from 'react';
-
-const Loader = ({ className = '' }) => {
-    return (
-        <div className={`flex items-center justify-center ${className}`}>
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-    );
-};
-
-export default Loader;
+export default function Loader({ size = 'md' }) {
+  const wh = size === 'sm' ? 'h-4 w-4' : size === 'lg' ? 'h-7 w-7' : 'h-5 w-5'
+  return (
+    <span
+      className={`inline-block ${wh} animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-900`}
+      aria-label="Loading"
+      role="status"
+    />
+  )
+}

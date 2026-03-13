@@ -10,7 +10,7 @@ import { format } from 'date-fns';
 
 const Purchases = () => {
     const dispatch = useDispatch();
-    const { purchases, suppliers } = useSelector((state) => state.inventory);
+    const { purchases, suppliers, products } = useSelector((state) => state.inventory);
     const [isFormOpen, setIsFormOpen] = useState(false);
 
     const handleCreate = (data) => {
@@ -81,8 +81,30 @@ const Purchases = () => {
                                 </div>
 
                                 <div className="mt-8 pt-6 border-t border-slate-50 flex items-center justify-between">
+                                    <div className="flex -space-x-3 overflow-hidden">
+                                        {purchase.details?.slice(0, 3).map((detail, index) => {
+                                            const product = products.find(p => String(p.product_id) === String(detail.product_id));
+                                            return product?.product_image ? (
+                                                <img
+                                                    key={index}
+                                                    src={product.product_image}
+                                                    alt={product.product_name}
+                                                    className="w-10 h-10 rounded-full border-2 border-white object-cover shadow-sm bg-slate-50"
+                                                />
+                                            ) : (
+                                                <div key={index} className="w-10 h-10 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center shadow-sm">
+                                                    <MdInventory className="w-4 h-4 text-slate-400" />
+                                                </div>
+                                            );
+                                        })}
+                                        {purchase.details?.length > 3 && (
+                                            <div className="w-10 h-10 rounded-full border-2 border-white bg-slate-50 flex items-center justify-center shadow-sm">
+                                                <span className="text-xs font-bold text-slate-500">+{purchase.details.length - 3}</span>
+                                            </div>
+                                        )}
+                                    </div>
                                     <div>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Items Purchased</p>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Products Purchased</p>
                                         <p className="text-sm font-black text-slate-800">{purchase.details?.length || 0} Products</p>
                                     </div>
                                     <div className="text-right">

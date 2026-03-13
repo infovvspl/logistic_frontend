@@ -7,7 +7,7 @@ import { MdBusiness, MdInventory, MdAdd, MdDelete, MdNumbers } from 'react-icons
 import { FaRupeeSign } from 'react-icons/fa';
 
 const PurchaseForm = ({ onSubmit, onCancel, loading }) => {
-    const { items, suppliers } = useSelector((state) => state.inventory);
+    const { products, suppliers } = useSelector((state) => state.inventory);
 
     const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm({
         defaultValues: {
@@ -75,8 +75,8 @@ const PurchaseForm = ({ onSubmit, onCancel, loading }) => {
                                     {...register(`details.${index}.product_id`, { required: true })}
                                 >
                                     <option value="">Select Product</option>
-                                    {items.map(item => (
-                                        <option key={item.item_id} value={item.item_id}>{item.item_name}</option>
+                                    {products?.map(prod => (
+                                        <option key={prod.product_id} value={prod.product_id}>{prod.product_name}</option>
                                     ))}
                                 </select>
                             </div>

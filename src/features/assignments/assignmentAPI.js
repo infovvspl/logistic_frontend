@@ -1,24 +1,44 @@
-import axiosInstance from '../../services/axios';
+import { api } from '../../services/axios.js'
+import { USE_MOCKS } from '../../utils/constants.js'
 
-// Admin: Get all assignments by request
-export const getAssignmentsByRequestAPI = () => axiosInstance.get('/api/requests');
+let mockAssignments = [
+  {
+    id: 'a1',
+    driver: 'Asha Verma',
+    vehicle: 'RST-1042',
+    client: 'Northwind',
+    createdAt: '2026-03-01',
+  },
+]
 
-// Admin: Bulk assign drivers and helpers to vehicle requests
-export const bulkAssignAPI = (data) => axiosInstance.post('/api/assignments/bulk', data);
+export async function listAssignments() {
+  if (USE_MOCKS) return { items: mockAssignments }
+  const { data } = await api.get('/assignments')
+  return data
+}
 
-// Admin: Get available drivers
-export const getAvailableDriversAPI = () => axiosInstance.get('/api/drivers');
-
-// Drivers/Helpers: Get personal assignments
-export const getMyAssignmentsAPI = () => axiosInstance.get('/api/assignments/my');
-
-// Drivers/Helpers: Respond to assignment
-export const respondAssignmentAPI = (id, status, rejectionReason = '') => {
-    const payload = { status };
-    if (status === 'rejected' && rejectionReason) {
-        payload.rejectionReason = rejectionReason;
+export async function createAssignment(payload) {
+  if (USE_MOCKS) {
+    const next = {
+      id: `a${Date.now()}`,
+      driver: payload.driver,
+      vehicle: payload.vehicle,
+      client: payload.client,
+      createdAt: payload.createdAt ?? new Date().toISOString(),
     }
-    return axiosInstance.patch(`/api/assignments/respond/${id}`, payload);
-};
+    mockAssignments = [next, ...mockAssignments]
+    return next
+  }
+  const { data } = await api.post('/assignments', payload)
+  return data
+}
 
-export const getAssignmentsAPI = () => axiosInstance.get('/api/assignments');
+export async function deleteAssignment(id) {
+  if (USE_MOCKS) {
+    mockAssignments = mockAssignments.filter((a) => a.id !== id)
+    return { ok: true }
+  }
+  const { data } = await api.delete(`/assignments/${id}`)
+  return data
+}
+

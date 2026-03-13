@@ -1,32 +1,23 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice } from '@reduxjs/toolkit'
 
 const initialState = {
-    list: [],
-    loading: false,
-    error: null,
-};
+  search: '',
+  selectedId: null,
+}
 
 const driverSlice = createSlice({
-    name: 'drivers',
-    initialState,
-    reducers: {
-        setDrivers: (state, action) => {
-            state.list = action.payload;
-        },
-        addDriver: (state, action) => {
-            state.list.unshift(action.payload);
-        },
-        updateDriver: (state, action) => {
-            const index = state.list.findIndex(d => d._id === action.payload._id);
-            if (index !== -1) {
-                state.list[index] = { ...state.list[index], ...action.payload };
-            }
-        },
-        deleteDriver: (state, action) => {
-            state.list = state.list.filter(d => d._id !== action.payload);
-        },
+  name: 'drivers',
+  initialState,
+  reducers: {
+    setSearch(state, action) {
+      state.search = action.payload ?? ''
     },
-});
+    setSelectedId(state, action) {
+      state.selectedId = action.payload ?? null
+    },
+  },
+})
 
-export const { setDrivers, addDriver, updateDriver, deleteDriver } = driverSlice.actions;
-export default driverSlice.reducer;
+export const { setSearch, setSelectedId } = driverSlice.actions
+export default driverSlice.reducer
+

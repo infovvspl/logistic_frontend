@@ -1,56 +1,67 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { MdEmail, MdLockOutline, MdPersonOutline, MdBusiness } from 'react-icons/md';
-import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
+import { Link, useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import Input from '../../components/ui/Input.jsx'
+import Button from '../../components/ui/Button.jsx'
+import { useAuth } from '../../hooks/useAuth.js'
 
-const Signup = () => {
-    return (
-        <div className="space-y-8">
-            <div>
-                <h3 className="text-3xl font-black text-slate-900 mb-2 font-display">Create Account</h3>
-                <p className="text-slate-500 font-medium">Join our transport network and start managing your fleet.</p>
-            </div>
+export default function Signup() {
+  const navigate = useNavigate()
+  const { signup, status, error } = useAuth()
 
-            <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
-                <div className="grid grid-cols-2 gap-4">
-                    <Input label="First Name" placeholder="John" icon={MdPersonOutline} />
-                    <Input label="Last Name" placeholder="Doe" icon={MdPersonOutline} />
-                </div>
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({ defaultValues: { email: '', password: '' } })
 
-                <Input label="Company" placeholder="R.S.Transport Ltd." icon={MdBusiness} />
+  const onSubmit = async (values) => {
+    await signup(values)
+    navigate('/dashboard', { replace: true })
+  }
 
-                <Input
-                    label="Corporate Email"
-                    type="email"
-                    placeholder="admin@enterprise.com"
-                    icon={MdEmail}
-                />
+  return (
+    <div className="space-y-4">
+      <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
+        <Input
+          label="Email"
+          placeholder="you@company.com"
+          error={errors.email?.message}
+          autoComplete="email"
+          {...register('email', { required: 'Email is required' })}
+        />
+        <Input
+          label="Password"
+          placeholder="Create a password"
+          type="password"
+          autoComplete="new-password"
+          error={errors.password?.message}
+          {...register('password', {
+            required: 'Password is required',
+            minLength: { value: 6, message: 'Min 6 characters' },
+          })}
+        />
 
-                <Input
-                    label="Password"
-                    type="password"
-                    placeholder="Min. 8 characters"
-                    icon={MdLockOutline}
-                />
+        {error ? <div className="text-sm text-rose-300">{error}</div> : null}
 
-                <div className="flex items-start space-x-3 pt-2">
-                    <input type="checkbox" className="mt-1 w-4 h-4 rounded border-slate-200 text-primary-600 focus:ring-primary-100" />
-                    <p className="text-xs text-slate-500 font-medium leading-relaxed">
-                        I agree to the <Link to="#" className="text-primary-600 font-bold hover:underline">Terms of Service</Link> and <Link to="#" className="text-primary-600 font-bold hover:underline">Privacy Policy</Link>.
-                    </p>
-                </div>
+        <Button
+          className="w-full justify-center"
+          type="submit"
+          loading={status === 'loading'}
+        >
+          Create account
+        </Button>
+      </form>
 
-                <div className="pt-2">
-                    <Button className="w-full" size="lg">Initialize Account</Button>
-                </div>
-            </form>
+      <div className="text-center text-sm text-zinc-400">
+        Already have an account?{' '}
+        <Link
+          className="text-zinc-100 underline underline-offset-4"
+          to="/auth/login"
+        >
+          Sign in
+        </Link>
+      </div>
+    </div>
+  )
+}
 
-            <p className="text-center text-sm font-medium text-slate-600">
-                Already have an account? <Link to="/auth/login" className="text-primary-600 font-bold hover:underline">Sign In</Link>
-            </p>
-        </div>
-    );
-};
-
-export default Signup;

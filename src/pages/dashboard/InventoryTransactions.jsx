@@ -4,28 +4,103 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MdAdd, MdSwapHoriz, MdTrendingUp, MdTrendingDown, MdClose, MdEvent, MdInventory, MdPerson } from 'react-icons/md';
 import Button from '../../components/ui/Button';
 import TransactionForm from '../../components/forms/TransactionForm';
-import { addTransaction } from '../../features/inventory/inventorySlice';
+import { addTransaction, setTransactions, setProducts } from '../../features/inventory/inventorySlice';
 import { format } from 'date-fns';
+import axiosInstance from '../../services/axios';
 
 const InventoryTransactions = () => {
     const dispatch = useDispatch();
-    const { transactions, items } = useSelector((state) => state.inventory);
+    const { transactions, products } = useSelector((state) => state.inventory);
     const [isFormOpen, setIsFormOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleCreate = (data) => {
-        // Find item to get its name (for logs/ui if needed)
-        const item = items.find(i => String(i.item_id) === String(data.item_id));
-        dispatch(addTransaction({
-            ...data,
-            item_name: item?.item_name || 'Unknown Item',
-            employee_name: localStorage.getItem('userName') || 'Current User'
-        }));
-        setIsFormOpen(false);
+    React.useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const promises = [axiosInstance.get('/api/inventory/transactions')];
+                if (products.length === 0) promises.push(axiosInstance.get('/api/inventory/products'));
+
+                const results = await Promise.allSettled(promises);
+
+                // Transactions
+                if (results[0].status === 'fulfilled' && results[0].value.data) {
+                    const mapped = results[0].value.data.map(tx => ({
+                        transaction_id: tx.id || tx._id,
+                        product_id: tx.productId,
+                        transaction_type: tx.type,
+                        quantity: tx.quantity,
+                        notes: tx.notes || '',
+                        employee_name: tx.employeeName || 'System',
+                        transaction_date: tx.createdAt || tx.date || new Date().toISOString()
+                    }));
+                    dispatch(setTransactions(mapped));
+                }
+
+                // Products (if not loaded)
+                if (products.length === 0 && results[1]?.status === 'fulfilled' && results[1].value.data) {
+                    const mappedProducts = results[1].value.data.map(prod => ({
+                        product_id: prod.id || prod._id,
+                        product_name: prod.name,
+                        category_id: prod.categoryId,
+                        supplier_id: prod.supplierId,
+                        unit_price: prod.unitPrice,
+                        quantity_in_stock: prod.quantityInStock,
+                        product_image: prod.image || ''
+                    }));
+                    dispatch(setProducts(mappedProducts));
+                }
+            } catch (error) {
+                console.error('Failed to fetch transactions data:', error);
+            }
+        };
+        fetchData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dispatch]);
+
+    const handleCreate = async (data) => {
+        setIsLoading(true);
+        try {
+            const payload = {
+                productId: data.product_id,
+                type: data.transaction_type,
+                quantity: Number(data.quantity),
+                ...(data.notes && data.notes.trim() ? { notes: data.notes.trim() } : {})
+            };
+
+            console.log('Transaction payload being sent:', JSON.stringify(payload, null, 2));
+            // DEBUG: show payload — remove this alert once working
+            const confirmed = window.confirm(`Sending payload:\n${JSON.stringify(payload, null, 2)}\n\nClick OK to proceed.`);
+            if (!confirmed) { setIsLoading(false); return; }
+
+            const response = await axiosInstance.post('/api/inventory/transactions', payload);
+
+            const product = products.find(p => String(p.product_id) === String(data.product_id));
+            dispatch(addTransaction({
+                transaction_id: response.data.id || response.data._id || Date.now(),
+                product_id: data.product_id,
+                transaction_type: data.transaction_type,
+                quantity: Number(data.quantity),
+                notes: data.notes || '',
+                product_name: product?.product_name || 'Unknown Product',
+                employee_name: localStorage.getItem('userName') || 'Current User',
+                transaction_date: response.data.createdAt || new Date().toISOString()
+            }));
+            setIsFormOpen(false);
+        } catch (error) {
+            console.error('API Error creating transaction:', error);
+            console.error('Server response:', error.response?.data);
+            const serverMsg = typeof error.response?.data === 'object'
+                ? JSON.stringify(error.response.data, null, 2)
+                : error.response?.data;
+            alert(`Failed to record transaction:\n${serverMsg || error.message}`);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const getItemName = (id) => {
-        const item = items.find(i => String(i.item_id) === String(id));
-        return item ? item.item_name : 'Unknown Item';
+    const getProductName = (id) => {
+        const product = products.find(p => String(p.product_id) === String(id));
+        return product ? product.product_name : 'Unknown Product';
     };
 
     return (
@@ -56,7 +131,7 @@ const InventoryTransactions = () => {
                         <thead>
                             <tr className="bg-slate-50/50">
                                 <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">Date & Time</th>
-                                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">Item Details</th>
+                                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">Product Details</th>
                                 <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">Type</th>
                                 <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">Quantity</th>
                                 <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-[2px]">Handler</th>
@@ -102,14 +177,14 @@ const InventoryTransactions = () => {
                                                         <MdInventory className="w-5 h-5" />
                                                     </div>
                                                     <p className="text-sm font-black text-slate-800">
-                                                        {getItemName(tx.item_id)}
+                                                        {getProductName(tx.product_id)}
                                                     </p>
                                                 </div>
                                             </td>
                                             <td className="px-8 py-6">
                                                 <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm ${tx.transaction_type === 'IN'
-                                                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100/50'
-                                                        : 'bg-rose-50 text-rose-600 border-rose-100/50'
+                                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100/50'
+                                                    : 'bg-rose-50 text-rose-600 border-rose-100/50'
                                                     }`}>
                                                     {tx.transaction_type === 'IN' ? (
                                                         <MdTrendingUp className="w-3 h-3 mr-1.5" />
@@ -178,6 +253,7 @@ const InventoryTransactions = () => {
                             <TransactionForm
                                 onSubmit={handleCreate}
                                 onCancel={() => setIsFormOpen(false)}
+                                loading={isLoading}
                             />
                         </motion.div>
                     </div>

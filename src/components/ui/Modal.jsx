@@ -1,49 +1,56 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { MdClose } from 'react-icons/md';
+import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { motion } from 'framer-motion'
+import Button from './Button.jsx'
 
-const Modal = ({ isOpen, onClose, title, children, maxWidth = 'max-w-md' }) => {
-    return (
-        <AnimatePresence>
-            {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-hidden">
-                    {/* Backdrop */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={onClose}
-                        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
-                    />
+export default function Modal({
+  open,
+  title,
+  children,
+  onClose,
+  footer,
+  closeText = 'Close',
+}) {
+  useEffect(() => {
+    if (!open) return
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') onClose?.()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [open, onClose])
 
-                    {/* Modal Card */}
-                    <motion.div
-                        initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                        animate={{ scale: 1, opacity: 1, y: 0 }}
-                        exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className={`relative w-full ${maxWidth} bg-white rounded-[32px] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden z-10`}
-                    >
-                        {/* Header */}
-                        <div className="flex items-center justify-between p-8 pb-4 shrink-0">
-                            <h3 className="text-2xl font-black text-slate-900 font-display tracking-tight">{title}</h3>
-                            <button
-                                onClick={onClose}
-                                className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
-                            >
-                                <MdClose size={24} />
-                            </button>
-                        </div>
+  if (!open) return null
 
-                        {/* Body - Scrollable */}
-                        <div className="flex-1 overflow-y-auto px-8 pb-8 custom-scrollbar">
-                            <div className="mt-2">{children}</div>
-                        </div>
-                    </motion.div>
-                </div>
-            )}
-        </AnimatePresence>
-    );
-};
+  return createPortal(
+    <div className="fixed inset-0 z-50 grid place-items-center px-4 py-8">
+      <div
+        className="absolute inset-0 bg-black/40"
+        onClick={() => onClose?.()}
+      />
+      <motion.div
+        initial={{ opacity: 0, y: 10, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.18, ease: 'easeOut' }}
+        className="relative w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-4 text-zinc-900 shadow-[0_30px_90px_rgba(0,0,0,0.18)]"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title ?? 'Dialog'}
+      >
+        {title ? (
+          <div className="mb-3 flex items-start justify-between gap-4">
+            <div className="text-base font-semibold">{title}</div>
+            <Button variant="ghost" onClick={() => onClose?.()}>
+              {closeText}
+            </Button>
+          </div>
+        ) : null}
 
-export default Modal;
+        <div className="max-h-[70vh] overflow-auto pr-1">{children}</div>
+
+        {footer ? <div className="mt-4">{footer}</div> : null}
+      </motion.div>
+    </div>,
+    document.body,
+  )
+}

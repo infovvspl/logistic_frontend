@@ -5,15 +5,15 @@ import { motion } from 'framer-motion';
 import { MdCategory, MdInventory, MdBusiness, MdSwapHoriz, MdShoppingCart, MdArrowForward } from 'react-icons/md';
 
 const Inventory = () => {
-    const { items, categories, suppliers, transactions, purchases } = useSelector(state => state.inventory);
+    const { products, categories, suppliers, transactions, purchases } = useSelector(state => state.inventory);
 
     const menuItems = [
         {
-            title: 'Items',
+            title: 'Products',
             description: 'Manage individual product variations and stock levels.',
             icon: MdInventory,
-            to: '/dashboard/inventory/items',
-            count: items.length,
+            to: '/dashboard/inventory/products',
+            count: products ? products.length : 0,
             color: 'text-indigo-600',
             bg: 'bg-indigo-50'
         },
@@ -59,7 +59,7 @@ const Inventory = () => {
         <div className="space-y-8 p-6">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-800 tracking-tight uppercase">
+                    <h1 className="text-3xl font-black text-slate-800 tracking-tight">
                         Inventory Overview
                     </h1>
                     <p className="text-slate-500 font-bold mt-1 tracking-tight">

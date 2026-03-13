@@ -1,126 +1,80 @@
-import React, { useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { motion } from 'framer-motion';
-import {
-    MdTrendingUp,
-    MdPeople,
-    MdDirectionsCar,
-    MdBusiness,
-    MdAutoGraph,
-    MdSupervisorAccount
-} from 'react-icons/md';
+import { motion } from 'framer-motion'
+import { FiClipboard, FiTruck, FiUsers } from 'react-icons/fi'
+import { USE_MOCKS } from '../../utils/constants.js'
 
-import StatCard from '../../components/ui/StatCard';
-import LogisticsCommandCenter from '../../components/dashboard/LogisticsCommandCenter';
+function StatCard({ icon, label, value, note }) {
+  const Icon = icon
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+      <div className="flex items-center justify-between">
+        <div className="text-sm text-zinc-600">{label}</div>
+        <Icon className="text-zinc-700" />
+      </div>
+      <div className="mt-2 text-2xl font-semibold">{value}</div>
+      {note ? <div className="mt-1 text-xs text-zinc-500">{note}</div> : null}
+    </div>
+  )
+}
 
-// Import necessary actions and APIs
-import { setClients } from '../../features/clients/clientSlice';
-import { setDrivers } from '../../features/drivers/driverSlice';
-import { setHelpers } from '../../features/helpers/helperSlice';
-import { setVehicles } from '../../features/vehicles/vehicleSlice';
+export default function DashboardHome() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-semibold">Overview</h1>
+        <p className="mt-1 text-sm text-zinc-600">
+          Quick visibility into your fleet operations.
+        </p>
+        {USE_MOCKS ? (
+          <p className="mt-2 text-xs text-emerald-600">
+            Mock mode enabled via `VITE_USE_MOCKS=true`.
+          </p>
+        ) : null}
+      </div>
 
-import { getClientsAPI } from '../../features/clients/clientAPI';
-import { getDriversAPI } from '../../features/drivers/driverAPI';
-import { getVehiclesAPI } from '../../features/vehicles/vehicleAPI';
-import axiosInstance from '../../services/axios';
+      <motion.div
+        initial="hidden"
+        animate="show"
+        variants={{
+          hidden: { opacity: 0, y: 10 },
+          show: { opacity: 1, y: 0, transition: { staggerChildren: 0.06 } },
+        }}
+        className="grid grid-cols-1 gap-4 md:grid-cols-3"
+      >
+        <motion.div
+          variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
+        >
+          <StatCard
+            icon={FiUsers}
+            label="Drivers"
+            value="12"
+            note="Active this month"
+          />
+        </motion.div>
+        <motion.div
+          variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
+        >
+          <StatCard icon={FiTruck} label="Vehicles" value="7" note="2 in maintenance" />
+        </motion.div>
+        <motion.div
+          variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}
+        >
+          <StatCard
+            icon={FiClipboard}
+            label="Assignments"
+            value="19"
+            note="Last 7 days"
+          />
+        </motion.div>
+      </motion.div>
 
-const DashboardHome = () => {
-    const dispatch = useDispatch();
-
-    // Select data from Redux
-    const clients = useSelector(state => state.clients.list);
-    const drivers = useSelector(state => state.drivers.list);
-    const helpers = useSelector(state => state.helpers.list);
-    const vehicles = useSelector(state => state.vehicles.list);
-
-    useEffect(() => {
-        fetchAllData();
-    }, []);
-
-    const fetchAllData = async () => {
-        try {
-            // Fetch everything in parallel
-            const [clientsRes, driversRes, vehiclesRes, helpersRes] = await Promise.all([
-                getClientsAPI(),
-                getDriversAPI(),
-                getVehiclesAPI(),
-                axiosInstance.get('/api/users?role=helper') // Direct call for helpers as per Helpers.jsx
-            ]);
-
-            dispatch(setClients(clientsRes.data?.data || clientsRes.data || []));
-            dispatch(setDrivers(driversRes.data?.data || driversRes.data || []));
-            dispatch(setVehicles(vehiclesRes.data?.data || vehiclesRes.data || []));
-            dispatch(setHelpers(helpersRes.data?.data || helpersRes.data || []));
-        } catch (error) {
-            console.error('[Dashboard] Data Sync Failure:', error);
-        }
-    };
-
-    const counts = {
-        clients: clients.length,
-        drivers: drivers.length,
-        helpers: helpers.length,
-        vehicles: vehicles.length
-    };
-
-    return (
-        <div className="space-y-10 pb-12">
-            {/* High-Impact Header */}
-            <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
-                <div>
-                    <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center space-x-2 text-primary-600 font-black text-[10px] uppercase tracking-[4px] mb-4"
-                    >
-                        <MdAutoGraph size={16} />
-                        <span>Operations Dashboard</span>
-                    </motion.div>
-                    <h2 className="text-4xl font-black text-slate-900 font-display tracking-tighter leading-none mb-3">
-                        Dashboard
-                    </h2>
-                    <p className="text-slate-500 font-medium text-lg">
-                        A unified view of your fleet operational intelligence.
-                    </p>
-                </div>
-            </div>
-
-            {/* Core KPIs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard
-                    title="Clients"
-                    value={counts.clients}
-                    icon={MdBusiness}
-                    color="blue"
-                />
-                <StatCard
-                    title="Drivers"
-                    value={counts.drivers}
-                    icon={MdPeople}
-                    color="indigo"
-                />
-                <StatCard
-                    title="Helpers"
-                    value={counts.helpers}
-                    icon={MdSupervisorAccount}
-                    color="emerald"
-                />
-                <StatCard
-                    title="Vehicles"
-                    value={counts.vehicles}
-                    icon={MdDirectionsCar}
-                    color="amber"
-                />
-            </div>
-
-            {/* The Unified Logistics Command Center */}
-            <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
-                <div className="xl:col-span-4">
-                    <LogisticsCommandCenter data={{ clients, drivers, helpers, vehicles }} />
-                </div>
-            </div>
-        </div>
-    );
-};
-
-export default DashboardHome;
+      <div className="rounded-2xl border border-zinc-200 bg-white p-5">
+        <div className="text-sm font-semibold">Next steps</div>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-600">
+          <li>Connect your API base URL via `VITE_API_BASE_URL`.</li>
+          <li>Replace mock data in feature APIs with real endpoints.</li>
+          <li>Add role-based permissions in `usePermissions`.</li>
+        </ul>
+      </div>
+    </div>
+  )
+}

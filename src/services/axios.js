@@ -1,58 +1,22 @@
-import axios from 'axios';
+import axios from 'axios'
+import Cookies from 'js-cookie'
+import { STORAGE_KEYS } from '../utils/constants.js'
 
-const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://committee-injuries-combinations-karl.trycloudflare.com',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  withCredentials: true,
-});
+let accessTokenGetter = () => Cookies.get(STORAGE_KEYS.auth + '.token')
 
-axiosInstance.interceptors.request.use(
-  (config) => {
-    // Prevent double slashes if baseURL ends with / and config.url starts with /
-    if (config.baseURL?.endsWith('/') && config.url?.startsWith('/')) {
-      config.url = config.url.substring(1);
-    }
+export function setAccessTokenGetter(getter) {
+  accessTokenGetter = typeof getter === 'function' ? getter : () => Cookies.get(STORAGE_KEYS.auth + '.token')
+}
 
-    const token = localStorage.getItem('token');
-    const isPublicRoute = config.url?.includes('/api/auth/login');
+export const api = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? '/api',
+  timeout: 20_000,
+  headers: { 'Content-Type': 'application/json' },
+})
 
-    if (token && token !== 'undefined' && token !== 'null') {
-      console.log(`Attaching Auth: Bearer ${token.substring(0, 10)}...`);
-      config.headers.Authorization = `Bearer ${token}`;
-    } else if (!isPublicRoute) {
-      console.log('No token for request:', config.url);
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+api.interceptors.request.use((config) => {
+  const token = accessTokenGetter?.()
+  if (token) config.headers.Authorization = `Bearer ${token}`
+  return config
+})
 
-axiosInstance.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    const isAuthError = error.response?.status === 401;
-    // Match /api/users/onboard even if it has baseURL or query params
-    const driversEndpointPattern = /\/api\/users\/onboard/;
-    const isDriversFetch = driversEndpointPattern.test(error.config?.url || '');
-
-    // If it's a 401 on the drivers fetch, we let the component handle the error
-    // instead of forcing a global logout.
-    if (isAuthError && !isDriversFetch) {
-      const wasAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-
-      localStorage.removeItem('token');
-      localStorage.removeItem('isAuthenticated');
-      localStorage.removeItem('userRole');
-      localStorage.removeItem('userName');
-
-      if (wasAuthenticated && !window.location.pathname.includes('/auth/login')) {
-        window.location.href = '/auth/login';
-      }
-    }
-    return Promise.reject(error);
-  }
-);
-
-export default axiosInstance;

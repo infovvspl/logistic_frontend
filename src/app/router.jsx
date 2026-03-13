@@ -1,81 +1,78 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
-import AuthLayout from '../layouts/AuthLayout';
-import DashboardLayout from '../layouts/DashboardLayout';
-import Login from '../pages/auth/Login';
-import Signup from '../pages/auth/Signup';
-import DashboardHome from '../pages/dashboard/DashboardHome';
-import Drivers from '../pages/dashboard/Drivers';
-import Helpers from '../pages/dashboard/Helpers';
-import Vehicles from '../pages/dashboard/Vehicles';
-import Clients from '../pages/dashboard/Clients';
-import Assignments from '../pages/dashboard/Assignments';
-import DailyReports from '../pages/dashboard/DailyReports';
-import CreateAdmin from '../pages/dashboard/CreateAdmin';
-import Items from '../pages/dashboard/Items';
-import InventoryCategories from '../pages/dashboard/InventoryCategories';
-import InventorySuppliers from '../pages/dashboard/InventorySuppliers';
-import InventoryTransactions from '../pages/dashboard/InventoryTransactions';
-import Purchases from '../pages/dashboard/Purchases';
-import Inventory from '../pages/dashboard/Inventory';
+import { createBrowserRouter, Navigate } from 'react-router-dom'
+import AuthLayout from '../layouts/AuthLayout.jsx'
+import DashboardLayout from '../layouts/DashboardLayout.jsx'
+import Login from '../pages/auth/Login.jsx'
+import Signup from '../pages/auth/Signup.jsx'
+import Assignments from '../pages/dashboard/Assignments.jsx'
+import Clients from '../pages/dashboard/Clients.jsx'
+import DashboardHome from '../pages/dashboard/DashboardHome.jsx'
+import Drivers from '../pages/dashboard/Drivers.jsx'
+import Helpers from '../pages/dashboard/Helpers.jsx'
+import Vehicles from '../pages/dashboard/Vehicles.jsx'
+import { useAuth } from '../hooks/useAuth.js'
 
-const ProtectedRoute = ({ children }) => {
-    // In cookie-based auth, we might not have a token in localStorage
-    const isAuthenticated = !!localStorage.getItem('token') || !!localStorage.getItem('isAuthenticated');
-    return isAuthenticated ? children : <Navigate to="/auth/login" />;
-};
+function RequireAuth({ children }) {
+  const { isAuthenticated } = useAuth()
+  if (!isAuthenticated) return <Navigate to="/auth/login" replace />
+  return children
+}
 
-const RoleProtectedRoute = ({ children, allowedRole }) => {
-    const isAuthenticated = !!localStorage.getItem('token') || !!localStorage.getItem('isAuthenticated');
-    const userRole = localStorage.getItem('userRole');
+function RootRedirect() {
+  const { isAuthenticated } = useAuth()
+  return (
+    <Navigate to={isAuthenticated ? '/dashboard' : '/auth/login'} replace />
+  )
+}
 
-    if (!isAuthenticated) return <Navigate to="/auth/login" />;
-    if (userRole !== allowedRole) return <Navigate to="/dashboard" replace />;
-
-    return children;
-};
+function NotFound() {
+  return (
+    <div className="min-h-screen grid place-items-center bg-zinc-950 text-zinc-100">
+      <div className="max-w-md text-center px-6">
+        <p className="text-sm text-zinc-400">404</p>
+        <h1 className="mt-2 text-2xl font-semibold">Page not found</h1>
+        <p className="mt-2 text-sm text-zinc-400">
+          The page you are looking for does not exist.
+        </p>
+        <div className="mt-6 flex items-center justify-center gap-3">
+          <a
+            href="/"
+            className="rounded-lg bg-zinc-100 px-4 py-2 text-sm font-medium text-zinc-950 hover:bg-white"
+          >
+            Go home
+          </a>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export const router = createBrowserRouter([
-    {
-        path: '/',
-        element: <Navigate to="/dashboard" replace />,
-    },
-    {
-        path: '/auth',
-        element: <AuthLayout />,
-        children: [
-            { path: 'login', element: <Login /> },
-            { path: 'signup', element: <Signup /> },
-        ],
-    },
-    {
-        path: '/dashboard',
-        element: (
-            <ProtectedRoute>
-                <DashboardLayout />
-            </ProtectedRoute>
-        ),
-        children: [
-            { index: true, element: <DashboardHome /> },
-            {
-                path: 'create-admin',
-                element: (
-                    <RoleProtectedRoute allowedRole="superadmin">
-                        <CreateAdmin />
-                    </RoleProtectedRoute>
-                )
-            },
-            { path: 'drivers', element: <Drivers /> },
-            { path: 'helpers', element: <Helpers /> },
-            { path: 'vehicles', element: <Vehicles /> },
-            { path: 'clients', element: <Clients /> },
-            { path: 'assignments', element: <Assignments /> },
-            { path: 'reports', element: <DailyReports /> },
-            { path: 'inventory', element: <Inventory /> },
-            { path: 'inventory/items', element: <Items /> },
-            { path: 'inventory/categories', element: <InventoryCategories /> },
-            { path: 'inventory/suppliers', element: <InventorySuppliers /> },
-            { path: 'inventory/transactions', element: <InventoryTransactions /> },
-            { path: 'inventory/purchases', element: <Purchases /> },
-        ],
-    },
-]);
+  { path: '/', element: <RootRedirect /> },
+  {
+    path: '/auth',
+    element: <AuthLayout />,
+    children: [
+      { index: true, element: <Navigate to="login" replace /> },
+      { path: 'login', element: <Login /> },
+      { path: 'signup', element: <Signup /> },
+    ],
+  },
+  {
+    path: '/dashboard',
+    element: (
+      <RequireAuth>
+        <DashboardLayout />
+      </RequireAuth>
+    ),
+    children: [
+      { index: true, element: <DashboardHome /> },
+      { path: 'drivers', element: <Drivers /> },
+      { path: 'helpers', element: <Helpers /> },
+      { path: 'vehicles', element: <Vehicles /> },
+      { path: 'clients', element: <Clients /> },
+      { path: 'assignments', element: <Assignments /> },
+    ],
+  },
+  { path: '*', element: <NotFound /> },
+])
+

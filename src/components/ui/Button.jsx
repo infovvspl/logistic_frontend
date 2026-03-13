@@ -1,47 +1,28 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import { forwardRef } from 'react'
+import { cn } from '../../utils/helpers.js'
+import Loader from './Loader.jsx'
 
-const Button = ({
-    children,
-    variant = 'primary',
-    size = 'md',
-    onClick,
-    type = 'button',
-    disabled = false,
-    className = '',
-    icon: Icon,
-    loading = false
-}) => {
-    const baseStyles = 'inline-flex items-center justify-center font-bold tracking-tight shadow-sm transition-all duration-300 focus:outline-none focus:ring-4 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95';
+const styles = {
+  base: 'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition focus:outline-none focus:ring-2 focus:ring-blue-400/50 disabled:opacity-60 disabled:pointer-events-none',
+  solid: 'bg-zinc-100 text-zinc-950 hover:bg-white',
+  ghost: 'bg-white text-zinc-900 hover:bg-zinc-50 border border-zinc-200',
+  danger: 'bg-rose-500 text-white hover:bg-rose-400',
+}
 
-    const sizes = {
-        sm: 'px-4 py-2 text-xs rounded-xl',
-        md: 'px-6 py-3 text-sm rounded-2xl',
-        lg: 'px-8 py-4 text-base rounded-[18px]',
-    };
+const Button = forwardRef(function Button(
+  { className, variant = 'solid', loading, leftIcon, children, ...props },
+  ref,
+) {
+  return (
+    <button
+      ref={ref}
+      className={cn(styles.base, styles[variant], className)}
+      {...props}
+    >
+      {loading ? <Loader size="sm" /> : leftIcon}
+      <span>{children}</span>
+    </button>
+  )
+})
 
-    const variants = {
-        primary: 'bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-100 shadow-primary-500/20',
-        secondary: 'bg-slate-100 text-slate-900 hover:bg-slate-200 focus:ring-slate-100',
-        danger: 'bg-rose-500 text-white hover:bg-rose-600 focus:ring-rose-100',
-        ghost: 'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900',
-        outline: 'border-2 border-slate-100 text-slate-700 hover:border-primary-600 hover:text-primary-600 hover:bg-primary-50/50',
-    };
-
-    return (
-        <motion.button
-            whileTap={{ scale: 0.98 }}
-            type={type}
-            onClick={onClick}
-            disabled={disabled || loading}
-            className={`${baseStyles} ${sizes[size]} ${variants[variant]} ${className}`}
-        >
-            {loading ? (
-                <div className="w-5 h-5 border-2 border-current/30 border-t-current rounded-full animate-spin mr-2"></div>
-            ) : Icon && <Icon className={`${children ? 'mr-2.5' : ''} w-5 h-5`} />}
-            {children}
-        </motion.button>
-    );
-};
-
-export default Button;
+export default Button

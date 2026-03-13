@@ -3,44 +3,54 @@ import { useForm } from 'react-hook-form';
 import { useSelector } from 'react-redux';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
-import { MdInventory, MdSwapHoriz, MdNumbers } from 'react-icons/md';
+import { MdInventory, MdNumbers, MdNotes } from 'react-icons/md';
 
 const TransactionForm = ({ initialData, onSubmit, onCancel, loading }) => {
-    const { items } = useSelector((state) => state.inventory);
+    const { products } = useSelector((state) => state.inventory);
     const { register, handleSubmit, formState: { errors } } = useForm({
         defaultValues: initialData || {
-            item_id: '',
+            product_id: '',
             transaction_type: 'IN',
-            quantity: ''
+            quantity: '',
+            notes: ''
         }
     });
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Product Select */}
             <div className="space-y-1">
                 <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">
-                    Select Item
+                    Select Product
                 </label>
                 <div className="relative group">
                     <MdInventory className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-primary-600 transition-colors z-10" />
                     <select
-                        className={`w-full pl-12 pr-5 py-4 bg-slate-50 border-2 rounded-2xl text-sm font-bold appearance-none outline-none focus:ring-4 focus:ring-primary-500/10 transition-all ${errors.item_id ? 'border-rose-100 focus:border-rose-500' : 'border-transparent focus:border-primary-500'
+                        className={`w-full pl-12 pr-5 py-4 bg-slate-50 border-2 rounded-2xl text-sm font-bold appearance-none outline-none focus:ring-4 focus:ring-primary-500/10 transition-all ${errors.product_id ? 'border-rose-100 focus:border-rose-500' : 'border-transparent focus:border-primary-500'
                             }`}
-                        {...register('item_id', { required: 'Please select an item' })}
+                        {...register('product_id', { required: 'Please select a product' })}
                     >
-                        <option value="">Select Item</option>
-                        {items.map(item => (
-                            <option key={item.item_id} value={item.item_id}>
-                                {item.item_name} (Current Stock: {item.quantity_in_stock})
+                        <option value="">
+                            {products.length === 0 ? 'No products loaded — visit Products page first' : 'Select Product'}
+                        </option>
+                        {products.map(product => (
+                            <option key={product.product_id} value={product.product_id}>
+                                {product.product_name} (Stock: {product.quantity_in_stock})
                             </option>
                         ))}
                     </select>
                 </div>
-                {errors.item_id && (
-                    <p className="text-[10px] font-bold text-rose-500 mt-1 ml-1">{errors.item_id.message}</p>
+                {errors.product_id && (
+                    <p className="text-[10px] font-bold text-rose-500 mt-1 ml-1">{errors.product_id.message}</p>
+                )}
+                {products.length === 0 && (
+                    <p className="text-[10px] font-bold text-amber-500 mt-1 ml-1">
+                        ⚠ Products list is empty. Visit the Products page first to load them.
+                    </p>
                 )}
             </div>
 
+            {/* Transaction Type */}
             <div className="space-y-1">
                 <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">
                     Transaction Type
@@ -71,6 +81,7 @@ const TransactionForm = ({ initialData, onSubmit, onCancel, loading }) => {
                 </div>
             </div>
 
+            {/* Quantity */}
             <Input
                 label="Quantity"
                 type="number"
@@ -83,6 +94,23 @@ const TransactionForm = ({ initialData, onSubmit, onCancel, loading }) => {
                 error={errors.quantity?.message}
             />
 
+            {/* Notes */}
+            <div className="space-y-1">
+                <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">
+                    Notes
+                </label>
+                <div className="relative group">
+                    <MdNotes className="absolute left-5 top-4 text-slate-400 group-hover:text-primary-600 transition-colors z-10" />
+                    <textarea
+                        rows={3}
+                        placeholder="e.g. Manual stock adjustment"
+                        className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-transparent rounded-2xl text-sm font-bold outline-none focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all resize-none"
+                        {...register('notes')}
+                    />
+                </div>
+            </div>
+
+            {/* Actions */}
             <div className="flex space-x-3 pt-2">
                 <Button
                     type="button"
