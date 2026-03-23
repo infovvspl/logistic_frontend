@@ -1,0 +1,332 @@
+import { useForm, useWatch } from 'react-hook-form'
+import { useMemo } from 'react'
+import Input from '../ui/Input.jsx'
+import PasswordInput from '../ui/PasswordInput.jsx'
+import Button from '../ui/Button.jsx'
+import Select from '../ui/Select.jsx'
+import Textarea from '../ui/Textarea.jsx'
+
+const GENDER_OPTIONS = [
+  { value: 'MALE', label: 'Male' },
+  { value: 'FEMALE', label: 'Female' },
+  { value: 'OTHER', label: 'Other' },
+]
+
+const STATUS_OPTIONS = [
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'INACTIVE', label: 'Inactive' },
+]
+
+export default function AdminForm({ defaultValues, onSubmit, loading }) {
+  const processedDefaults = useMemo(() => {
+    if (!defaultValues) return null
+    const vals = { ...defaultValues }
+    if (vals.date_of_birth) {
+      try {
+        const d = new Date(vals.date_of_birth)
+        if (!isNaN(d.getTime())) {
+          vals.date_of_birth = d.toISOString().split('T')[0]
+        }
+      } catch (e) {
+        console.error('Invalid date format:', vals.date_of_birth)
+      }
+    }
+    return vals
+  }, [defaultValues])
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors },
+  } = useForm({
+    defaultValues: processedDefaults ?? { 
+      name: '', 
+      email: '', 
+      mobile: '', 
+      password: '', 
+      role: 'admin',
+      date_of_birth: '',
+      gender: 'MALE',
+      aadhar_number: '',
+      pan_number: '',
+      passport_number: '',
+      emergency_contact_number: '',
+      emergency_contact_name: '',
+      emergency_contact_relationship: '',
+      permanent_address: '',
+      current_address: '',
+      fcm_token: 'sample_fcm_token_here',
+      image: 'profile_image_url',
+      status: 'ACTIVE'
+    },
+  })
+
+  const aadhar = useWatch({ control, name: 'aadhar_number' }) ?? ''
+  const pan    = useWatch({ control, name: 'pan_number' })    ?? ''
+  const passport = useWatch({ control, name: 'passport_number' }) ?? ''
+
+  const charHint = (len, max) => (
+    <span className={`text-xs ${len === max ? 'text-rose-500 font-medium' : 'text-zinc-400'}`}>
+      {len}/{max}
+    </span>
+  )
+
+  return (
+    <div className="max-w-4xl mx-auto p-0">
+      <div className="bg-gradient-to-br from-slate-50 via-white to-slate-50 min-h-screen p-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Premium Header */}
+          <div className="text-center pb-12 pt-8">
+            <div className="inline-flex items-center gap-3 bg-gradient-to-r from-emerald-500 to-teal-600 px-8 py-4 rounded-3xl shadow-2xl mb-6 backdrop-blur-sm border border-white/50">
+              <div className="w-3 h-3 bg-white/20 rounded-full animate-pulse"></div>
+              <h1 className="text-3xl lg:text-4xl font-black bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 bg-clip-text text-transparent">
+                {defaultValues ? 'Edit Admin Profile' : 'Create New Admin'}
+              </h1>
+            </div>
+            <p className="text-xl text-slate-600 font-medium max-w-2xl mx-auto leading-relaxed">
+              Complete the information below to {defaultValues ? 'update' : 'create'} a secure admin account
+            </p>
+          </div>
+
+          {/* Premium Form Cards - NO SCROLLBAR */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+            
+            {/* Left Column */}
+            <div className="space-y-8">
+              
+              {/* Basic Credentials */}
+              <div className="group bg-white/90 backdrop-blur-xl rounded-3xl p-10 border border-white/50 shadow-2xl hover:shadow-3xl hover:-translate-y-2 transition-all duration-500 hover:border-emerald-200/50">
+                <h3 className="text-lg font-bold text-slate-800 mb-8 flex items-center gap-3">
+                  <div className="w-3 h-3 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full shadow-lg"></div>
+                  Basic Credentials
+                </h3>
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 gap-6">
+                    <Input
+                      label="Full Name"
+                      placeholder="e.g. John Doe"
+                      error={errors.name?.message}
+                      {...register('name', { required: 'Name is required' })}
+                    />
+                    <Input
+                      label="Email Address"
+                      type="email"
+                      placeholder="john@example.com"
+                      error={errors.email?.message}
+                      {...register('email', { 
+                        required: 'Email is required',
+                        pattern: {
+                          value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                          message: "Invalid email"
+                        }
+                      })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 gap-6">
+                    <Input
+                      label="Mobile Number"
+                      placeholder="9876543210"
+                      error={errors.mobile?.message}
+                      {...register('mobile', {
+                        required: 'Mobile is required',
+                        pattern: { value: /^\d{10}$/, message: 'Must be 10 digits' },
+                      })}
+                    />
+                    {!defaultValues ? (
+                      <PasswordInput
+                        label="Password"
+                        placeholder="••••••••"
+                        error={errors.password?.message}
+                        required
+                        {...register('password', { 
+                          required: 'Password is required',
+                          minLength: { value: 8, message: "At least 8 characters" },
+                          validate: {
+                            hasUpper: (v) => /[A-Z]/.test(v) || "One uppercase letter required",
+                            hasLower: (v) => /[a-z]/.test(v) || "One lowercase letter required",
+                            hasNumber: (v) => /[0-9]/.test(v) || "One number required",
+                            hasSymbol: (v) => /[!@#$%^&*(),.?":{}|<>]/.test(v) || "One special character required"
+                          }
+                        })}
+                      />
+                    ) : (
+                      <PasswordInput
+                        label="New Password (Optional)"
+                        placeholder="Leave blank to keep current"
+                        error={errors.password?.message}
+                        {...register('password')}
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Personal Info */}
+              <div className="group bg-gradient-to-br from-blue-50/90 to-indigo-50/90 backdrop-blur-xl rounded-3xl p-10 border border-white/50 shadow-2xl hover:shadow-3xl hover:-translate-y-2 transition-all duration-500 hover:border-blue-200/50">
+                <h3 className="text-lg font-bold text-slate-800 mb-8 flex items-center gap-3">
+                  <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full shadow-lg"></div>
+                  Personal Information
+                </h3>
+                <div className="grid grid-cols-1 gap-6">
+                  <Input
+                    label="Date of Birth"
+                    type="date"
+                    error={errors.date_of_birth?.message}
+                    {...register('date_of_birth', { required: 'DOB is required' })}
+                  />
+                  <Select
+                    label="Gender"
+                    options={GENDER_OPTIONS}
+                    error={errors.gender?.message}
+                    {...register('gender', { required: 'Gender is required' })}
+                  />
+                </div>
+              </div>
+
+            </div>
+
+            {/* Right Column */}
+            <div className="space-y-8">
+              
+              {/* Identification */}
+              <div className="group bg-gradient-to-br from-emerald-50/90 to-teal-50/90 backdrop-blur-xl rounded-3xl p-10 border border-white/50 shadow-2xl hover:shadow-3xl hover:-translate-y-2 transition-all duration-500 hover:border-emerald-200/50 h-full">
+                <h3 className="text-lg font-bold text-slate-800 mb-8 flex items-center gap-3">
+                  <div className="w-3 h-3 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full shadow-lg"></div>
+                  Identification
+                </h3>
+                <div className="grid grid-cols-1 gap-6">
+                  <Input
+                    label="Aadhar Number"
+                    placeholder="123456789012"
+                    hint={charHint(aadhar.length, 12)}
+                    maxLength={12}
+                    error={errors.aadhar_number?.message}
+                    {...register('aadhar_number', {
+                      validate: (v) => !v || /^\d{12}$/.test(v) || 'Must be exactly 12 digits',
+                    })}
+                  />
+                  <Input
+                    label="PAN Number"
+                    placeholder="ABCDE1234F"
+                    hint={charHint(pan.length, 10)}
+                    maxLength={10}
+                    error={errors.pan_number?.message}
+                    {...register('pan_number', {
+                      validate: (v) => !v || /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(v) || 'Invalid PAN (e.g. ABCDE1234F)',
+                    })}
+                  />
+                  <Input
+                    label="Passport Number"
+                    placeholder="A1234567"
+                    hint={charHint(passport.length, 8)}
+                    maxLength={8}
+                    error={errors.passport_number?.message}
+                    {...register('passport_number', {
+                      validate: (v) => !v || /^[A-Z0-9]{1,8}$/.test(v) || 'Max 8 alphanumeric characters',
+                    })}
+                  />
+                </div>
+              </div>
+
+              {/* Emergency & Address */}
+              <div className="space-y-8">
+                <div className="group bg-gradient-to-br from-orange-50/90 to-amber-50/90 backdrop-blur-xl rounded-3xl p-10 border border-white/50 shadow-2xl hover:shadow-3xl hover:-translate-y-2 transition-all duration-500 hover:border-orange-200/50">
+                  <h3 className="text-lg font-bold text-slate-800 mb-8 flex items-center gap-3">
+                    <div className="w-3 h-3 bg-gradient-to-r from-orange-500 to-amber-500 rounded-full shadow-lg"></div>
+                    Emergency Contact
+                  </h3>
+                  <div className="grid grid-cols-1 gap-6">
+                    <Input
+                      label="Contact Name"
+                      placeholder="Rahul Kumar"
+                      error={errors.emergency_contact_name?.message}
+                      {...register('emergency_contact_name', { required: 'Required' })}
+                    />
+                    <Input
+                      label="Relationship"
+                      placeholder="Brother"
+                      error={errors.emergency_contact_relationship?.message}
+                      {...register('emergency_contact_relationship', { required: 'Required' })}
+                    />
+                    <Input
+                      label="Contact Number"
+                      placeholder="9876543211"
+                      error={errors.emergency_contact_number?.message}
+                      {...register('emergency_contact_number', { required: 'Required' })}
+                    />
+                  </div>
+                </div>
+
+                <div className="group bg-gradient-to-br from-purple-50/90 to-violet-50/90 backdrop-blur-xl rounded-3xl p-10 border border-white/50 shadow-2xl hover:shadow-3xl hover:-translate-y-2 transition-all duration-500 hover:border-purple-200/50">
+                  <h3 className="text-lg font-bold text-slate-800 mb-8 flex items-center gap-3">
+                    <div className="w-3 h-3 bg-gradient-to-r from-purple-500 to-violet-500 rounded-full shadow-lg"></div>
+                    Address Details
+                  </h3>
+                  <div className="space-y-6">
+                    <Textarea
+                      label="Current Address"
+                      placeholder="Enter current address..."
+                      error={errors.current_address?.message}
+                      {...register('current_address', { required: 'Required' })}
+                      rows={4}
+                    />
+                    <Textarea
+                      label="Permanent Address"
+                      placeholder="Enter permanent address..."
+                      error={errors.permanent_address?.message}
+                      {...register('permanent_address', { required: 'Required' })}
+                      rows={4}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Status & Role + Premium Button */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-16">
+            <div className="group bg-gradient-to-br from-slate-50/90 to-zinc-50/90 backdrop-blur-xl rounded-3xl p-10 border border-white/50 shadow-2xl hover:shadow-3xl hover:-translate-y-2 transition-all duration-500 hover:border-slate-200/50">
+              <h3 className="text-lg font-bold text-slate-800 mb-8 flex items-center gap-3">
+                <div className="w-3 h-3 bg-gradient-to-r from-slate-500 to-zinc-500 rounded-full shadow-lg"></div>
+                Account Settings
+              </h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                <Select
+                  label="Account Status"
+                  options={STATUS_OPTIONS}
+                  className="w-full"
+                  {...register('status')}
+                />
+                <div className="text-center lg:text-left">
+                  <label className="text-sm font-semibold text-slate-700 block mb-4">Role</label>
+                  <div className="inline-flex items-center gap-3 px-8 py-5 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl text-xl font-black text-white shadow-2xl border-2 border-white/30 backdrop-blur-sm hover:scale-105 transition-all duration-300">
+                    <div className="w-4 h-4 bg-white rounded-full shadow-lg"></div>
+                    Admin
+                  </div>
+                  <input type="hidden" {...register('role')} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Ultimate Premium CTA Button */}
+          <div className="text-center pt-12">
+            <Button 
+              type="submit" 
+              loading={loading} 
+              className="group relative inline-flex items-center justify-center w-full lg:w-auto min-w-[220px] h-20 text-xl font-black shadow-3xl hover:shadow-4xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:via-teal-700 hover:to-emerald-800 text-white rounded-3xl px-12 transform hover:-translate-y-2 hover:scale-[1.02] transition-all duration-500 border-0 overflow-hidden"
+            >
+              <span className="relative z-10 flex items-center gap-3">
+                {defaultValues ? 'Update Admin Profile' : 'Create Admin Account'}
+                <div className="w-6 h-6 bg-white/20 rounded-2xl group-hover:w-8 group-hover:h-8 transition-all duration-300"></div>
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent -skew-x-12 -translate-x-4 group-hover:translate-x-2 transition-transform duration-500"></div>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+the role is not changing according to the pages like drivers, herlps and admin

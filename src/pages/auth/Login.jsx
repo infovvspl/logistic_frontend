@@ -1,17 +1,19 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
+import { useState } from "react";
 import { useDispatch } from "react-redux";
-import Input from "../../components/ui/Input.jsx";
-import Button from "../../components/ui/Button.jsx";
-import { demoLogin } from "../../features/auth/authSlice.js";
+// import Input from "../../components/ui/Input.jsx";
+// import Button from "../../components/ui/Button.jsx";
+// import { demoLogin } from "../../features/auth/authSlice.js";
 import { useAuth } from "../../hooks/useAuth.js";
 import Img from "../../assets/tt.png";
-import { FiGrid } from "react-icons/fi";
+import { FiGrid, FiEye, FiEyeOff } from "react-icons/fi";
 
 export default function Login() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { login, status, error } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -35,12 +37,12 @@ export default function Login() {
     }
   };
 
-  const onDemo = () => {
-    dispatch(
-      demoLogin({ user: { email: "admin@example.com" }, token: "demo-token" }),
-    );
-    navigate("/dashboard", { replace: true });
-  };
+  // const onDemo = () => {
+  //   dispatch(
+  //     demoLogin({ user: { email: "admin@example.com" }, token: "demo-token" }),
+  //   );
+  //   navigate("/dashboard", { replace: true });
+  // };
 
   return (
     <>
@@ -557,21 +559,44 @@ export default function Login() {
                     Password
                   </label>
                 </div>
-                <input
-                  id="password"
-                  className={`field-input${errors.password ? " has-error" : ""}`}
-                  type="password"
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                  style={{ marginTop: "8px" }}
-                  {...register("password", {
-                    required: "Password is required",
-                    minLength: {
-                      value: 6,
-                      message: "Password must be at least 6 characters",
-                    },
-                  })}
-                />
+                <div className="relative" style={{ marginTop: "8px" }}>
+                  <input
+                    id="password"
+                    className={`field-input${errors.password ? " has-error" : ""}`}
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    autoComplete="current-password"
+                    style={{ paddingRight: "44px" }}
+                    {...register("password", {
+                      required: "Password is required",
+                      minLength: {
+                        value: 6,
+                        message: "Password must be at least 6 characters",
+                      },
+                    })}
+                  />
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setShowPassword((v) => !v)}
+                    style={{
+                      position: "absolute",
+                      right: "16px",
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "#94a3b8",
+                      display: "flex",
+                      alignItems: "center",
+                      padding: 0,
+                    }}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                  </button>
+                </div>
                 {errors.password && (
                   <p className="field-error">{errors.password.message}</p>
                 )}
@@ -594,13 +619,13 @@ export default function Login() {
               </button>
             </form>
 
-            <div className="or-divider">
+            {/* <div className="or-divider">
               <div className="or-line" />
               <span className="or-text">OR</span>
               <div className="or-line" />
-            </div>
+            </div> */}
 
-            <button className="btn-demo" type="button" onClick={onDemo}>
+            {/* <button className="btn-demo" type="button" onClick={onDemo}>
               <svg
                 width="16"
                 height="16"
@@ -616,7 +641,7 @@ export default function Login() {
                 <line x1="15" y1="12" x2="3" y2="12" />
               </svg>
               Try demo (no API needed)
-            </button>
+            </button> */}
           </div>
         </div>
       </div>

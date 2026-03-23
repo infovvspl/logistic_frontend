@@ -17,10 +17,10 @@ export default function AuthLayout() {
           <div className="mb-8 text-center">
             <h1
               className="text-3xl md:text-4xl font-bold tracking-tight 
-                bg-gradient-to-r from-stone-700 via-amber-700 to-[#C8B97A]
-                bg-clip-text text-transparent"
+              bg-gradient-to-r from-sky-400 via-blue-500 to-indigo-700
+              bg-clip-text text-transparent"
             >
-              RS Transports
+              RS Transport
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               Logistics & Transport Management

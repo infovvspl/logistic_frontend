@@ -20,4 +20,3 @@ const driverSlice = createSlice({
 
 export const { setSearch, setSelectedId } = driverSlice.actions
 export default driverSlice.reducer
-

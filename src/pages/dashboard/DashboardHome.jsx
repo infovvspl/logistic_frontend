@@ -68,12 +68,12 @@ export default function DashboardHome() {
       </motion.div>
 
       <div className="rounded-2xl border border-zinc-200 bg-white p-5">
-        <div className="text-sm font-semibold">Next steps</div>
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-600">
+        <div className="text-sm font-semibold">Coming soon</div>
+        {/* <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-zinc-600">
           <li>Connect your API base URL via `VITE_API_BASE_URL`.</li>
           <li>Replace mock data in feature APIs with real endpoints.</li>
           <li>Add role-based permissions in `usePermissions`.</li>
-        </ul>
+        </ul> */}
       </div>
     </div>
   )

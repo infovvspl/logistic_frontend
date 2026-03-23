@@ -19,13 +19,13 @@ function loadAuth() {
 function saveAuth(next) {
   try {
     if (!next?.token) {
-      Cookies.remove(STORAGE_KEYS.auth + '.token')
-      Cookies.remove(STORAGE_KEYS.auth + '.user')
+      Cookies.remove(STORAGE_KEYS.auth + '.token', { path: '/' })
+      Cookies.remove(STORAGE_KEYS.auth + '.user', { path: '/' })
     } else {
-      // Set cookies with a 7-day expiration (customizable)
-      Cookies.set(STORAGE_KEYS.auth + '.token', next.token, { expires: 7 })
+      // Set cookies with a 7-day expiration and global path
+      Cookies.set(STORAGE_KEYS.auth + '.token', next.token, { expires: 7, path: '/' })
       if (next.user) {
-        Cookies.set(STORAGE_KEYS.auth + '.user', JSON.stringify(next.user), { expires: 7 })
+        Cookies.set(STORAGE_KEYS.auth + '.user', JSON.stringify(next.user), { expires: 7, path: '/' })
       }
     }
   } catch {

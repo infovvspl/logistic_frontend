@@ -4,16 +4,33 @@ import DashboardLayout from '../layouts/DashboardLayout.jsx'
 import Login from '../pages/auth/Login.jsx'
 import Signup from '../pages/auth/Signup.jsx'
 import Assignments from '../pages/dashboard/Assignments.jsx'
-import Clients from '../pages/dashboard/Clients.jsx'
+import Companies from '../pages/dashboard/Companies.jsx'
+import Customers from '../pages/dashboard/Customers.jsx'
 import DashboardHome from '../pages/dashboard/DashboardHome.jsx'
 import Drivers from '../pages/dashboard/Drivers.jsx'
 import Helpers from '../pages/dashboard/Helpers.jsx'
 import Vehicles from '../pages/dashboard/Vehicles.jsx'
+import Admins from '../pages/dashboard/Admins.jsx'
+import Roles from '../pages/dashboard/Roles.jsx'
+import Trips from '../pages/dashboard/Trips.jsx'
+import Places from '../pages/dashboard/Places.jsx'
+import Consignments from '../pages/dashboard/Consignments.jsx'
+import Metrics from '../pages/dashboard/Metrics.jsx'
+import RateCharts from '../pages/dashboard/RateCharts.jsx'
 import { useAuth } from '../hooks/useAuth.js'
+import { usePermissions } from '../hooks/usePermissions.js'
 
 function RequireAuth({ children }) {
   const { isAuthenticated } = useAuth()
   if (!isAuthenticated) return <Navigate to="/auth/login" replace />
+  return children
+}
+
+function RequireSuperAdmin({ children }) {
+  const { isAuthenticated } = useAuth()
+  const { isSuperAdmin } = usePermissions()
+  if (!isAuthenticated) return <Navigate to="/auth/login" replace />
+  if (!isSuperAdmin) return <Navigate to="/dashboard" replace />
   return children
 }
 
@@ -66,11 +83,20 @@ export const router = createBrowserRouter([
     ),
     children: [
       { index: true, element: <DashboardHome /> },
+      { path: 'admins', element: <RequireSuperAdmin><Admins /></RequireSuperAdmin> },
       { path: 'drivers', element: <Drivers /> },
       { path: 'helpers', element: <Helpers /> },
       { path: 'vehicles', element: <Vehicles /> },
-      { path: 'clients', element: <Clients /> },
-      { path: 'assignments', element: <Assignments /> },
+      { path: 'companies', element: <Companies /> },
+      { path: 'customers', element: <Customers /> },
+      { path: 'roles', element: <Roles /> },
+      { path: 'clients', element: <Navigate to="/dashboard/customers" replace /> },
+      // { path: 'assignments', element: <Assignments /> },
+      { path: 'trips', element: <Trips /> },
+      { path: 'places', element: <Places /> },
+      { path: 'consignments', element: <Consignments /> },
+      { path: 'metrics', element: <Metrics /> },
+      { path: 'rate-charts', element: <RateCharts /> },
     ],
   },
   { path: '*', element: <NotFound /> },

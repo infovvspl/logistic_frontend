@@ -1,27 +1,45 @@
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
 import {
-  FiClipboard,
   FiHome,
   FiLogOut,
   FiTruck,
-  FiUsers,
   FiGrid,
   FiChevronRight,
-  FiBell,
-  FiSearch,
+  FiShield,
+  FiUsers,
+  FiMap,
+  FiBriefcase,
+  FiTag,
+  FiUserCheck,
+  FiMenu,
+  FiX,
+  FiMapPin,
+  FiPackage,
+  FiBarChart2,
+  FiDollarSign,
 } from "react-icons/fi";
+import { FaRupeeSign } from "react-icons/fa";
 import { APP_NAME } from "../utils/constants.js";
-import Button from "../components/ui/Button.jsx";
 import { useAuth } from "../hooks/useAuth.js";
+import { usePermissions } from "../hooks/usePermissions.js";
+import { GrUserPolice } from "react-icons/gr";
 
 const navItems = [
-  { to: "/dashboard", label: "Overview", icon: FiHome, end: true },
-  { to: "/dashboard/drivers", label: "Drivers", icon: FiUsers },
-  { to: "/dashboard/helpers", label: "Helpers", icon: FiUsers },
-  { to: "/dashboard/vehicles", label: "Vehicles", icon: FiTruck },
-  { to: "/dashboard/clients", label: "Clients", icon: FiUsers },
-  { to: "/dashboard/assignments", label: "Assignments", icon: FiClipboard },
+  { to: "/dashboard",           label: "Overview",      icon: FiHome, end: true },
+  { to: "/dashboard/admins",    label: "Create Admins", icon: FiShield },
+  { to: "/dashboard/drivers",   label: "Drivers",       icon: GrUserPolice },
+  { to: "/dashboard/helpers",   label: "Helpers",       icon: FiUserCheck },
+  { to: "/dashboard/vehicles",  label: "Vehicles",      icon: FiTruck },
+  { to: "/dashboard/companies", label: "Companies",     icon: FiBriefcase },
+  { to: "/dashboard/customers", label: "Customers",     icon: FiUsers },
+  { to: "/dashboard/roles",     label: "Roles",         icon: FiTag },
+  { to: "/dashboard/trips",     label: "Trips",         icon: FiMap },
+  { to: "/dashboard/places",        label: "Places",        icon: FiMapPin },
+  { to: "/dashboard/consignments",  label: "Consignments",  icon: FiPackage },
+  { to: "/dashboard/metrics",       label: "Metrics",       icon: FiBarChart2 },
+  { to: "/dashboard/rate-charts",   label: "Rate Charts",   icon: FaRupeeSign },
 ];
 
 const navGroups = [
@@ -31,24 +49,34 @@ const navGroups = [
   },
   {
     label: "People",
-    items: [navItems[1], navItems[2], navItems[4]],
+    items: [navItems[1], navItems[2], navItems[3], navItems[7]],
   },
   {
     label: "Operations",
-    items: [navItems[3], navItems[5]],
+    items: [navItems[4], navItems[5], navItems[6], navItems[8], navItems[9], navItems[10], navItems[11], navItems[12]],
   },
 ];
 
 export default function DashboardLayout() {
   const { user, logout } = useAuth();
+  const { isSuperAdmin } = usePermissions();
   const location = useLocation();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const currentPage = navItems.find((n) =>
     n.end ? location.pathname === n.to : location.pathname.startsWith(n.to),
   );
 
-  return (
-    <>
+  const visibleNavGroups = navGroups.map((group) => ({
+    ...group,
+    items: group.items.filter(
+      (item) => item.to !== '/dashboard/admins' || isSuperAdmin
+    ),
+  }));
+
+  const allVisibleItems = visibleNavGroups.flatMap((g) => g.items);
+
+  return (<>
       <style>
         {`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -431,44 +459,105 @@ export default function DashboardLayout() {
 
         /* ── Responsive ── */
         @media (max-width: 1024px) {
-          .db-search-input input {
-            width: 200px;
-          }
+          .db-search-input input { width: 200px; }
         }
 
         @media (max-width: 768px) {
           .db-root {
             flex-direction: column;
-            padding: 16px;
-            gap: 16px;
+            padding: 12px;
+            gap: 12px;
+            padding-bottom: 80px;
           }
+          .db-sidebar { display: none; }
+          .db-topbar { padding: 14px 20px; }
+          .db-content { padding: 20px 16px; }
+        }
 
-          .db-sidebar {
-            width: 100%;
-          }
+        @media (min-width: 1024px) {
+          .db-mobile-topbar-menu { display: none !important; }
+        }
 
-          .db-sidebar-inner {
-            padding: 24px 20px 20px;
-          }
+        /* ── Mobile bottom navbar ── */
+        .db-mobile-nav {
+          position: fixed;
+          bottom: 0; left: 0; right: 0;
+          z-index: 100;
+          background: rgba(255,255,255,0.97);
+          backdrop-filter: blur(20px);
+          border-top: 1px solid rgba(0,0,0,0.08);
+          padding: 8px 4px;
+          box-shadow: 0 -4px 24px rgba(0,0,0,0.08);
+        }
 
-          .db-topbar {
-            padding: 16px 24px;
-            flex-direction: column;
-            gap: 16px;
-            align-items: stretch;
-          }
+        .db-mobile-nav-inner {
+          display: flex;
+          align-items: center;
+          justify-content: space-around;
+        }
 
-          .db-topbar-right {
-            justify-content: flex-end;
-          }
+        .db-mobile-nav-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 3px;
+          padding: 6px 10px;
+          border-radius: 12px;
+          color: #94a3b8;
+          text-decoration: none;
+          font-size: 10px;
+          font-weight: 500;
+          transition: all 0.2s ease;
+          min-width: 52px;
+          background: none;
+          border: none;
+          cursor: pointer;
+        }
 
-          .db-search-input input {
-            width: 100%;
-          }
+        .db-mobile-nav-item.active {
+          color: #1d4ed8;
+          background: rgba(59,130,246,0.08);
+        }
 
-          .db-content {
-            padding: 24px 20px;
-          }
+        .db-mobile-nav-item svg { width: 20px; height: 20px; }
+
+        /* ── Mobile drawer ── */
+        .db-drawer {
+          position: absolute;
+          left: 0; top: 0; bottom: 0;
+          width: 280px;
+          background: white;
+          box-shadow: 4px 0 40px rgba(0,0,0,0.15);
+          overflow-y: auto;
+          padding: 28px 20px;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .db-drawer-close {
+          position: absolute;
+          top: 16px; right: 16px;
+          width: 36px; height: 36px;
+          border-radius: 10px;
+          border: 1px solid rgba(0,0,0,0.08);
+          background: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: #64748b;
+        }
+
+        .db-mobile-topbar-menu {
+          width: 38px; height: 38px;
+          border-radius: 12px;
+          border: 1px solid rgba(0,0,0,0.08);
+          background: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: #1e293b;
         }
         `}
       </style>
@@ -489,7 +578,7 @@ export default function DashboardLayout() {
 
             {/* Nav */}
             <nav>
-              {navGroups.map((group) => (
+              {visibleNavGroups.map((group) => (
                 <div className="db-nav-group" key={group.label}>
                   <div className="db-nav-group-label">{group.label}</div>
                   {group.items.map((item) => {
@@ -522,7 +611,9 @@ export default function DashboardLayout() {
                   <div className="db-user-name">
                     {user?.name || user?.email?.split('@')[0] || 'Admin'}
                   </div>
-                  <div className="db-user-role">Administrator</div>
+                  <div className="db-user-role">
+                    {isSuperAdmin ? 'Super Admin' : 'Administrator'}
+                  </div>
                 </div>
               </div>
               <button className="db-logout-btn" onClick={logout}>
@@ -545,21 +636,13 @@ export default function DashboardLayout() {
               </span>
             </div>
             <div className="db-topbar-right">
-              <div className="db-search-input">
-                <FiSearch className="db-search-icon" size={16} />
-                <input 
-                  type="text" 
-                  placeholder="Search drivers, vehicles..." 
-                  readOnly 
-                />
-              </div>
-              <div className="db-notification">
-                <FiBell size={18} />
-              </div>
               <div className="db-status">
                 <div className="db-status-dot" />
-                <span className="db-status-text">All systems operational</span>
+                <span className="db-status-text">Online</span>
               </div>
+              {/* <button className="db-mobile-topbar-menu lg:hidden" onClick={() => setDrawerOpen(true)}>
+                <FiMenu size={18} />
+              </button> */}
             </div>
           </div>
 
@@ -580,6 +663,108 @@ export default function DashboardLayout() {
           </div>
         </div>
       </div>
+
+      {/* ── Mobile bottom navbar ── */}
+      <nav className="db-mobile-nav md:hidden">
+        <div className="db-mobile-nav-inner">
+          {allVisibleItems.slice(0, 4).map((item) => {
+            const Icon = item.icon;
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) => `db-mobile-nav-item${isActive ? ' active' : ''}`}
+              >
+                <Icon />
+                <span>{item.label.split(' ')[0]}</span>
+              </NavLink>
+            );
+          })}
+          <button className="db-mobile-nav-item" onClick={() => setDrawerOpen(true)}>
+            <FiMenu />
+            <span>More</span>
+          </button>
+        </div>
+      </nav>
+
+      {/* ── Mobile drawer — rendered via portal-like fixed overlay, no CSS display toggling ── */}
+      <AnimatePresence>
+        {drawerOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setDrawerOpen(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 9999,
+              background: 'rgba(0,0,0,0.45)',
+              backdropFilter: 'blur(4px)',
+            }}
+          >
+            <motion.div
+              className="db-drawer"
+              initial={{ x: -280 }}
+              animate={{ x: 0 }}
+              exit={{ x: -280 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button className="db-drawer-close" onClick={() => setDrawerOpen(false)}>
+                <FiX size={16} />
+              </button>
+
+              <div className="db-brand" style={{ marginBottom: 24 }}>
+                <div className="db-brand-icon"><FiGrid /></div>
+                <div className="db-brand-text">
+                  <div className="db-brand-name">{APP_NAME}</div>
+                  <div className="db-brand-sub">Dashboard</div>
+                </div>
+              </div>
+
+              <nav style={{ flex: 1 }}>
+                {visibleNavGroups.map((group) => (
+                  <div className="db-nav-group" key={group.label}>
+                    <div className="db-nav-group-label">{group.label}</div>
+                    {group.items.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <NavLink
+                          key={item.to}
+                          to={item.to}
+                          end={item.end}
+                          onClick={() => setDrawerOpen(false)}
+                          className={({ isActive }) => `db-nav-item${isActive ? ' active' : ''}`}
+                        >
+                          <Icon className="nav-icon" />
+                          <span>{item.label}</span>
+                        </NavLink>
+                      );
+                    })}
+                  </div>
+                ))}
+              </nav>
+
+              <div className="db-user-card">
+                <div className="db-user-info">
+                  <div className="db-avatar">{(user?.email ?? 'A')[0].toUpperCase()}</div>
+                  <div>
+                    <div className="db-user-name">{user?.name || user?.email?.split('@')[0] || 'Admin'}</div>
+                    <div className="db-user-role">{isSuperAdmin ? 'Super Admin' : 'Administrator'}</div>
+                  </div>
+                </div>
+                <button className="db-logout-btn" onClick={logout}>
+                  <FiLogOut size={16} />
+                  Sign out
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }
