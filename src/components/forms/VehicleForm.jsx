@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, Controller, useWatch } from 'react-hook-form'
 import {
   FiTruck, FiHash, FiCalendar,
   FiFileText, FiShield, FiCheckCircle,
@@ -116,7 +116,7 @@ function FileUpload({ label, fieldName, setValue, watch }) {
   )
 }
 
-export default function VehicleForm({ defaultValues, onSubmit, loading, branches = [] }) {
+export default function VehicleForm({ defaultValues, onSubmit, loading, branches = [], companies = [] }) {
   const isEdit = !!defaultValues
 
   const processedDefaults = useMemo(() => {
@@ -124,6 +124,7 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
     const src = { ...defaultValues }
     const dateFields = [
       'vehicle_registration_certificate_expiry_date',
+      'vehicle_insurance_policy_date',
       'vehicle_insurance_expiry_date',
       'vehicle_pollution_under_control_certificate_issue_date',
       'vehicle_pollution_under_control_certificate_expiry_date',
@@ -132,6 +133,10 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       'vehicle_permit_issue_date',
       'vehicle_permit_expiry_date',
       'vehicle_purchase_date',
+      'vehicle_gps_device_expiry_date',
+      'vehicle_mining_gps_device_expiry_date',
+      'vehicle_vts_device_expiry_date',
+      'andhra_permit_expiry_date',
     ]
     dateFields.forEach((f) => (src[f] = formatDate(src[f])))
     // normalise file fields — only keep http URLs
@@ -157,6 +162,8 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
     defaultValues: processedDefaults ?? {
       registration_number: '',
       chassis_number: '',
+      engine_number: '',
+      vehicle_engine_no: '',
       vehicle_type: 'Truck',
       vehicle_manufacture_company: '',
       vehicle_model: '',
@@ -166,11 +173,14 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       vehicle_seating_capacity: 2,
       vehicle_body_type: 'Closed',
       vehicle_fuel_type: 'Diesel',
+      vehicle_status: 'ACTIVE',
       vehicle_registration_certificate_number: '',
       vehicle_registration_certificate_expiry_date: '',
       vehicle_insurance_company_name: '',
       vehicle_insurance_policy_number: '',
+      vehicle_insurance_policy_date: '',
       vehicle_insurance_expiry_date: '',
+      vehicle_pollution_under_control_certificate_number: '',
       vehicle_pollution_under_control_certificate_issue_date: '',
       vehicle_pollution_under_control_certificate_expiry_date: '',
       vehicle_fitness_certificate_issue_date: '',
@@ -178,11 +188,21 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       vehicle_permit_issue_date: '',
       vehicle_permit_expiry_date: '',
       vehicle_permit_type: 'National',
+      andhra_permit_status: '',
+      andhra_permit_expiry_date: '',
+      andhra_tax: '',
+      odisha_tax: '',
+      vehicle_gps_company: '',
+      vehicle_gps_device_id: '',
+      vehicle_gps_device_expiry_date: '',
+      vehicle_mining_gps_device_id: '',
+      vehicle_mining_gps_device_expiry_date: '',
+      vehicle_vts_device_id: '',
+      vehicle_vts_device_expiry_date: '',
       vehicle_owner_name: '',
       vehicle_purchase_date: '',
-      vehicle_status: 'ACTIVE',
-      vehicle_gps_device_id: '',
       branch_id: '',
+      company_id: '',
       vehicle_image: '',
       vehicle_registration_certificate_file: '',
       vehicle_insurance_file: '',
@@ -191,6 +211,17 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       vehicle_permit_file: '',
     },
   })
+
+  const selectedBranchId = useWatch({ control, name: 'branch_id' })
+  const selectedCompany = useMemo(() => {
+    const branch = branches.find((b) => String(b.id) === String(selectedBranchId))
+    if (!branch) return null
+    return companies.find((c) => String(c.id) === String(branch.company_id))
+  }, [selectedBranchId, branches, companies])
+
+  useEffect(() => {
+    setValue('company_id', selectedCompany?.id ?? '')
+  }, [selectedCompany, setValue])
 
   return (
     <form onSubmit={handleSubmit((values) => {
@@ -216,6 +247,11 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
           label="Chassis Number" placeholder="CHS98765..."
           leftIcon={<FiHash />}
           {...register('chassis_number')}
+        />
+        <Input
+          label="Engine Number" placeholder="ENG-11223344"
+          leftIcon={<FiHash />}
+          {...register('engine_number')}
         />
         <Controller control={control} name="vehicle_type"
           render={({ field }) => <Select label="Vehicle Type" options={VEHICLE_TYPES} {...field} />}
@@ -288,13 +324,16 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
           leftIcon={<FiFileText />}
           {...register('vehicle_insurance_policy_number')}
         />
-        <div className="col-span-full">
-          <Input
-            label="Insurance Expiry" type="date"
-            leftIcon={<FiCalendar />}
-            {...register('vehicle_insurance_expiry_date')}
-          />
-        </div>
+        <Input
+          label="Policy Date" type="date"
+          leftIcon={<FiCalendar />}
+          {...register('vehicle_insurance_policy_date')}
+        />
+        <Input
+          label="Insurance Expiry" type="date"
+          leftIcon={<FiCalendar />}
+          {...register('vehicle_insurance_expiry_date')}
+        />
       </div>
 
       {/* ── Certificates ───────────────────────────────────── */}
@@ -303,6 +342,7 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <span className="text-sm font-medium text-zinc-800">Pollution (PUC)</span>
+          <Input placeholder="PUC Certificate No." {...register('vehicle_pollution_under_control_certificate_number')} />
           <div className="grid grid-cols-2 gap-2">
             <Input type="date" hint="Issue"
               {...register('vehicle_pollution_under_control_certificate_issue_date')}
@@ -348,7 +388,7 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
           {...register('vehicle_permit_expiry_date')}
         />
         <Input
-          label="Purchase Date" type="date"
+          label="Vehicle Purchase Date" type="date"
           leftIcon={<FiCalendar />}
           {...register('vehicle_purchase_date')}
         />
@@ -359,21 +399,46 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
         />
       </div>
 
+      {/* ── GPS / VTS Devices ───────────────────────────────── */}
+      <SectionDivider label="GPS / VTS Devices" />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input label="GPS Company" placeholder="SecureTrack Solutions" leftIcon={<FiCpu />} {...register('vehicle_gps_company')} />
+        <Input label="GPS Device ID" placeholder="GPS-IND-9001" leftIcon={<FiCpu />} {...register('vehicle_gps_device_id')} />
+        <Input label="GPS Expiry" type="date" leftIcon={<FiCalendar />} {...register('vehicle_gps_device_expiry_date')} />
+        <div />
+        <Input label="Mining GPS Device ID" placeholder="M-GPS-4455" leftIcon={<FiCpu />} {...register('vehicle_mining_gps_device_id')} />
+        <Input label="Mining GPS Expiry" type="date" leftIcon={<FiCalendar />} {...register('vehicle_mining_gps_device_expiry_date')} />
+        <Input label="VTS Device ID" placeholder="VTS-ID-9981" leftIcon={<FiCpu />} {...register('vehicle_vts_device_id')} />
+        <Input label="VTS Expiry" type="date" leftIcon={<FiCalendar />} {...register('vehicle_vts_device_expiry_date')} />
+      </div>
+
+      {/* ── Andhra Permit & Tax ─────────────────────────────── */}
+      <SectionDivider label="Andhra Permit & Tax" />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input label="Andhra Permit Status" placeholder="VALID / EXPIRED" {...register('andhra_permit_status')} />
+        <Input label="Andhra Permit Expiry" type="date" leftIcon={<FiCalendar />} {...register('andhra_permit_expiry_date')} />
+        <Input label="Andhra Tax (₹)" type="number" placeholder="2500" {...register('andhra_tax')} />
+        <Input label="Odisha Tax (₹)" type="number" placeholder="1850" {...register('odisha_tax')} />
+      </div>
+
       {/* ── Assignment ──────────────────────────────────────── */}
       <SectionDivider label="Assignment" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="col-span-full">
-          <Controller control={control} name="branch_id"
-            render={({ field }) => (
-              <Select
-                label="Assign Branch" required
-                options={branchOptions}
-                error={errors.branch_id?.message}
-                {...field}
-              />
-            )}
-          />
+        <Controller control={control} name="branch_id"
+          render={({ field }) => (
+            <Select label="Assign Branch" options={branchOptions} error={errors.branch_id?.message} {...field} />
+          )}
+        />
+        <div>
+          <label className="block text-sm font-medium text-zinc-700 mb-1.5">Company</label>
+          <div className={`flex items-center h-10 px-3 rounded-lg border text-sm transition-colors ${selectedCompany
+            ? 'border-blue-200 bg-blue-50 text-blue-800 font-medium'
+            : 'border-zinc-200 bg-zinc-50 text-zinc-400'}`}>
+            {selectedCompany?.name || 'Auto-filled on branch select'}
+          </div>
         </div>
       </div>
 

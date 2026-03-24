@@ -151,7 +151,7 @@ export default function UserForm({
     const rawImg = out.pro_image_url || out.image || ''
     out.image = (typeof rawImg === 'string' && rawImg.startsWith('http')) ? rawImg : ''
     // normalise document file fields
-    ;['aadhar_file', 'pan_file', 'passport_file', 'license_file'].forEach((f) => {
+    ;['aadhar_file', 'pan_file', 'passport_file', 'license_file', 'bank_passbook_file'].forEach((f) => {
       const v = out[f] || ''
       out[f] = (typeof v === 'string' && v.startsWith('http')) ? v : ''
     })
@@ -183,6 +183,9 @@ export default function UserForm({
       year_of_experience: '', preferred_vehicle_type: 'Truck', referenced_by: '',
       image: '', status: 'ACTIVE', branch_id: '',
       aadhar_file: '', pan_file: '', passport_file: '', license_file: '',
+      whatsapp_number: '', upi_number: '', upi_id: '',
+      bank_name: '', bank_customer_id: '', account_number: '', ifsc_code: '', swift_code: '', bank_branch: '',
+      bank_passbook_file: '',
     },
   })
 
@@ -216,7 +219,7 @@ export default function UserForm({
   return (
     <form onSubmit={handleSubmit(async (values) => {
       // remove empty file fields so existing files are preserved
-      ;['image', 'aadhar_file', 'pan_file', 'passport_file', 'license_file'].forEach((f) => {
+      ;['image', 'aadhar_file', 'pan_file', 'passport_file', 'license_file', 'bank_passbook_file'].forEach((f) => {
         if (!values[f] || typeof values[f] === 'string') delete values[f]
       })
       await onSubmit(values)
@@ -498,6 +501,38 @@ export default function UserForm({
           rows={3}
           {...register('permanent_address')}
         />
+      </div>
+
+      {/* ── Contact & Payment ───────────────────────────────── */}
+      <SectionDivider label="Contact & Payment" />
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Input
+          label="WhatsApp Number"
+          placeholder="9876543210"
+          leftIcon={<FiPhone />}
+          {...register('whatsapp_number', {
+            validate: (v) => !v || /^\d{10}$/.test(v) || 'Must be 10 digits',
+          })}
+          error={errors.whatsapp_number?.message}
+        />
+        <Input label="UPI Number" placeholder="9876543210@upi" {...register('upi_number')} />
+        <Input label="UPI ID" placeholder="name@bank" {...register('upi_id')} />
+      </div>
+
+      {/* ── Bank Details ─────────────────────────────────────── */}
+      <SectionDivider label="Bank Details" />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input label="Bank Name" placeholder="e.g. State Bank of India" {...register('bank_name')} />
+        <Input label="Bank Customer ID" placeholder="Customer ID" {...register('bank_customer_id')} />
+        <Input label="Account Number" placeholder="Account number" {...register('account_number')} />
+        <Input label="IFSC Code" placeholder="e.g. SBIN0001234" {...register('ifsc_code')} />
+        <Input label="SWIFT Code" placeholder="e.g. SBININBB" {...register('swift_code')} />
+        <Input label="Bank Branch" placeholder="Branch name / city" {...register('bank_branch')} />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <FileUpload label="Bank Passbook" fieldName="bank_passbook_file" setValue={setValue} watch={watch} />
       </div>
 
       {/* ── Submit ──────────────────────────────────────────── */}

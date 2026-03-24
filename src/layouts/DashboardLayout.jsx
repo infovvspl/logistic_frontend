@@ -19,6 +19,7 @@ import {
   FiPackage,
   FiBarChart2,
   FiDollarSign,
+  FiClipboard,
 } from "react-icons/fi";
 import { FaRupeeSign } from "react-icons/fa";
 import { APP_NAME } from "../utils/constants.js";
@@ -40,6 +41,7 @@ const navItems = [
   { to: "/dashboard/consignments",  label: "Consignments",  icon: FiPackage },
   { to: "/dashboard/metrics",       label: "Metrics",       icon: FiBarChart2 },
   { to: "/dashboard/rate-charts",   label: "Rate Charts",   icon: FaRupeeSign },
+  { to: "/dashboard/challans",      label: "Challans",      icon: FiClipboard },
 ];
 
 const navGroups = [
@@ -53,7 +55,7 @@ const navGroups = [
   },
   {
     label: "Operations",
-    items: [navItems[4], navItems[5], navItems[6], navItems[8], navItems[9], navItems[10], navItems[11], navItems[12]],
+    items: [navItems[4], navItems[5], navItems[6], navItems[8], navItems[9], navItems[10], navItems[11], navItems[12], navItems[13]],
   },
 ];
 
@@ -196,7 +198,8 @@ export default function DashboardLayout() {
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 12px 16px;
+          padding: 8px 10px;
+          // padding: 12px 16px;
           border-radius: 16px;
           font-size: 14px;
           font-weight: 500;

@@ -14,6 +14,7 @@ import * as branchAPI from '../../features/branches/branchAPI.js'
 import * as assignmentAPI from '../../features/assignments/assignmentAPI.js'
 import * as userAPI from '../../features/users/userAPI.js'
 import * as roleAPI from '../../features/roles/roleAPI.js'
+import * as companyAPI from '../../features/companies/companyAPI.js'
 
 export default function Vehicles() {
   const qc = useQueryClient()
@@ -27,6 +28,7 @@ export default function Vehicles() {
   // Data Fetching
   const vehiclesQuery = useQuery({ queryKey: ['vehicles'], queryFn: vehicleAPI.listVehicles })
   const branchesQuery = useQuery({ queryKey: ['branches'], queryFn: branchAPI.listBranches })
+  const companiesQuery = useQuery({ queryKey: ['companies'], queryFn: companyAPI.listCompanies })
   const rolesQuery = useQuery({ queryKey: ['roles'], queryFn: roleAPI.listRoles })
   const assignmentsQuery = useQuery({ queryKey: ['assignments'], queryFn: assignmentAPI.listAssignments })
 
@@ -330,6 +332,7 @@ export default function Vehicles() {
         <VehicleForm
           defaultValues={modal.vehicle}
           branches={branchesQuery.data?.items ?? []}
+          companies={companiesQuery.data?.items ?? []}
           loading={createMutation.isPending || updateMutation.isPending}
           onSubmit={async (values) => {
             if (modal.vehicle) await updateMutation.mutateAsync({ id: modal.vehicle.id, values })

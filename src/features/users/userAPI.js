@@ -31,6 +31,16 @@ const ALLOWED_USER_FIELDS = [
   'image',
   'status',
   'branch_id',
+  'whatsapp_number',
+  'upi_number',
+  'upi_id',
+  'bank_name',
+  'bank_customer_id',
+  'account_number',
+  'ifsc_code',
+  'swift_code',
+  'bank_branch',
+  'bank_passbook_file',
 ]
 
 let mockUsers = []
@@ -96,7 +106,7 @@ export async function getUser(id) {
   }
 }
 
-const FILE_FIELDS = ['image', 'aadhar_file', 'pan_file', 'passport_file', 'license_file']
+const FILE_FIELDS = ['image', 'aadhar_file', 'pan_file', 'passport_file', 'license_file', 'bank_passbook_file']
 
 function buildFormData(clean) {
   const form = new FormData()

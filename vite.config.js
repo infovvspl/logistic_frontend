@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [tailwindcss(),react()],
   server: {
     allowedHosts: [
-      'starring-builds-goals-dont.trycloudflare.com'
+      'humans-effective-selections-students.trycloudflare.com'
     ]
   }
 })

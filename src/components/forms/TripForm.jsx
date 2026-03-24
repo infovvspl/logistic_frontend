@@ -1,27 +1,20 @@
-import { useForm, Controller } from 'react-hook-form'
 import { useState, useMemo } from 'react'
-import {
-  FiSearch, FiUser, FiTruck, FiMapPin,
-  FiCalendar, FiPackage, FiDollarSign, FiCheckCircle, FiX,
-} from 'react-icons/fi'
-import { FaRupeeSign } from "react-icons/fa";
+import { FiSearch, FiUser, FiTruck, FiCalendar, FiCheckCircle, FiX, FiAlertTriangle } from 'react-icons/fi'
 import Input from '../ui/Input.jsx'
-import Button from '../ui/Button.jsx'
 import Select from '../ui/Select.jsx'
+import Button from '../ui/Button.jsx'
 
 const STATUS_OPTIONS = [
-  { value: 'ONGOING', label: 'Ongoing' },
+  { value: 'SCHEDULED', label: 'Scheduled' },
+  { value: 'IN_TRANSIT', label: 'Ongoing' },
   { value: 'COMPLETED', label: 'Completed' },
   { value: 'CANCELLED', label: 'Cancelled' },
-  { value: 'PENDING', label: 'Pending' },
 ]
 
 function SectionDivider({ label }) {
   return (
     <div className="flex items-center gap-3 pt-1 pb-0.5">
-      <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 whitespace-nowrap">
-        {label}
-      </span>
+      <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 whitespace-nowrap">{label}</span>
       <div className="h-px flex-1 bg-zinc-100" />
     </div>
   )
@@ -66,35 +59,106 @@ function SearchPicker({ label, icon: Icon, selected, selectedLabel, selectedSub,
   )
 }
 
-export default function TripForm({ defaultValues, onSubmit, loading, customers = [], assignments = [], drivers = [], vehicles = [] }) {
+export default function TripForm({
+  defaultValues,
+  onSubmit,
+  loading,
+  customers = [],
+  assignments = [],
+  drivers = [],
+  vehicles = [],
+  places = [],
+  consignments = [],
+  metrics = [],
+  rateCharts = [],
+}) {
+  const [form, setForm] = useState({
+    customer_id: defaultValues?.customer_id ?? '',
+    vehicle_assign_id: defaultValues?.vehicle_assign_id ?? defaultValues?.vehicle_assign_to_driver_id ?? '',
+    source: defaultValues?.source ?? '',
+    destination: defaultValues?.destination ?? '',
+    consignment: defaultValues?.consignment ?? '',
+    metrics: defaultValues?.metrics ?? '',
+    quantity: defaultValues?.quantity ?? '',
+    amount: defaultValues?.amount ?? '',
+    start_date_time: defaultValues?.start_date_time
+      ? new Date(defaultValues.start_date_time).toISOString().slice(0, 16)
+      : '',
+    end_date_time: defaultValues?.end_date_time
+      ? new Date(defaultValues.end_date_time).toISOString().slice(0, 16)
+      : '',
+    status: defaultValues?.status ?? 'SCHEDULED',
+  })
+  const [errors, setErrors] = useState({})
   const [customerSearch, setCustomerSearch] = useState('')
-  const [assignmentSearch, setAssignmentSearch] = useState('')
+  const [assignSearch, setAssignSearch] = useState('')
+  // base rate per unit from matched rate chart
+  const [baseRate, setBaseRate] = useState(null)
 
-  const driverMap = useMemo(() => {
-    const map = new Map()
-    drivers.forEach(d => map.set(String(d.id), d))
-    return map
+  // Find matching rate chart when source/destination/consignment/metrics change
+  const findRate = (updatedForm) => {
+    const { source, destination, consignment, metrics: metricsId } = updatedForm
+    if (!source || !destination || !consignment || !metricsId) return null
+    return rateCharts.find(
+      (rc) =>
+        String(rc.from_place) === String(source) &&
+        String(rc.to_place) === String(destination) &&
+        String(rc.metrics_id) === String(metricsId)
+    ) ?? null
+  }
+
+  const set = (key, val) => {
+    setForm((prev) => {
+      const next = { ...prev, [key]: val }
+
+      // Recalculate rate when any of the 4 fields change
+      if (['source', 'destination', 'consignment', 'metrics'].includes(key)) {
+        const matched = findRate(next)
+        if (matched) {
+          setBaseRate(matched.rate)
+          const qty = Number(next.quantity) || 1
+          next.amount = String(matched.rate * qty)
+        } else {
+          setBaseRate(null)
+          // only clear amount if it was auto-filled (baseRate was set)
+          if (baseRate !== null) next.amount = ''
+        }
+      }
+
+      // Recalculate amount when quantity changes and we have a base rate
+      if (key === 'quantity') {
+        const rate = baseRate ?? findRate(prev)?.rate
+        if (rate) {
+          setBaseRate(rate)
+          const qty = Number(val) || 1
+          next.amount = String(rate * qty)
+        }
+      }
+
+      return next
+    })
+    setErrors((e) => ({ ...e, [key]: '' }))
+  }
+
+  // Build assignment display labels
+  const driverById = useMemo(() => {
+    const map = new Map(); drivers.forEach(d => map.set(String(d.id), d)); return map
   }, [drivers])
 
-  const vehicleMap = useMemo(() => {
-    const map = new Map()
-    vehicles.forEach(v => map.set(String(v.id), v))
-    return map
+  const vehicleById = useMemo(() => {
+    const map = new Map(); vehicles.forEach(v => map.set(String(v.id), v)); return map
   }, [vehicles])
 
-  const assignmentOptions = useMemo(() => {
-    return assignments
-      .filter(a => a.status === 'ASSIGNED' || a.id === defaultValues?.vehicle_assign_to_driver_id)
-      .map(a => {
-        const driver = driverMap.get(String(a.user_id))
-        const vehicle = vehicleMap.get(String(a.vehicle_id))
-        return {
-          ...a,
-          label: vehicle ? `${vehicle.registration_number} (${driver?.name || 'No Driver'})` : `Assignment ${a.id}`,
-          subLabel: `${vehicle?.vehicle_model || 'Unknown model'} · ${driver?.mobile || 'No mobile'}`,
-        }
-      })
-  }, [assignments, driverMap, vehicleMap, defaultValues])
+  const assignmentOptions = useMemo(() =>
+    assignments.map(a => {
+      const driver = driverById.get(String(a.driver_id || a.user_id))
+      const vehicle = vehicleById.get(String(a.vehicle_id))
+      return {
+        ...a,
+        label: vehicle ? vehicle.registration_number : `Assignment ${a.id}`,
+        subLabel: driver?.name || 'No driver',
+      }
+    }), [assignments, driverById, vehicleById])
 
   const filteredCustomers = useMemo(() =>
     customers.filter(c =>
@@ -104,159 +168,161 @@ export default function TripForm({ defaultValues, onSubmit, loading, customers =
 
   const filteredAssignments = useMemo(() =>
     assignmentOptions.filter(a =>
-      a.label.toLowerCase().includes(assignmentSearch.toLowerCase()) ||
-      a.subLabel.toLowerCase().includes(assignmentSearch.toLowerCase())
-    ), [assignmentOptions, assignmentSearch])
+      a.label.toLowerCase().includes(assignSearch.toLowerCase()) ||
+      a.subLabel.toLowerCase().includes(assignSearch.toLowerCase())
+    ), [assignmentOptions, assignSearch])
 
-  const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm({
-    defaultValues: defaultValues ?? {
-      customer_id: '',
-      vehicle_assign_to_driver_id: '',
-      source: '',
-      destination: '',
-      start_date_time: '',
-      end_date_time: '',
-      consignment: '',
-      metrics: '',
-      amount: '',
-      status: 'ONGOING',
-    },
-  })
+  const selectedCustomer = customers.find(c => String(c.id) === String(form.customer_id))
+  const selectedAssignment = assignmentOptions.find(a => String(a.id) === String(form.vehicle_assign_id))
 
-  const selectedCustomerId = watch('customer_id')
-  const selectedAssignmentId = watch('vehicle_assign_to_driver_id')
+  const placeOptions = [{ value: '', label: 'Select place...' }, ...places.map(p => ({ value: p.id, label: p.name }))]
+  const consignmentOptions = [{ value: '', label: 'Select consignment...' }, ...consignments.map(c => ({ value: c.id, label: c.name }))]
+  const metricOptions = [{ value: '', label: 'Select metric...' }, ...metrics.map(m => ({ value: m.id, label: m.name }))]
 
-  const selectedCustomer = useMemo(() =>
-    customers.find(c => String(c.id) === String(selectedCustomerId)),
-    [customers, selectedCustomerId])
+  // Show "no rate chart" warning when source+destination+metrics are all set but no match found
+  const noRateChart = !!(
+    form.source && form.destination && form.metrics &&
+    form.source !== form.destination &&
+    !findRate(form)
+  )
 
-  const selectedAssignment = useMemo(() =>
-    assignmentOptions.find(a => String(a.id) === String(selectedAssignmentId)),
-    [assignmentOptions, selectedAssignmentId])
+  const validate = () => {
+    const e = {}
+    if (!form.customer_id) e.customer_id = 'Customer is required'
+    if (!form.vehicle_assign_id) e.vehicle_assign_id = 'Vehicle assignment is required'
+    if (!form.source) e.source = 'Source is required'
+    if (!form.destination) e.destination = 'Destination is required'
+    if (form.source && form.source === form.destination) e.destination = 'Source and destination cannot be the same'
+    if (!form.consignment) e.consignment = 'Consignment is required'
+    if (!form.metrics) e.metrics = 'Metric is required'
+    if (!form.start_date_time) e.start_date_time = 'Start date is required'
+    return e
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    const errs = validate()
+    if (Object.keys(errs).length) { setErrors(errs); return }
+    onSubmit({
+      ...form,
+      quantity: form.quantity ? Number(form.quantity) : undefined,
+      amount: form.amount || '',
+      end_date_time: form.end_date_time || undefined,
+    })
+  }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="w-full space-y-4">
+    <form onSubmit={handleSubmit} className="w-full space-y-4">
 
-      {/* ── People ──────────────────────────────────────────── */}
       <SectionDivider label="People" />
-
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <SearchPicker
-          label="Customer"
-          icon={FiUser}
+          label="Customer" icon={FiUser}
           selected={!!selectedCustomer}
           selectedLabel={selectedCustomer?.customer_name}
           selectedSub={selectedCustomer?.customer_email}
-          onClear={() => setValue('customer_id', '')}
-          search={customerSearch}
-          onSearch={setCustomerSearch}
-          error={errors.customer_id?.message}
+          onClear={() => set('customer_id', '')}
+          search={customerSearch} onSearch={setCustomerSearch}
+          error={errors.customer_id}
         >
           {filteredCustomers.length > 0 ? filteredCustomers.map(c => (
             <button key={c.id} type="button"
               className="w-full px-3 py-2 text-left hover:bg-zinc-50 transition-colors"
-              onClick={() => setValue('customer_id', c.id)}
+              onClick={() => { set('customer_id', c.id); setCustomerSearch('') }}
             >
               <div className="font-medium text-zinc-900 text-sm">{c.customer_name}</div>
               {c.customer_email && <div className="text-xs text-zinc-400">{c.customer_email}</div>}
             </button>
-          )) : (
-            <div className="p-3 text-center text-zinc-400 text-xs">No customers found</div>
-          )}
+          )) : <div className="p-3 text-center text-zinc-400 text-xs">No customers found</div>}
         </SearchPicker>
 
         <SearchPicker
-          label="Vehicle & Driver"
-          icon={FiTruck}
+          label="Vehicle Assignment" icon={FiTruck}
           selected={!!selectedAssignment}
           selectedLabel={selectedAssignment?.label}
           selectedSub={selectedAssignment?.subLabel}
-          onClear={() => setValue('vehicle_assign_to_driver_id', '')}
-          search={assignmentSearch}
-          onSearch={setAssignmentSearch}
-          error={errors.vehicle_assign_to_driver_id?.message}
+          onClear={() => set('vehicle_assign_id', '')}
+          search={assignSearch} onSearch={setAssignSearch}
+          error={errors.vehicle_assign_id}
         >
           {filteredAssignments.length > 0 ? filteredAssignments.map(a => (
             <button key={a.id} type="button"
               className="w-full px-3 py-2 text-left hover:bg-zinc-50 transition-colors"
-              onClick={() => setValue('vehicle_assign_to_driver_id', a.id)}
+              onClick={() => { set('vehicle_assign_id', a.id); setAssignSearch('') }}
             >
               <div className="font-medium text-zinc-900 text-sm">{a.label}</div>
               <div className="text-xs text-zinc-400">{a.subLabel}</div>
             </button>
-          )) : (
-            <div className="p-3 text-center text-zinc-400 text-xs">No active assignments found</div>
-          )}
+          )) : <div className="p-3 text-center text-zinc-400 text-xs">No assignments found</div>}
         </SearchPicker>
       </div>
 
-      <input type="hidden" {...register('customer_id', { required: 'Please select a customer' })} />
-      <input type="hidden" {...register('vehicle_assign_to_driver_id', { required: 'Please select a vehicle assignment' })} />
-
-      {/* ── Route ───────────────────────────────────────────── */}
       <SectionDivider label="Route" />
-
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Input
-          label="Source" placeholder="Kolkata" required
-          leftIcon={<FiMapPin />}
-          error={errors.source?.message}
-          {...register('source', { required: 'Required' })}
-        />
-        <Input
-          label="Destination" placeholder="Delhi" required
-          leftIcon={<FiMapPin />}
-          error={errors.destination?.message}
-          {...register('destination', { required: 'Required' })}
-        />
+        <Select label="Source" options={placeOptions} value={form.source}
+          onChange={(e) => set('source', e.target.value)} error={errors.source} />
+        <Select label="Destination" options={placeOptions} value={form.destination}
+          onChange={(e) => set('destination', e.target.value)} error={errors.destination} />
       </div>
 
-      {/* ── Schedule ────────────────────────────────────────── */}
+      <SectionDivider label="Cargo" />
+      {noRateChart && (
+        <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <FiAlertTriangle size={15} className="text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">No rate chart found</p>
+            <p className="text-xs text-amber-600 mt-0.5">
+              No rate exists for this route + metric combination. Please{' '}
+              <a href="/dashboard/rate-charts" target="_blank" rel="noreferrer" className="underline font-semibold hover:text-amber-800">
+                add it in Rate Charts
+              </a>{' '}
+              first, or enter the amount manually.
+            </p>
+          </div>
+        </div>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Select label="Consignment" options={consignmentOptions} value={form.consignment}
+          onChange={(e) => set('consignment', e.target.value)} error={errors.consignment} />
+        <Select label="Metric" options={metricOptions} value={form.metrics}
+          onChange={(e) => set('metrics', e.target.value)} error={errors.metrics} />
+        <Input label="Quantity" type="number" placeholder="e.g. 3"
+          value={form.quantity} onChange={(e) => set('quantity', e.target.value)} />
+        <div className="space-y-1">
+          <Input
+            label="Amount (₹)"
+            type="number"
+            placeholder={baseRate ? `Auto: ₹${baseRate} × qty` : 'e.g. 25000'}
+            value={form.amount}
+            onChange={(e) => { setBaseRate(null); set('amount', e.target.value) }}
+          />
+          {baseRate && (
+            <p className="text-[11px] text-emerald-600 font-medium">
+              ₹{baseRate.toLocaleString('en-IN')} × {Number(form.quantity) || 1} = ₹{Number(form.amount).toLocaleString('en-IN')}
+            </p>
+          )}
+        </div>
+      </div>
+
       <SectionDivider label="Schedule" />
-
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Input
-          label="Start Date & Time" type="datetime-local"
+        <Input label="Start Date & Time" type="datetime-local"
           leftIcon={<FiCalendar />}
-          {...register('start_date_time')}
+          value={form.start_date_time}
+          onChange={(e) => set('start_date_time', e.target.value)}
+          error={errors.start_date_time}
         />
-        <Input
-          label="End Date & Time" type="datetime-local"
+        <Input label="End Date & Time" type="datetime-local"
           leftIcon={<FiCalendar />}
-          {...register('end_date_time')}
+          value={form.end_date_time}
+          onChange={(e) => set('end_date_time', e.target.value)}
         />
+        <Select label="Status" options={STATUS_OPTIONS} value={form.status}
+          onChange={(e) => set('status', e.target.value)} />
       </div>
 
-      {/* ── Cargo & Financials ──────────────────────────────── */}
-      <SectionDivider label="Cargo & Financials" />
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Input
-          label="Consignment" placeholder="Electronics, Furniture..."
-          leftIcon={<FiPackage />}
-          {...register('consignment')}
-        />
-        <Input
-          label="Metrics (KM / Weight)" placeholder="1500 KM"
-          {...register('metrics')}
-        />
-        <Input
-          label="Amount (₹)" type="number" placeholder="45000"
-          leftIcon={<FaRupeeSign  />}
-          {...register('amount')}
-        />
-        <Controller control={control} name="status"
-          render={({ field }) => <Select label="Status" options={STATUS_OPTIONS} {...field} />}
-        />
-      </div>
-
-      {/* ── Submit ──────────────────────────────────────────── */}
       <div className="flex justify-end pt-3 border-t border-zinc-100">
-        <Button
-          type="submit" loading={loading}
-          className="min-w-[160px]"
-          leftIcon={<FiCheckCircle size={16} />}
-        >
+        <Button type="submit" loading={loading} className="min-w-[160px]" leftIcon={<FiCheckCircle size={16} />}>
           {defaultValues ? 'Update Trip' : 'Create Trip'}
         </Button>
       </div>

@@ -17,6 +17,7 @@ import Places from '../pages/dashboard/Places.jsx'
 import Consignments from '../pages/dashboard/Consignments.jsx'
 import Metrics from '../pages/dashboard/Metrics.jsx'
 import RateCharts from '../pages/dashboard/RateCharts.jsx'
+import Challans from '../pages/dashboard/Challans.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { usePermissions } from '../hooks/usePermissions.js'
 
@@ -97,6 +98,7 @@ export const router = createBrowserRouter([
       { path: 'consignments', element: <Consignments /> },
       { path: 'metrics', element: <Metrics /> },
       { path: 'rate-charts', element: <RateCharts /> },
+      { path: 'challans', element: <Challans /> },
     ],
   },
   { path: '*', element: <NotFound /> },

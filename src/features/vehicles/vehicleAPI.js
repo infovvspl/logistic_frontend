@@ -4,6 +4,8 @@ import { USE_MOCKS } from '../../utils/constants.js'
 const ALLOWED_VEHICLE_FIELDS = [
   'registration_number',
   'chassis_number',
+  'engine_number',
+  'vehicle_engine_no',
   'vehicle_type',
   'vehicle_manufacture_company',
   'vehicle_model',
@@ -13,23 +15,46 @@ const ALLOWED_VEHICLE_FIELDS = [
   'vehicle_seating_capacity',
   'vehicle_body_type',
   'vehicle_fuel_type',
+  'vehicle_status',
+  // Registration
   'vehicle_registration_certificate_number',
   'vehicle_registration_certificate_expiry_date',
+  // Insurance
   'vehicle_insurance_company_name',
   'vehicle_insurance_policy_number',
+  'vehicle_insurance_policy_date',
   'vehicle_insurance_expiry_date',
+  // PUC
+  'vehicle_pollution_under_control_certificate_number',
   'vehicle_pollution_under_control_certificate_issue_date',
   'vehicle_pollution_under_control_certificate_expiry_date',
+  // Fitness
   'vehicle_fitness_certificate_issue_date',
   'vehicle_fitness_certificate_expiry_date',
+  // Permit
   'vehicle_permit_issue_date',
   'vehicle_permit_expiry_date',
   'vehicle_permit_type',
+  // Andhra permit
+  'andhra_permit_status',
+  'andhra_permit_expiry_date',
+  'andhra_tax',
+  'odisha_tax',
+  // GPS / VTS
+  'vehicle_gps_company',
+  'vehicle_gps_device_id',
+  'vehicle_gps_device_expiry_date',
+  'vehicle_mining_gps_device_id',
+  'vehicle_mining_gps_device_expiry_date',
+  'vehicle_vts_device_id',
+  'vehicle_vts_device_expiry_date',
+  // Ownership
   'vehicle_owner_name',
   'vehicle_purchase_date',
-  'vehicle_status',
-  'vehicle_gps_device_id',
+  // Assignment
   'branch_id',
+  'company_id',
+  // Files
   'vehicle_image',
   'vehicle_registration_certificate_file',
   'vehicle_insurance_file',

@@ -6,7 +6,7 @@ const SKIP_KEYS = ['id', '_id', 'role_id', 'branch_id', 'company_id', 'vehicle_i
 
 const PROFILE_IMAGE_KEYS = ['image', 'pro_image_url', 'profile_image', 'avatar', 'photo']
 const DOC_IMAGE_KEYS = [
-  'aadhar_file', 'pan_file', 'passport_file', 'license_file',
+  'aadhar_file', 'pan_file', 'passport_file', 'license_file', 'bank_passbook_file',
   'vehicle_image', 'vehicle_registration_certificate_file',
   'vehicle_insurance_file', 'vehicle_pollution_under_control_certificate_file',
   'vehicle_fitness_certificate_file', 'vehicle_permit_file',
