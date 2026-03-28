@@ -1,7 +1,13 @@
 import { useState, useMemo } from 'react'
-import { FiSearch, FiX, FiFileText, FiCalendar, FiCheckCircle, FiTruck } from 'react-icons/fi'
+import { FiSearch, FiX, FiFileText, FiCalendar, FiCheckCircle, FiTruck, FiAlertTriangle, FiCreditCard } from 'react-icons/fi'
 import Input from '../ui/Input.jsx'
 import Button from '../ui/Button.jsx'
+
+const ADVANCE_TYPES = [
+  { value: 'BANK_TRANSFER', label: 'Bank Transfer' },
+  { value: 'CASH_BOOK',     label: 'Cash Book' },
+  { value: 'DRIVER',        label: 'Driver' },
+]
 
 function SectionDivider({ label }) {
   return (
@@ -12,82 +18,146 @@ function SectionDivider({ label }) {
   )
 }
 
+function ReadOnlyField({ label, value, highlight }) {
+  return (
+    <div className="space-y-1">
+      <label className="block text-sm font-medium text-zinc-700">{label}</label>
+      <div className={`flex items-center h-10 px-3 rounded-lg border text-sm font-semibold transition-colors ${
+        highlight === 'emerald' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' :
+        highlight === 'red'     ? 'border-red-200 bg-red-50 text-red-800' :
+        highlight === 'amber'   ? 'border-amber-200 bg-amber-50 text-amber-800' :
+        value ? 'border-zinc-200 bg-zinc-50 text-zinc-800' : 'border-zinc-200 bg-zinc-50 text-zinc-400'
+      }`}>
+        {value || 'Auto-calculated'}
+      </div>
+    </div>
+  )
+}
+
+function recalc(f) {
+  const next = { ...f }
+
+  const loadingTon = Number(f.weight_at_loading)  || 0
+  const unloadTon  = Number(f.weight_at_unloading) || 0
+  if (loadingTon > 0 && unloadTon > 0) {
+    next.shortage = String(Math.max(0, (loadingTon - unloadTon) * 1000))
+  }
+
+  const shortageKg   = Number(next.shortage) || 0
+  const shortageRate = Number(f.shortage_rate) || 0
+  next.shortage_amount = shortageKg > 150 && shortageRate > 0
+    ? String((shortageKg * shortageRate).toFixed(2))
+    : ''
+
+  const total       = Number(f.total_amount) || 0
+  const tdsPct      = Number(f.tds_percentage) || 0
+  const cgstPct     = Number(f.cgst_percentage) || 0
+  const sgstPct     = Number(f.sgst_percentage) || 0
+  const dieselAdv   = Number(f.diesel_advance) || 0
+  const driverAdv   = Number(f.advance) || 0
+  const shortageAmt = Number(next.shortage_amount) || 0
+  const otherExp    = Number(f.other_expense) || 0
+  const advanceAmt  = Number(f.advance_amount) || 0
+
+  next.tds_amount  = tdsPct  > 0 ? String(((total * tdsPct)  / 100).toFixed(2)) : ''
+  next.cgst_amount = cgstPct > 0 ? String(((total * cgstPct) / 100).toFixed(2)) : ''
+  next.sgst_amount = sgstPct > 0 ? String(((total * sgstPct) / 100).toFixed(2)) : ''
+
+  const tdsAmt  = Number(next.tds_amount)  || 0
+  const cgstAmt = Number(next.cgst_amount) || 0
+  const sgstAmt = Number(next.sgst_amount) || 0
+
+  next.balance = String(
+    (total - tdsAmt - dieselAdv - driverAdv - shortageAmt - otherExp - advanceAmt + cgstAmt + sgstAmt).toFixed(2)
+  )
+
+  return next
+}
+
 export default function ChallanForm({
   defaultValues,
   onSubmit,
   loading,
   serverError = null,
   trips = [],
-  tripMeta = {}, // { [trip_id]: { customerName, fromPlace, toPlace, metric, ratePerUnit, driverName } }
+  tripMeta = {},
+  bankAccounts = [],
 }) {
   const isEdit = !!defaultValues
-
   const today = new Date().toISOString().slice(0, 10)
 
-  const [form, setForm] = useState({
-    challan_no: defaultValues?.challan_no ?? '',
-    bill_no: defaultValues?.bill_no ?? '',
-    challan_date: defaultValues?.challan_date ?? today,
-    trip_id: defaultValues?.trip_id ?? '',
-    unloading_date: defaultValues?.unloading_date ?? '',
-    permit_number: defaultValues?.permit_number ?? '',
-    transport: defaultValues?.transport ?? '',
-    vehicle_number: defaultValues?.vehicle_number ?? '',
-    description: defaultValues?.description ?? '',
-    weight_at_loading: defaultValues?.weight_at_loading ?? '',
+  const [form, setForm] = useState(() => recalc({
+    challan_no:          defaultValues?.challan_no          ?? '',
+    bill_no:             defaultValues?.bill_no             ?? '',
+    challan_date:        defaultValues?.challan_date        ?? today,
+    trip_id:             defaultValues?.trip_id             ?? '',
+    unloading_date:      defaultValues?.unloading_date      ?? '',
+    permit_number:       defaultValues?.permit_number       ?? '',
+    transport:           defaultValues?.transport           ?? '',
+    vehicle_number:      defaultValues?.vehicle_number      ?? '',
+    description:         defaultValues?.description         ?? '',
+    hsn_code:            defaultValues?.hsn_code            ?? '',
+    weight_at_loading:   defaultValues?.weight_at_loading   ?? '',
     weight_at_unloading: defaultValues?.weight_at_unloading ?? '',
-    shortage: defaultValues?.shortage ?? '',
-    hsn_code: defaultValues?.hsn_code ?? '',
-    total_amount: defaultValues?.total_amount ?? '',
-    tds: defaultValues?.tds ?? '',
-    remark: defaultValues?.remark ?? '',
-    advance: defaultValues?.advance ?? '',
-    tc_date: defaultValues?.tc_date ?? '',
-    balance: defaultValues?.balance ?? '',
-  })
+    shortage:            defaultValues?.shortage            ?? '',
+    shortage_rate:       defaultValues?.shortage_rate       ?? '',
+    shortage_amount:     defaultValues?.shortage_amount     ?? '',
+    total_amount:        defaultValues?.total_amount        ?? '',
+    tds_percentage:      defaultValues?.tds_percentage      ?? '',
+    tds_amount:          defaultValues?.tds_amount          ?? '',
+    diesel_advance:      defaultValues?.diesel_advance      ?? '',
+    advance:             defaultValues?.advance             ?? '',
+    cgst_percentage:     defaultValues?.cgst_percentage     ?? '',
+    cgst_amount:         defaultValues?.cgst_amount         ?? '',
+    sgst_percentage:     defaultValues?.sgst_percentage     ?? '',
+    sgst_amount:         defaultValues?.sgst_amount         ?? '',
+    other_expense:       defaultValues?.other_expense       ?? '',
+    balance:             defaultValues?.balance             ?? '',
+    tc_date:             defaultValues?.tc_date             ?? '',
+    remark:              defaultValues?.remark              ?? '',
+    advance_type:        defaultValues?.advance_type        ?? '',
+    advance_amount:      defaultValues?.advance_amount      ?? '',
+    advance_date:        defaultValues?.advance_date        ?? '',
+    advance_account_number: defaultValues?.advance_account_number ?? '',
+  }))
+
   const [errors, setErrors] = useState({})
   const [tripSearch, setTripSearch] = useState('')
 
   const set = (key, val) => {
     setForm((prev) => {
       const next = { ...prev, [key]: val }
-      // auto-calc balance whenever financial fields change
-      if (['total_amount', 'tds', 'advance'].includes(key)) {
-        const total = Number(key === 'total_amount' ? val : prev.total_amount) || 0
-        const tds = Number(key === 'tds' ? val : prev.tds) || 0
-        const advance = Number(key === 'advance' ? val : prev.advance) || 0
-        next.balance = String(total + tds - advance)
+      if (key === 'weight_at_unloading') {
+        const m = prev.trip_id ? (tripMeta[String(prev.trip_id)] ?? {}) : {}
+        const rate = Number(m.ratePerUnit)
+        const unloadTon = Number(val)
+        if (rate > 0 && unloadTon > 0) next.total_amount = String((unloadTon * rate).toFixed(2))
       }
-      // auto-calc shortage = weight_at_loading - weight_at_unloading
-      if (['weight_at_loading', 'weight_at_unloading'].includes(key)) {
-        const loading = Number(key === 'weight_at_loading' ? val : prev.weight_at_loading)
-        const unloading = Number(key === 'weight_at_unloading' ? val : prev.weight_at_unloading)
-        if (loading > 0 && unloading > 0) {
-          next.shortage = String(Math.max(0, loading - unloading))
-        }
-      }
-      return next
+      // clear account when switching away from bank transfer
+      if (key === 'advance_type' && val !== 'BANK_TRANSFER') next.advance_account_number = ''
+      return recalc(next)
     })
     setErrors((e) => ({ ...e, [key]: '' }))
   }
 
-  // Auto-fill from trip when trip_id changes
   const handleTripSelect = (tripId) => {
     const m = tripMeta[String(tripId)] ?? {}
-    setForm((prev) => {
-      const total = Number(m.tripAmount) || 0
-      const tds = Number(prev.tds) || 0
-      const advance = Number(prev.advance) || 0
-      return {
-        ...prev,
-        trip_id: tripId,
-        vehicle_number: m.vehicleNumber || prev.vehicle_number,
-        unloading_date: m.endDateTime || prev.unloading_date,
-        transport: m.transport || prev.transport,
-        total_amount: m.tripAmount !== '' ? String(m.tripAmount) : prev.total_amount,
-        balance: String(total + tds - advance),
-      }
-    })
+    const rate = Number(m.ratePerUnit)
+    const loadingWeight = m.quantity !== undefined && m.quantity !== '' ? String(m.quantity) : ''
+    const unloadTon = Number(form.weight_at_unloading)
+    let totalAmount
+    if (rate > 0 && unloadTon > 0) totalAmount = String((unloadTon * rate).toFixed(2))
+    else if (rate > 0 && Number(loadingWeight) > 0) totalAmount = String((Number(loadingWeight) * rate).toFixed(2))
+    else totalAmount = m.tripAmount !== undefined && m.tripAmount !== '' ? String(m.tripAmount) : ''
+    setForm((prev) => recalc({
+      ...prev,
+      trip_id:           tripId,
+      vehicle_number:    m.vehicleNumber || prev.vehicle_number,
+      unloading_date:    m.endDateTime   || prev.unloading_date,
+      transport:         m.transport     || prev.transport,
+      total_amount:      totalAmount,
+      weight_at_loading: loadingWeight   || prev.weight_at_loading,
+    }))
     setTripSearch('')
   }
 
@@ -99,13 +169,16 @@ export default function ChallanForm({
     return trips.filter((t) => {
       const m = tripMeta[String(t.id)] ?? {}
       return (
-        (m.fromPlace ?? '').toLowerCase().includes(q) ||
-        (m.toPlace ?? '').toLowerCase().includes(q) ||
+        (m.fromPlace    ?? '').toLowerCase().includes(q) ||
+        (m.toPlace      ?? '').toLowerCase().includes(q) ||
         (m.customerName ?? '').toLowerCase().includes(q) ||
         String(t.id).toLowerCase().includes(q)
       )
     })
   }, [trips, tripSearch, tripMeta])
+
+  const shortageKg       = Number(form.shortage) || 0
+  const showShortageRate = shortageKg > 150
 
   const validate = () => {
     const e = {}
@@ -119,11 +192,19 @@ export default function ChallanForm({
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
     const payload = { ...form }
-    ;['weight_at_loading', 'weight_at_unloading', 'shortage', 'total_amount', 'tds', 'advance', 'balance'].forEach((f) => {
+    const numFields = [
+      'weight_at_loading', 'weight_at_unloading', 'shortage', 'shortage_rate', 'shortage_amount',
+      'total_amount', 'tds_percentage', 'tds_amount', 'diesel_advance', 'advance',
+      'cgst_percentage', 'cgst_amount', 'sgst_percentage', 'sgst_amount',
+      'other_expense', 'advance_amount', 'balance',
+    ]
+    numFields.forEach((f) => {
       if (payload[f] !== '' && payload[f] !== undefined) payload[f] = Number(payload[f])
     })
     onSubmit(payload)
   }
+
+  const fmt = (v) => v ? `₹${Number(v).toLocaleString('en-IN')}` : ''
 
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-4">
@@ -139,7 +220,6 @@ export default function ChallanForm({
       </div>
 
       <SectionDivider label="Trip" />
-      {/* Trip picker */}
       <div className="space-y-1.5">
         <span className="text-sm font-medium text-zinc-800">Trip <span className="text-rose-500">*</span></span>
         {selectedTrip ? (
@@ -166,7 +246,7 @@ export default function ChallanForm({
                 return (
                   <button key={t.id} type="button"
                     className="w-full px-3 py-2 text-left hover:bg-zinc-50 transition-colors"
-                    onClick={() => { handleTripSelect(t.id) }}>
+                    onClick={() => handleTripSelect(t.id)}>
                     <div className="font-medium text-zinc-900">{m.fromPlace ?? '—'} → {m.toPlace ?? '—'}</div>
                     <div className="text-xs text-zinc-400">{m.customerName ?? ''}{m.driverName ? ` · Driver: ${m.driverName}` : ''}</div>
                   </button>
@@ -178,7 +258,6 @@ export default function ChallanForm({
         {errors.trip_id && <p className="text-xs text-rose-600 font-medium">{errors.trip_id}</p>}
       </div>
 
-      {/* Trip info read-only display */}
       {selectedTrip && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 rounded-xl bg-zinc-50 border border-zinc-100">
           {[
@@ -205,8 +284,8 @@ export default function ChallanForm({
           value={form.transport} onChange={(e) => set('transport', e.target.value)} />
         <Input label="Vehicle Number" placeholder="WB-01-AB-1234" leftIcon={<FiTruck />}
           value={form.vehicle_number} onChange={(e) => set('vehicle_number', e.target.value)} />
-        <Input label="Permit Number" placeholder="PRM-12345"
-          value={form.permit_number} onChange={(e) => set('permit_number', e.target.value)} />
+        {/* <Input label="Permit Number" placeholder="PRM-12345"
+          value={form.permit_number} onChange={(e) => set('permit_number', e.target.value)} /> */}
         <Input label="Unloading Date" type="date" leftIcon={<FiCalendar />}
           value={form.unloading_date} onChange={(e) => set('unloading_date', e.target.value)} />
       </div>
@@ -217,42 +296,158 @@ export default function ChallanForm({
           value={form.description} onChange={(e) => set('description', e.target.value)} />
         <Input label="HSN Code" placeholder="HSN-8877"
           value={form.hsn_code} onChange={(e) => set('hsn_code', e.target.value)} />
-        <Input label="Weight at Loading" type="number" placeholder="20.5"
+        <Input label="Weight at Loading (Ton)" type="number" placeholder="20.5"
           value={form.weight_at_loading} onChange={(e) => set('weight_at_loading', e.target.value)} />
-        <Input label="Weight at Unloading" type="number" placeholder="20.2"
+        <Input label="Weight at Unloading (Ton)" type="number" placeholder="20.2"
           value={form.weight_at_unloading} onChange={(e) => set('weight_at_unloading', e.target.value)} />
-        <Input label="Shortage" type="number" placeholder="Auto-calculated"
-          value={form.shortage} onChange={(e) => set('shortage', e.target.value)} />
+
+        <div className="space-y-1">
+          <label className="block text-sm font-medium text-zinc-700">Shortage (kg)</label>
+          <div className={`flex items-center gap-2 h-10 px-3 rounded-lg border text-sm font-semibold ${
+            shortageKg > 151 ? 'border-red-200 bg-red-50 text-red-800' :
+            shortageKg > 0   ? 'border-amber-200 bg-amber-50 text-amber-800' :
+            'border-zinc-200 bg-zinc-50 text-zinc-400'
+          }`}>
+            {shortageKg > 151 && <FiAlertTriangle size={14} />}
+            {form.shortage ? `${Number(form.shortage).toLocaleString('en-IN')} kg` : 'Auto-calculated'}
+          </div>
+          {shortageKg > 151 && (
+            <p className="text-[11px] text-red-500 font-medium">Shortage exceeds 150 kg — rate required</p>
+          )}
+        </div>
       </div>
 
       <SectionDivider label="Financials" />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Input label="Total Amount (₹)" type="number" placeholder="24240"
+
+        <Input label="Total Amount (₹)" type="number" placeholder="Auto-filled from trip"
           value={form.total_amount} onChange={(e) => set('total_amount', e.target.value)} />
-        <Input label="TDS (₹)" type="number" placeholder="242.40"
-          value={form.tds} onChange={(e) => set('tds', e.target.value)} />
-        <Input label="Advance (₹)" type="number" placeholder="5000"
-          value={form.advance} onChange={(e) => set('advance', e.target.value)} />
-        {/* Balance read-only display */}
-        <div className="space-y-1">
-          <label className="block text-sm font-medium text-zinc-700">Balance (₹)</label>
-          <div className={`flex items-center h-10 px-3 rounded-lg border text-sm font-semibold transition-colors ${
-            form.balance ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-zinc-200 bg-zinc-50 text-zinc-400'
-          }`}>
-            {form.balance ? `₹${Number(form.balance).toLocaleString('en-IN')}` : 'Auto-calculated'}
+
+        {showShortageRate && (
+          <>
+            <Input label="Shortage Rate (₹/kg)" type="number" placeholder="e.g. 0.5"
+              value={form.shortage_rate} onChange={(e) => set('shortage_rate', e.target.value)} />
+            <ReadOnlyField label="Shortage Amount (₹)" value={fmt(form.shortage_amount)} highlight="red" />
+          </>
+        )}
+
+        <Input label="TDS %" type="number" placeholder="2"
+          value={form.tds_percentage} onChange={(e) => set('tds_percentage', e.target.value)} />
+        <ReadOnlyField label="TDS Amount (₹)" value={fmt(form.tds_amount)} highlight="amber" />
+
+        <Input label="Diesel Advance (₹)" type="number" placeholder="0"
+          value={form.diesel_advance} onChange={(e) => set('diesel_advance', e.target.value)} />
+        {/* <Input label="Driver Advance (₹)" type="number" placeholder="0"
+          value={form.advance} onChange={(e) => set('advance', e.target.value)} /> */}
+
+        <Input label="CGST %" type="number" placeholder="0"
+          value={form.cgst_percentage} onChange={(e) => set('cgst_percentage', e.target.value)} />
+        <ReadOnlyField label="CGST Amount (₹)" value={fmt(form.cgst_amount)} highlight="emerald" />
+
+        <Input label="SGST %" type="number" placeholder="0"
+          value={form.sgst_percentage} onChange={(e) => set('sgst_percentage', e.target.value)} />
+        <ReadOnlyField label="SGST Amount (₹)" value={fmt(form.sgst_amount)} highlight="emerald" />
+
+        <div className="col-span-full">
+          <Input label="Other Expense (₹)" type="number" placeholder="0"
+            value={form.other_expense} onChange={(e) => set('other_expense', e.target.value)} />
+        </div>
+
+        {/* Advance type toggle buttons */}
+        <div className="col-span-full space-y-1.5">
+          <label className="block text-sm font-medium text-zinc-700">Advance Type</label>
+          <div className="flex gap-2 flex-wrap">
+            {ADVANCE_TYPES.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => set('advance_type', form.advance_type === opt.value ? '' : opt.value)}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-semibold transition-all ${
+                  form.advance_type === opt.value
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50'
+                }`}
+              >
+                {opt.value === 'BANK_TRANSFER' && <FiCreditCard size={13} />}
+                {opt.label}
+              </button>
+            ))}
           </div>
+        </div>
+
+        {/* Bank account selector — only when BANK_TRANSFER */}
+        {form.advance_type === 'BANK_TRANSFER' && (
+          <div className="col-span-full space-y-1">
+            <label className="block text-sm font-medium text-zinc-700">Select Account</label>
+            {(() => {
+              const filtered = form.transport
+                ? bankAccounts.filter((a) => a.companyName?.toLowerCase() === form.transport.toLowerCase())
+                : bankAccounts
+              if (filtered.length === 0) return (
+                <p className="text-xs text-zinc-400 italic">
+                  {form.transport
+                    ? `No bank accounts found for "${form.transport}". Add accounts in Companies.`
+                    : 'No bank accounts found. Add accounts in Companies.'}
+                </p>
+              )
+              return (
+                <div className="grid grid-cols-1 gap-2">
+                  {filtered.map((acc) => (
+                    <button
+                      key={acc.value}
+                      type="button"
+                      onClick={() => set('advance_account_number', form.advance_account_number === acc.value ? '' : acc.value)}
+                      className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm text-left transition-all ${
+                        form.advance_account_number === acc.value
+                          ? 'border-blue-500 bg-blue-50 text-blue-700 font-semibold'
+                          : 'border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50'
+                      }`}
+                    >
+                      <FiCreditCard size={13} className="shrink-0 text-zinc-400" />
+                      {acc.label}
+                    </button>
+                  ))}
+                </div>
+              )
+            })()}
+          </div>
+        )}
+
+        <Input label="Advance Amount (₹)" type="number" placeholder="0"
+          value={form.advance_amount} onChange={(e) => set('advance_amount', e.target.value)} />
+        <Input label="Advance Date" type="date" leftIcon={<FiCalendar />}
+          value={form.advance_date} onChange={(e) => set('advance_date', e.target.value)} />
+
+        <div className="col-span-full">
+          <ReadOnlyField
+            label="Balance (₹)"
+            value={form.balance ? `₹${Number(form.balance).toLocaleString('en-IN')}` : ''}
+            highlight="emerald"
+          />
           {form.total_amount && (
-            <p className="text-[11px] text-zinc-400">
-              ₹{Number(form.total_amount).toLocaleString('en-IN')} + ₹{Number(form.tds || 0).toLocaleString('en-IN')} TDS − ₹{Number(form.advance || 0).toLocaleString('en-IN')} advance
+            <p className="text-[11px] text-zinc-400 mt-1">
+              Total {fmt(form.total_amount)}
+              {form.tds_amount      ? ` − TDS ${fmt(form.tds_amount)}`            : ''}
+              {form.diesel_advance  ? ` − Diesel Adv ${fmt(form.diesel_advance)}` : ''}
+              {form.advance         ? ` − Driver Adv ${fmt(form.advance)}`        : ''}
+              {form.shortage_amount ? ` − Shortage ${fmt(form.shortage_amount)}`  : ''}
+              {form.other_expense   ? ` − Other ${fmt(form.other_expense)}`       : ''}
+              {form.advance_amount  ? ` − Advance ${fmt(form.advance_amount)}`    : ''}
+              {form.cgst_amount     ? ` + CGST ${fmt(form.cgst_amount)}`          : ''}
+              {form.sgst_amount     ? ` + SGST ${fmt(form.sgst_amount)}`          : ''}
             </p>
           )}
         </div>
-        <Input label="TC Date" type="date" leftIcon={<FiCalendar />}
-          value={form.tc_date} onChange={(e) => set('tc_date', e.target.value)} />
-        <div className="col-span-full">
+
+        {/* <div className="col-span-full">
           <Input label="Remark" placeholder="Good condition"
             value={form.remark} onChange={(e) => set('remark', e.target.value)} />
-        </div>
+        </div> */}
+      </div>
+
+      <div className="grid grid-cols-1 gap-3">
+        <Input label="Remark" placeholder="Good condition"
+          value={form.remark} onChange={(e) => set('remark', e.target.value)} />
       </div>
 
       <div className="flex justify-end pt-3 border-t border-zinc-100">

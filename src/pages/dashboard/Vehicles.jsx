@@ -1,6 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { FiPlus, FiTrash2, FiEdit2, FiUser, FiEye, FiTruck, FiSearch, FiMapPin, FiRefreshCw } from 'react-icons/fi'
+import { 
+  FiPlus, FiTrash2, FiEdit2, FiUser, FiEye, FiTruck, 
+  FiSearch, FiMapPin, FiRefreshCw, FiCheckCircle 
+} from 'react-icons/fi'
+
+// UI Components
 import Button from '../../components/ui/Button.jsx'
 import Table from '../../components/ui/Table.jsx'
 import Modal from '../../components/ui/Modal.jsx'
@@ -9,6 +14,8 @@ import ConfirmDialog from '../../components/common/ConfirmDialog.jsx'
 import DetailModal from '../../components/common/DetailModal.jsx'
 import VehicleForm from '../../components/forms/VehicleForm.jsx'
 import AssignmentForm from '../../components/forms/AssignmentForm.jsx'
+
+// APIs
 import * as vehicleAPI from '../../features/vehicles/vehicleAPI.js'
 import * as branchAPI from '../../features/branches/branchAPI.js'
 import * as assignmentAPI from '../../features/assignments/assignmentAPI.js'
@@ -25,13 +32,14 @@ export default function Vehicles() {
   const [view, setView] = useState({ open: false, record: null, driver: null, helper: null })
   const [confirm, setConfirm] = useState({ open: false, id: null })
 
-  // Data Fetching
+  // --- Queries ---
   const vehiclesQuery = useQuery({ queryKey: ['vehicles'], queryFn: vehicleAPI.listVehicles })
   const branchesQuery = useQuery({ queryKey: ['branches'], queryFn: branchAPI.listBranches })
   const companiesQuery = useQuery({ queryKey: ['companies'], queryFn: companyAPI.listCompanies })
   const rolesQuery = useQuery({ queryKey: ['roles'], queryFn: roleAPI.listRoles })
   const assignmentsQuery = useQuery({ queryKey: ['assignments'], queryFn: assignmentAPI.listAssignments })
 
+  // --- Role Logic ---
   const driverRole = useMemo(() => {
     const roles = rolesQuery.data?.items ?? []
     return roles.find((r) => String(r.designation || '').toLowerCase().includes('driver')) ?? null
@@ -54,7 +62,7 @@ export default function Vehicles() {
     queryFn: userAPI.listUsers,
   })
 
-  // Mutations
+  // --- Mutations ---
   const createMutation = useMutation({
     mutationFn: vehicleAPI.createVehicle,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['vehicles'] }); setModal({ open: false, vehicle: null }) },
@@ -88,7 +96,7 @@ export default function Vehicles() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['vehicles'] }),
   })
 
-  // Mappings
+  // --- Logic Mappings ---
   const branchNameById = useMemo(() => {
     const map = new Map();
     (branchesQuery.data?.items ?? []).forEach((b) => map.set(String(b.id), b.branch_name))
@@ -123,7 +131,6 @@ export default function Vehicles() {
     return map
   }, [helpers])
 
-  // Filter logic
   const filteredRows = useMemo(() => {
     const rows = vehiclesQuery.data?.items ?? []
     if (!searchTerm) return rows
@@ -133,19 +140,20 @@ export default function Vehicles() {
     )
   }, [vehiclesQuery.data, searchTerm])
 
+  // --- Table Configuration ---
   const columns = useMemo(() => [
     {
       key: 'registration_number',
       header: 'Vehicle Identity',
       render: (r) => (
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-zinc-100 rounded-lg text-zinc-600">
-            <FiTruck size={20} />
+        <div className="flex items-center gap-4 py-1">
+          <div className="p-3 bg-zinc-900 text-white rounded-xl shadow-lg shrink-0">
+            <FiTruck size={18} />
           </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-zinc-900 tracking-tight leading-none mb-1">{r.registration_number}</span>
-            <span className="text-[11px] font-medium text-zinc-400 uppercase tracking-tighter">
-              {r.vehicle_model || r.vehicle_manufacture_company || 'Standard Model'} • {r.vehicle_type}
+          <div className="flex flex-col min-w-0">
+            <span className="font-bold text-zinc-900 tracking-tight text-base leading-tight uppercase">{r.registration_number}</span>
+            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest truncate">
+              {r.vehicle_model || 'Standard'} • {r.vehicle_type}
             </span>
           </div>
         </div>
@@ -153,83 +161,70 @@ export default function Vehicles() {
     },
     {
       key: 'branch',
-      header: 'Branch',
+      header: 'Location',
       render: (r) => (
-        <div className="flex items-center gap-1.5 text-zinc-600">
-          <FiMapPin size={14} className="text-zinc-400" />
-          <span className="text-sm">{branchNameById.get(String(r.branch_id)) ?? '—'}</span>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-50 border border-zinc-100 w-fit">
+          <FiMapPin size={12} className="text-zinc-400" />
+          <span className="text-xs font-bold text-zinc-700">{branchNameById.get(String(r.branch_id)) ?? '—'}</span>
         </div>
       )
     },
     {
       key: 'driver',
-      header: 'Driver',
+      header: 'Staff Assignment',
       render: (r) => {
         const assignment = assignmentByVehicleId.get(String(r.id))
         const driver = assignment ? driverById.get(String(assignment.driver_id || assignment.user_id)) : null
-
-        if (driver) {
-          return (
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-xs border border-blue-200 shrink-0">
-                {driver.name.charAt(0)}
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold text-zinc-900 leading-tight">{driver.name}</span>
-                <button
-                  onClick={() => setDriverModal({ open: true, vehicle: r, assignment })}
-                  className="text-[10px] text-blue-600 font-bold hover:text-blue-800 flex items-center gap-1 transition-colors"
-                >
-                  <FiRefreshCw size={10} /> REASSIGN
-                </button>
-              </div>
-            </div>
-          )
-        }
-        return (
-          <Button variant="ghost" size="sm"
-            className="text-[11px] h-8 bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-zinc-100"
-            leftIcon={<FiUser size={14} />}
-            onClick={() => setDriverModal({ open: true, vehicle: r, assignment: null })}
-          >
-            Assign Driver
-          </Button>
-        )
-      }
-    },
-    {
-      key: 'helper',
-      header: 'Helper',
-      render: (r) => {
-        const assignment = assignmentByVehicleId.get(String(r.id))
         const helper = assignment ? helperById.get(String(assignment.helper_id)) : null
 
-        if (helper) {
-          return (
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-700 font-bold text-xs border border-orange-200 shrink-0">
-                {helper.name.charAt(0)}
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold text-zinc-900 leading-tight">{helper.name}</span>
-                <button
-                  onClick={() => setHelperModal({ open: true, vehicle: r, assignment })}
-                  className="text-[10px] text-orange-600 font-bold hover:text-orange-800 flex items-center gap-1 transition-colors"
+        return (
+          <div className="flex flex-col gap-2">
+            {/* Driver Pill */}
+            {driver ? (
+              <div className="flex items-center justify-between gap-3 bg-blue-50/50 p-1.5 pr-3 rounded-full border border-blue-100 w-fit group/staff">
+                <div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center text-[10px] text-white font-bold">
+                  {driver.name.charAt(0)}
+                </div>
+                <span className="text-[11px] font-bold text-blue-900">{driver.name}</span>
+                <button 
+                   onClick={() => setDriverModal({ open: true, vehicle: r, assignment })}
+                   className="opacity-0 group-hover/staff:opacity-100 transition-opacity text-blue-600 hover:scale-110"
                 >
-                  <FiRefreshCw size={10} /> REASSIGN
+                  <FiRefreshCw size={12} />
                 </button>
               </div>
-            </div>
-          )
-        }
-        return (
-          <Button variant="ghost" size="sm"
-            className="text-[11px] h-8 bg-zinc-50 border border-zinc-200 text-zinc-500 hover:bg-zinc-100"
-            leftIcon={<FiUser size={14} />}
-            onClick={() => setHelperModal({ open: true, vehicle: r, assignment: null })}
-          >
-            Assign Helper
-          </Button>
+            ) : (
+              <button 
+                onClick={() => setDriverModal({ open: true, vehicle: r, assignment: null })}
+                className="text-[10px] font-black text-zinc-400 hover:text-blue-600 flex items-center gap-1 transition-colors uppercase tracking-widest"
+              >
+                <FiPlus size={12} /> Assign Driver
+              </button>
+            )}
+
+            {/* Helper Pill */}
+            {helper ? (
+              <div className="flex items-center justify-between gap-3 bg-orange-50/50 p-1.5 pr-3 rounded-full border border-orange-100 w-fit group/staff">
+                <div className="h-6 w-6 rounded-full bg-orange-600 flex items-center justify-center text-[10px] text-white font-bold">
+                  {helper.name.charAt(0)}
+                </div>
+                <span className="text-[11px] font-bold text-orange-900">{helper.name}</span>
+                <button 
+                  onClick={() => setHelperModal({ open: true, vehicle: r, assignment })}
+                  className="opacity-0 group-hover/staff:opacity-100 transition-opacity text-orange-600 hover:scale-110"
+                >
+                  <FiRefreshCw size={12} />
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={() => setHelperModal({ open: true, vehicle: r, assignment: null })}
+                className="text-[10px] font-black text-zinc-400 hover:text-orange-600 flex items-center gap-1 transition-colors uppercase tracking-widest"
+              >
+                <FiPlus size={12} /> Assign Helper
+              </button>
+            )}
+          </div>
         )
       }
     },
@@ -239,27 +234,27 @@ export default function Vehicles() {
       render: (r) => {
         const isActive = r.vehicle_status === 'ACTIVE'
         return (
-          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-black tracking-widest uppercase border ${
-            isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-zinc-50 text-zinc-500 border-zinc-200'
-          }`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${isActive ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-400'}`} />
-            {r.vehicle_status}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className={`h-2 w-2 rounded-full ${isActive ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse' : 'bg-zinc-300'}`} />
+            <span className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-emerald-700' : 'text-zinc-500'}`}>
+              {r.vehicle_status}
+            </span>
+          </div>
         )
       }
     },
     {
       key: 'actions',
-      header: '',
+      header: 'Actions',
       render: (r) => {
         const assignment = assignmentByVehicleId.get(String(r.id))
         const driver = assignment ? driverById.get(String(assignment.driver_id || assignment.user_id)) : null
         const helper = assignment ? helperById.get(String(assignment.helper_id)) : null
         return (
           <div className="flex justify-end gap-1">
-            <Button variant="ghost" size="sm" onClick={() => setView({ open: true, record: r, driver, helper })} className="text-zinc-400 hover:text-zinc-900"><FiEye size={18} /></Button>
-            <Button variant="ghost" size="sm" onClick={() => setModal({ open: true, vehicle: r })} className="text-zinc-400 hover:text-blue-600"><FiEdit2 size={18} /></Button>
-            <Button variant="ghost" size="sm" onClick={() => setConfirm({ open: true, id: r.id })} className="text-zinc-400 hover:text-red-600"><FiTrash2 size={18} /></Button>
+            <ActionBtn icon={<FiEye />} onClick={() => setView({ open: true, record: r, driver, helper })} hover="hover:text-indigo-600 hover:bg-indigo-50" />
+            <ActionBtn icon={<FiEdit2 />} onClick={() => setModal({ open: true, vehicle: r })} hover="hover:text-amber-600 hover:bg-amber-50" />
+            <ActionBtn icon={<FiTrash2 />} onClick={() => setConfirm({ open: true, id: r.id })} hover="hover:text-red-600 hover:bg-red-50" />
           </div>
         )
       },
@@ -267,68 +262,63 @@ export default function Vehicles() {
   ], [branchNameById, assignmentByVehicleId, driverById, helperById])
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto p-2">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">Vehicles</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">Manage fleet inventory, assignments, and vehicle status.</p>
-        </div>
-        <Button
-          variant="primary"
-          className="bg-zinc-900 hover:bg-zinc-800 text-white shadow-lg shadow-zinc-200"
-          leftIcon={<FiPlus />}
-          onClick={() => setModal({ open: true, vehicle: null })}
-        >
-          Add Vehicle
-        </Button>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <StatCard label="Total Vehicles" value={(vehiclesQuery.data?.items ?? []).length} icon={<FiTruck />} color="blue" />
-        <StatCard label="Assigned Vehicles" value={assignmentByVehicleId.size} icon={<FiUser />} color="emerald" />
-        <StatCard
-          label="Unassigned Vehicles"
-          value={(vehiclesQuery.data?.items ?? []).length - assignmentByVehicleId.size}
-          icon={<FiMapPin />}
-          color="amber"
-        />
-      </div>
-
-      {/* Search */}
-      <div className="relative group">
-        <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-zinc-900 transition-colors" />
-        <input
-          type="text"
-          placeholder="Search by registration number or model..."
-          className="w-full pl-11 pr-4 py-3 bg-white border border-zinc-200 rounded-xl shadow-sm focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition-all text-sm"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-
-      {/* Fleet Table */}
-      <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
-        {vehiclesQuery.isLoading ? (
-          <div className="p-20 flex flex-col items-center justify-center gap-4">
-            <div className="w-10 h-10 border-4 border-zinc-200 border-t-zinc-900 rounded-full animate-spin" />
-            <p className="text-zinc-500 font-medium animate-pulse">Loading vehicles...</p>
+    <div className="min-h-screen p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
+        
+        {/* Header Section */}
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-black text-zinc-900 tracking-tight">Vehicles</h1>
+            <p className="text-zinc-500 font-medium">Manage fleet inventory, assignments, and vehicle status.</p>
           </div>
-        ) : filteredRows.length ? (
-          <Table columns={columns} rows={filteredRows} />
-        ) : (
-          <EmptyState
-            title={searchTerm ? 'No results found' : 'Fleet Inventory Empty'}
-            description={searchTerm ? `No vehicle matches "${searchTerm}"` : 'Register your first vehicle to begin assigning drivers.'}
-            actionLabel={!searchTerm ? 'Add Vehicle' : undefined}
-            onAction={() => setModal({ open: true, vehicle: null })}
+          <Button
+            variant="primary"
+            className="bg-zinc-900 hover:bg-emerald-600 text-white p-4 rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.2)] transition-all active:scale-95"
+            leftIcon={<FiPlus className="stroke-[3px]" />}
+            onClick={() => setModal({ open: true, vehicle: null })}
+          >
+            Add New Vehicle
+          </Button>
+        </header>
+
+        {/* Stats Section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <StatCard title="Total Fleet" value={vehiclesQuery.data?.items?.length ?? 0} icon={<FiTruck />} gradient="from-blue-600 to-indigo-600" />
+          <StatCard title="Active Duty" value={assignmentByVehicleId.size} icon={<FiCheckCircle />} gradient="from-emerald-600 to-teal-600" />
+          <StatCard title="Standby" value={(vehiclesQuery.data?.items?.length ?? 0) - assignmentByVehicleId.size} icon={<FiRefreshCw />} gradient="from-amber-500 to-orange-600" />
+        </div>
+
+        {/* Controls */}
+        <div className="relative">
+          <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
+          <input
+            type="text"
+            placeholder="Search by registration number or model..."
+            className="w-full pl-14 pr-6 py-5 bg-white border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all font-medium text-zinc-700 placeholder:text-zinc-400"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
-        )}
+        </div>
+
+        {/* Main Table */}
+        <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-xl overflow-hidden">
+          {vehiclesQuery.isLoading ? (
+            <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-zinc-900 border-t-transparent rounded-full" /></div>
+          ) : filteredRows.length ? (
+            <Table
+              columns={columns}
+              rows={filteredRows}
+              headerClassName="bg-zinc-900 !text-white uppercase text-[10px] tracking-[0.2em] font-black py-5 px-6"
+              rowClassName="group hover:bg-emerald-50/30 transition-colors border-b border-zinc-50 last:border-none"
+            />
+          ) : (
+            <EmptyState title="No Vehicles Found" description="Try adjusting your search or add a new vehicle." />
+          )}
+        </div>
       </div>
 
-      {/* Vehicle Form Modal */}
-      <Modal open={modal.open} size="lg" title={modal.vehicle ? "Modify Vehicle Entry" : "Register New Vehicle"} onClose={() => setModal({ open: false, vehicle: null })}>
+      {/* --- Modals (Logic preserved, styling inherited) --- */}
+      <Modal open={modal.open} size="lg" title={modal.vehicle ? "Modify Vehicle" : "Add New Vehicle"} onClose={() => setModal({ open: false, vehicle: null })}>
         <VehicleForm
           defaultValues={modal.vehicle}
           branches={branchesQuery.data?.items ?? []}
@@ -341,14 +331,13 @@ export default function Vehicles() {
         />
       </Modal>
 
-      {/* Driver Assignment Modal */}
       <Modal open={driverModal.open} title="Assign Driver" onClose={() => setDriverModal({ open: false, vehicle: null, assignment: null })}>
-        <div className="mb-6 p-4 bg-zinc-50 rounded-xl border border-zinc-200 flex items-center justify-between">
+        <div className="mb-6 p-5 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-center justify-between">
           <div>
-            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Vehicle</p>
-            <p className="text-lg font-black text-zinc-900">{driverModal.vehicle?.registration_number}</p>
+            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Active Vehicle</p>
+            <p className="text-xl font-black text-blue-900">{driverModal.vehicle?.registration_number}</p>
           </div>
-          <FiTruck size={24} className="text-zinc-300" />
+          <FiUser size={32} className="text-blue-200" />
         </div>
         <AssignmentForm
           mode="driver"
@@ -364,14 +353,13 @@ export default function Vehicles() {
         />
       </Modal>
 
-      {/* Helper Assignment Modal */}
       <Modal open={helperModal.open} title="Assign Helper" onClose={() => setHelperModal({ open: false, vehicle: null, assignment: null })}>
-        <div className="mb-6 p-4 bg-zinc-50 rounded-xl border border-zinc-200 flex items-center justify-between">
+        <div className="mb-6 p-5 bg-orange-50/50 rounded-2xl border border-orange-100 flex items-center justify-between">
           <div>
-            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Vehicle</p>
-            <p className="text-lg font-black text-zinc-900">{helperModal.vehicle?.registration_number}</p>
+            <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest">Active Vehicle</p>
+            <p className="text-xl font-black text-orange-900">{helperModal.vehicle?.registration_number}</p>
           </div>
-          <FiTruck size={24} className="text-zinc-300" />
+          <FiUser size={32} className="text-orange-200" />
         </div>
         <AssignmentForm
           mode="helper"
@@ -380,14 +368,18 @@ export default function Vehicles() {
           defaultValues={helperModal.assignment}
           loading={createAssignMutation.isPending || updateAssignMutation.isPending}
           onSubmit={async (values) => {
+            const existingAssignment = assignmentByVehicleId.get(String(helperModal.vehicle.id))
             const payload = { ...values, vehicle_id: helperModal.vehicle.id }
-            if (helperModal.assignment) await updateAssignMutation.mutateAsync({ id: helperModal.assignment.id, values: payload })
-            else await createAssignMutation.mutateAsync(payload)
+            if (existingAssignment) {
+              // Always update the existing assignment to add/change helper
+              await updateAssignMutation.mutateAsync({ id: existingAssignment.id, values: payload })
+            } else {
+              await createAssignMutation.mutateAsync(payload)
+            }
           }}
         />
       </Modal>
 
-      {/* Standard Dialogs */}
       <ConfirmDialog
         open={confirm.open}
         title="Decommission Vehicle?"
@@ -400,24 +392,16 @@ export default function Vehicles() {
       <DetailModal
         open={view.open}
         onClose={() => setView({ open: false, record: null, driver: null, helper: null })}
-        title="Vehicle Details"
+        title="Vehicles Details"
         data={view.record}
         extraSections={[
           ...(view.driver ? [{
             title: 'Assigned Driver',
-            data: {
-              'Full Name': view.driver.name,
-              'Contact': view.driver.mobile,
-              'License Number': view.driver.license_number,
-              'License Type': view.driver.license_type,
-            }
+            data: { 'Name': view.driver.name, 'Contact': view.driver.mobile, 'License': view.driver.license_number }
           }] : []),
           ...(view.helper ? [{
             title: 'Assigned Helper',
-            data: {
-              'Full Name': view.helper.name,
-              'Contact': view.helper.mobile,
-            }
+            data: { 'Name': view.helper.name, 'Contact': view.helper.mobile }
           }] : []),
         ]}
       />
@@ -425,19 +409,29 @@ export default function Vehicles() {
   )
 }
 
-function StatCard({ label, value, icon, color }) {
-  const colors = {
-    blue: 'bg-blue-50 text-blue-600 border-blue-100',
-    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    amber: 'bg-amber-50 text-amber-600 border-amber-100',
-  }
+// --- Internal Helper Components ---
+
+function StatCard({ title, value, icon, gradient }) {
   return (
-    <div className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm flex items-center justify-between hover:border-zinc-300 transition-colors">
-      <div>
-        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">{label}</p>
-        <p className="text-2xl font-bold text-zinc-900">{value}</p>
+    <div className="group bg-white p-7 rounded-[2rem] border border-zinc-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+      <div className="space-y-1">
+        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{title}</p>
+        <p className="text-3xl font-bold text-zinc-900">{value}</p>
       </div>
-      <div className={`p-3 rounded-xl border ${colors[color]}`}>{icon}</div>
+      <div className={`p-4 rounded-2xl bg-gradient-to-tr ${gradient} text-white shadow-lg`}>
+        {icon}
+      </div>
     </div>
+  )
+}
+
+function ActionBtn({ icon, onClick, hover }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`p-2.5 rounded-xl text-zinc-400 transition-all active:scale-90 ${hover}`}
+    >
+      <div className="text-lg">{icon}</div>
+    </button>
   )
 }

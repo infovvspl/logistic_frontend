@@ -1,15 +1,16 @@
 import Modal from '../ui/Modal.jsx'
 import { formatDate } from '../../utils/formatDate.js'
 
-const SKIP_KEYS = ['id', '_id', 'role_id', 'branch_id', 'company_id', 'vehicle_id', 'user_id',
-  'customer_id', 'vehicle_assign_to_driver_id', 'fcm_token', '__v']
+const SKIP_KEYS = ['id', '_id', 'role_id', 'branch_id', 'company_id', 'vehicle_id', 'user_id', 'created_at', 'updated_at',
+  'customer_id', 'vehicle_assign_to_driver_id', 'fcm_token', '__v', 'created_by', 'updated_by']
 
 const PROFILE_IMAGE_KEYS = ['image', 'pro_image_url', 'profile_image', 'avatar', 'photo']
 const DOC_IMAGE_KEYS = [
   'aadhar_file', 'pan_file', 'passport_file', 'license_file', 'bank_passbook_file',
   'vehicle_image', 'vehicle_registration_certificate_file',
   'vehicle_insurance_file', 'vehicle_pollution_under_control_certificate_file',
-  'vehicle_fitness_certificate_file', 'vehicle_permit_file',
+  'vehicle_fitness_certificate_file', 'vehicle_permit_file', 'vehicle_permit_file', 'andhra_tax_file', 'odisha_tax_file', 'vehicle_national_permit_file',
+  'vehicle_andhra_permit_file', 'vehicle_odisha_permit_file'
 ]
 
 function isImageKey(key) {

@@ -2,19 +2,11 @@ import { api } from '../../services/axios.js'
 import { USE_MOCKS } from '../../utils/constants.js'
 
 const ALLOWED_COMPANY_FIELDS = [
-  'name',
-  'email',
-  'mobile',
-  'gst_no',
-  'cin_no',
-  'tin_no',
-  'account_no_1',
-  'account_no_2',
-  'pan_no',
-  'service_tax_no',
-  'pf',
-  'esis',
-  'senior_allowance',
+  'name', 'email', 'mobile',
+  'gst_no', 'cin_no', 'tin_no', 'pan_no', 'service_tax_no',
+  'pf', 'esis', 'esi', 'senior_allowance',
+  'account_no_1', 'bank_name', 'ifsc_code', 'swift_code', 'branch',
+  'account_no_2', 'bank_name_2', 'ifsc_code_2', 'swift_code_2', 'branch_2',
 ]
 
 let mockCompanies = [
@@ -26,13 +18,22 @@ let mockCompanies = [
     gst_no: '33DDDDD3333D4Z3',
     cin_no: 'U44556TN2021PTC345378',
     tin_no: '5566778839',
-    account_no_1: '321354987012',
-    account_no_2: '789312345678',
     pan_no: 'DDDDD3313D',
     service_tax_no: 'ST335678',
     pf: 'PF33579',
     esis: 'ESI13539',
+    esi: '',
     senior_allowance: 5500,
+    account_no_1: '321354987012',
+    bank_name: 'State Bank of India',
+    ifsc_code: 'SBIN0001234',
+    swift_code: 'SBININBB',
+    branch: 'Mumbai Main Branch',
+    account_no_2: '789312345678',
+    bank_name_2: 'HDFC Bank',
+    ifsc_code_2: 'HDFC0001234',
+    swift_code_2: 'HDFCINBB',
+    branch_2: 'Delhi Branch',
   },
 ]
 

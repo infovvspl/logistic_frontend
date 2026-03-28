@@ -135,6 +135,7 @@ export default function UserForm({
 }) {
   const isEdit = !!defaultValues
   const isDriver = lockedRoleLabel?.toLowerCase().includes('driver')
+  const [serverError, setServerError] = useState('')
 
   const processedDefaults = useMemo(() => {
     if (!defaultValues) return null
@@ -218,11 +219,17 @@ export default function UserForm({
 
   return (
     <form onSubmit={handleSubmit(async (values) => {
+      setServerError('')
       // remove empty file fields so existing files are preserved
       ;['image', 'aadhar_file', 'pan_file', 'passport_file', 'license_file', 'bank_passbook_file'].forEach((f) => {
         if (!values[f] || typeof values[f] === 'string') delete values[f]
       })
-      await onSubmit(values)
+      try {
+        await onSubmit(values)
+      } catch (err) {
+        const msg = err?.response?.data?.message ?? err?.response?.data?.error ?? err?.message ?? 'Something went wrong. Please try again.'
+        setServerError(msg)
+      }
     })} className="w-full space-y-4">
       <div className="flex items-center gap-4 p-4 rounded-xl border border-zinc-100 bg-zinc-50">
         <div className="relative shrink-0 group">
@@ -420,34 +427,39 @@ export default function UserForm({
               placeholder="DL-XXXXXXXXXX"
               required={isDriver}
               leftIcon={<FiTruck />}
-              {...register('license_number', { required: isDriver })}
+              error={errors.license_number?.message}
+              {...register('license_number', { required: isDriver ? 'License number required' : false })}
             />
             <Input
               label="License Type"
               placeholder="HMV / LMV"
               required={isDriver}
-              {...register('license_type', { required: isDriver })}
+              error={errors.license_type?.message}
+              {...register('license_type', { required: isDriver ? 'License type required' : false })}
             />
             <Input
               label="Issue Date"
               type="date"
               required={isDriver}
               leftIcon={<FiCalendar />}
-              {...register('license_issue_date', { required: isDriver })}
+              error={errors.license_issue_date?.message}
+              {...register('license_issue_date', { required: isDriver ? 'Issue date required' : false })}
             />
             <Input
               label="Expiry Date"
               type="date"
               required={isDriver}
               leftIcon={<FiCalendar />}
-              {...register('license_expiry_date', { required: isDriver })}
+              error={errors.license_expiry_date?.message}
+              {...register('license_expiry_date', { required: isDriver ? 'Expiry date required' : false })}
             />
             <Input
               label="Years of Experience"
               type="number"
               placeholder="e.g. 5"
               required={isDriver}
-              {...register('year_of_experience', { required: isDriver })}
+              error={errors.year_of_experience?.message}
+              {...register('year_of_experience', { required: isDriver ? 'Experience required' : false })}
             />
             <Controller
               name="preferred_vehicle_type"
@@ -536,15 +548,23 @@ export default function UserForm({
       </div>
 
       {/* ── Submit ──────────────────────────────────────────── */}
-      <div className="flex justify-end pt-3 border-t border-zinc-100">
-        <Button
-          type="submit"
-          loading={loading}
-          className="min-w-[160px]"
-          leftIcon={<FiCheckCircle size={16} />}
-        >
-          {isEdit ? 'Save Changes' : `Create ${lockedRoleLabel || 'User'}`}
-        </Button>
+      <div className="flex flex-col gap-3 pt-3 border-t border-zinc-100">
+        {serverError && (
+          <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+            <span className="text-red-500 text-base shrink-0">⚠</span>
+            <p className="text-sm text-red-700 font-medium">{serverError}</p>
+          </div>
+        )}
+        <div className="flex justify-end">
+          <Button
+            type="submit"
+            loading={loading}
+            className="min-w-[160px]"
+            leftIcon={<FiCheckCircle size={16} />}
+          >
+            {isEdit ? 'Save Changes' : `Create ${lockedRoleLabel || 'User'}`}
+          </Button>
+        </div>
       </div>
     </form>
   )

@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { FiPlus, FiTrash2, FiEdit2, FiEye, FiSearch, FiUsers, FiShield, FiMapPin } from 'react-icons/fi'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  FiPlus, FiTrash2, FiEdit2, FiEye, FiSearch,
+  FiUsers, FiShield, FiMapPin, FiChevronRight
+} from 'react-icons/fi'
+
+// UI Components
 import Button from '../../components/ui/Button.jsx'
 import Table from '../../components/ui/Table.jsx'
 import Modal from '../../components/ui/Modal.jsx'
@@ -8,6 +14,8 @@ import EmptyState from '../../components/common/EmptyState.jsx'
 import ConfirmDialog from '../../components/common/ConfirmDialog.jsx'
 import DetailModal from '../../components/common/DetailModal.jsx'
 import UserForm from '../../components/forms/UserForm.jsx'
+
+// APIs
 import * as userAPI from '../../features/users/userAPI.js'
 import * as roleAPI from '../../features/roles/roleAPI.js'
 import * as branchAPI from '../../features/branches/branchAPI.js'
@@ -22,7 +30,7 @@ export default function Admins() {
   const [view, setView] = useState({ open: false, record: null })
   const [confirm, setConfirm] = useState({ open: false, id: null })
 
-  // Queries
+  // --- Queries & Mutations (Logic remains same) ---
   const rolesQuery = useQuery({ queryKey: ['roles'], queryFn: roleAPI.listRoles })
   const branchesQuery = useQuery({ queryKey: ['branches'], queryFn: branchAPI.listBranches })
   const companiesQuery = useQuery({ queryKey: ['companies'], queryFn: companyAPI.listCompanies })
@@ -38,7 +46,6 @@ export default function Admins() {
     queryFn: userAPI.listUsers,
   })
 
-  // Mutations (Simplified for brevity, keeping your existing logic)
   const createMutation = useMutation({
     mutationFn: userAPI.createUser,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); setModal({ open: false, admin: null }) },
@@ -54,87 +61,93 @@ export default function Admins() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
   })
 
-  // Data Processing
   const branchNameById = useMemo(() => {
     const map = new Map()
-    ;(branchesQuery.data?.items ?? []).forEach((b) => map.set(b.id, b.branch_name))
+      ; (branchesQuery.data?.items ?? []).forEach((b) => map.set(b.id, b.branch_name))
     return map
   }, [branchesQuery.data])
 
   const filteredRows = useMemo(() => {
     const data = usersQuery.data?.items || []
     const admins = adminRole?.id ? data.filter(u => u.role_id === adminRole.id) : data
-    
     if (!searchTerm) return admins
-    return admins.filter(u => 
-      u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    return admins.filter(u =>
+      u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.email?.toLowerCase().includes(searchTerm.toLowerCase())
     )
   }, [usersQuery.data, adminRole?.id, searchTerm])
 
+  // --- Premium Table Definition ---
   const columns = useMemo(() => [
-    { 
-      key: 'name', 
-      header: 'Admin User',
+    {
+      key: 'name',
+      header: 'Administrator',
       render: (r) => {
         const imgUrl = r.pro_image_url || r.image || ''
         const initial = r.name?.charAt(0).toUpperCase() ?? '?'
         return (
-          <div className="flex items-center gap-3">
-            <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-indigo-100 text-indigo-700 font-bold text-sm shrink-0">
-              {initial}
+          <div className="flex items-center gap-4 py-1">
+            <div className="relative h-10 w-10 shrink-0 rounded-xl shadow-md ring-2 ring-white overflow-hidden">
+              {/* Fallback — visible only when no image or image fails */}
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-200 text-gray-700">
+                <span className="text-sm font-bold">{initial}</span>
+              </div>
+
               {imgUrl && (
                 <img
                   src={imgUrl}
                   alt={r.name}
-                  className="absolute inset-0 h-full w-full rounded-full object-cover"
-                  onError={(e) => { e.currentTarget.style.display = 'none' }}
+                  className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-200"
+                  onLoad={(e) => {
+                    e.currentTarget.style.opacity = '1';
+                    e.currentTarget.previousSibling.style.display = 'none';
+                  }}
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
                 />
               )}
             </div>
-            <div className="flex flex-col">
-              <span className="font-medium text-zinc-900">{r.name}</span>
-              <span className="text-xs text-zinc-500">{r.email}</span>
+            <div className="flex flex-col min-w-0">
+              <span className="font-semibold text-zinc-900 truncate leading-tight">{r.name}</span>
+              <span className="text-[11px] text-zinc-500 font-medium tracking-wide truncate">{r.email}</span>
             </div>
           </div>
         )
       }
     },
-    { 
-      key: 'branch', 
-      header: 'Assigned Branch',
+    {
+      key: 'branch',
+      header: 'Assigned Location',
       render: (r) => (
-        <div className="flex items-center gap-1.5 text-zinc-600">
-          <FiMapPin className="text-zinc-400" />
-          <span className="text-sm">{branchNameById.get(r.branch_id) ?? 'Global'}</span>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-50 border border-zinc-100 w-fit">
+          <FiMapPin className="text-indigo-500 text-xs" />
+          <span className="text-xs font-bold text-zinc-700 uppercase tracking-tighter">
+            {branchNameById.get(r.branch_id) ?? 'Main Branch'}
+          </span>
         </div>
       )
     },
-    { 
-      key: 'status', 
-      header: 'Status',
+    {
+      key: 'status',
+      header: 'System Status',
       render: () => (
-        <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
-          Active
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="flex h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+          <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Active</span>
+        </div>
       )
     },
-    { 
+    {
       key: 'actions',
-      header: '',
+      header: 'Actions',
       render: (r) => (
-        <div className="flex justify-end gap-1">
-          <Button variant="ghost" size="sm" onClick={() => setView({ open: true, record: r })} className="text-zinc-500 hover:text-indigo-600">
-            <FiEye className="h-4 w-4" />
-          </Button>
+        <div className="flex justify-end gap-1.5">
+          <ActionBtn icon={<FiEye />} onClick={() => setView({ open: true, record: r })} hover="hover:text-indigo-600 hover:bg-indigo-50" />
           {isSuperAdmin && (
             <>
-              <Button variant="ghost" size="sm" onClick={() => setModal({ open: true, admin: r })} className="text-zinc-500 hover:text-amber-600">
-                <FiEdit2 className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setConfirm({ open: true, id: r._id || r.id })} className="text-zinc-500 hover:text-red-600">
-                <FiTrash2 className="h-4 w-4" />
-              </Button>
+              <ActionBtn icon={<FiEdit2 />} onClick={() => setModal({ open: true, admin: r })} hover="hover:text-amber-600 hover:bg-amber-50" />
+              <ActionBtn icon={<FiTrash2 />} onClick={() => setConfirm({ open: true, id: r._id || r.id })} hover="hover:text-red-600 hover:bg-red-50" />
             </>
           )}
         </div>
@@ -143,67 +156,69 @@ export default function Admins() {
   ], [branchNameById, isSuperAdmin])
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto p-4 lg:p-8">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">Admins</h1>
-          <p className="text-zinc-500 text-sm">Overview of users with administrative privileges.</p>
+    <div className="min-h-screen p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
+
+        {/* Header Section */}
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-black text-zinc-900 tracking-tight">Admins</h1>
+            <p className="text-zinc-500 font-medium">Overview of users with administrative privileges.</p>
+          </div>
+          {isSuperAdmin && (
+            <Button
+              variant="primary"
+              className="bg-zinc-900 hover:bg-indigo-600 text-white p-4 rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.2)] transition-all active:scale-95"
+              leftIcon={<FiPlus className="stroke-[3px]" />}
+              onClick={() => setModal({ open: true, admin: null })}
+            >
+              Register Admin
+            </Button>
+          )}
+        </header>
+
+        {/* Stats Section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <StatCard title="Total Admins" value={filteredRows.length} icon={<FiUsers />} gradient="from-indigo-500 to-blue-500" />
+          <StatCard title="Active Role" value={adminRole?.designation || 'Admin'} icon={<FiShield />} gradient="from-purple-500 to-pink-500" />
+          <StatCard title="Active branches" value={branchNameById.size} icon={<FiMapPin />} gradient="from-emerald-500 to-teal-500" />
         </div>
-        {isSuperAdmin && (
-          <Button
-            variant="primary"
-            className="bg-zinc-900 hover:bg-zinc-800 text-white shadow-lg shadow-zinc-200"
-            leftIcon={<FiPlus />}
-            onClick={() => setModal({ open: true, admin: null })}
-          >
-            Add New Admin
-          </Button>
-        )}
-      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard title="Total Admins" value={filteredRows.length} icon={<FiUsers />} color="text-blue-600" bg="bg-blue-50" />
-        <StatCard title="Role Type" value={adminRole?.designation || 'Admin'} icon={<FiShield />} color="text-purple-600" bg="bg-purple-50" />
-        <StatCard title="Active Branches" value={branchNameById.size} icon={<FiMapPin />} color="text-emerald-600" bg="bg-emerald-50" />
-      </div>
-
-      {/* Table Controls */}
-      <div className="relative group">
-        <div className="relative flex-1 ">
-          <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-zinc-900 transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Search admins by name or email..." 
-            className="w-full pl-11 pr-4 py-3 bg-white border border-zinc-200 rounded-xl shadow-sm focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition-all text-sm"
+        {/* Controls */}
+        <div className="relative">
+          <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
+          <input
+            type="text"
+            placeholder="Search by name, email ..."
+            className="w-full pl-14 pr-6 py-5 bg-white border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all font-medium text-zinc-700 placeholder:text-zinc-400"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="bg-white rounded-xl border border-zinc-200 shadow-sm overflow-hidden">
-        {usersQuery.isLoading ? (
-          <div className="p-12 text-center animate-pulse">
-            <div className="h-4 bg-zinc-100 rounded w-1/4 mx-auto mb-4"></div>
-            <div className="h-8 bg-zinc-50 rounded w-full"></div>
+        {/* Premium Table Wrapper */}
+        <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            {usersQuery.isLoading ? (
+              <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-indigo-500 border-t-transparent rounded-full" /></div>
+            ) : filteredRows.length ? (
+              <Table
+                columns={columns}
+                rows={filteredRows}
+                rowKey={(r) => r._id || r.id}
+                // Important: We add a class to the actual table header in the Table component if possible
+                headerClassName="bg-zinc-900 !text-white uppercase text-[10px] tracking-[0.2em] font-black py-5 px-6"
+                rowClassName="group hover:bg-indigo-50/40 transition-colors border-b border-zinc-50 last:border-none"
+              />
+            ) : (
+              <EmptyState title="No Records" description="Adjust filters or add a new admin." />
+            )}
           </div>
-        ) : filteredRows.length ? (
-          <Table columns={columns} rows={filteredRows} rowKey={(r) => r._id || r.id} />
-        ) : (
-          <EmptyState
-            title="No admins found"
-            description={searchTerm ? "Try adjusting your search filters." : "Start by adding your first system administrator."}
-            actionLabel={isSuperAdmin && !searchTerm ? "Add admin" : undefined}
-            onAction={() => setModal({ open: true, admin: null })}
-          />
-        )}
+        </div>
       </div>
 
-      {/* Modals remain structurally similar but get the better UI from the wrappers */}
-      <Modal open={modal.open} title={modal.admin ? "Update Admin Profile" : "Create New Admin"} onClose={() => setModal({ open: false, admin: null })}>
+      {/* Existing Modals */}
+      <Modal open={modal.open} title={modal.admin ? "Modify Admin" : "New Admin"} onClose={() => setModal({ open: false, admin: null })}>
         <UserForm
           defaultValues={modal.admin}
           lockedRoleId={adminRole?.id}
@@ -224,10 +239,10 @@ export default function Admins() {
 
       <ConfirmDialog
         open={confirm.open}
-        title="Delete Administrator"
-        description="Are you sure? This user will lose all access to the dashboard immediately."
+        title="Confirm delete ?"
+        description="This action will immediately disable the admin's dashboard session."
         danger
-        confirmText="Confirm Delete"
+        confirmText="Delete"
         loading={deleteMutation.isPending}
         onClose={() => setConfirm({ open: false, id: null })}
         onConfirm={async () => {
@@ -241,17 +256,29 @@ export default function Admins() {
   )
 }
 
-// Sub-component for better organization
-function StatCard({ title, value, icon, color, bg }) {
+// --- Specialized UI Components ---
+
+function StatCard({ title, value, icon, gradient }) {
   return (
-    <div className="bg-white p-5 rounded-xl border border-zinc-200 shadow-sm flex items-center gap-4">
-      <div className={`p-3 rounded-lg ${bg} ${color} text-xl`}>
+    <div className="group bg-white p-7 rounded-[2rem] border border-zinc-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+      <div className="space-y-1">
+        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{title}</p>
+        <p className="text-3xl font-bold text-zinc-900">{value}</p>
+      </div>
+      <div className={`p-4 rounded-2xl bg-gradient-to-tr ${gradient} text-white shadow-lg`}>
         {icon}
       </div>
-      <div>
-        <p className="text-xs font-medium text-zinc-500 uppercase tracking-wider">{title}</p>
-        <p className="text-2xl font-bold text-zinc-900">{value}</p>
-      </div>
     </div>
+  )
+}
+
+function ActionBtn({ icon, onClick, hover }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`p-2.5 rounded-xl text-zinc-400 transition-all active:scale-90 ${hover}`}
+    >
+      <div className="text-lg">{icon}</div>
+    </button>
   )
 }

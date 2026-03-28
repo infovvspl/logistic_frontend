@@ -16,6 +16,7 @@ export default function CustomerForm({ defaultValues, onSubmit, loading, submitL
         contact_person_phone: '',
         customer_email: '',
         customer_address: '',
+        customer_gst: '',
       },
   })
 
@@ -58,6 +59,12 @@ export default function CustomerForm({ defaultValues, onSubmit, loading, submitL
         placeholder="Delhi, India"
         error={errors.customer_address?.message}
         {...register('customer_address')}
+      />
+      <Input
+        label="Customer GST"
+        placeholder="22AAAAA0000A1Z5"
+        error={errors.customer_gst?.message}
+        {...register('customer_gst')}
       />
       <div className="flex justify-end">
         <Button type="submit" loading={loading}>

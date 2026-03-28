@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react'
-import { FiSearch, FiUser, FiTruck, FiCalendar, FiCheckCircle, FiX, FiAlertTriangle } from 'react-icons/fi'
+import { useQuery } from '@tanstack/react-query'
+import { FiSearch, FiUser, FiTruck, FiCalendar, FiCheckCircle, FiX, FiAlertTriangle, FiRefreshCw } from 'react-icons/fi'
 import Input from '../ui/Input.jsx'
 import Select from '../ui/Select.jsx'
 import Button from '../ui/Button.jsx'
+import * as rateChartAPI from '../../features/rateCharts/rateChartAPI.js'
 
 const STATUS_OPTIONS = [
   { value: 'SCHEDULED', label: 'Scheduled' },
@@ -70,7 +72,7 @@ export default function TripForm({
   places = [],
   consignments = [],
   metrics = [],
-  rateCharts = [],
+  rateCharts: rateChartsProp = [],
 }) {
   const [form, setForm] = useState({
     customer_id: defaultValues?.customer_id ?? '',
@@ -94,6 +96,15 @@ export default function TripForm({
   const [assignSearch, setAssignSearch] = useState('')
   // base rate per unit from matched rate chart
   const [baseRate, setBaseRate] = useState(null)
+
+  // Always fetch live rate charts so new rates appear instantly without reopening the form
+  const rateChartsQuery = useQuery({
+    queryKey: ['rate-charts'],
+    queryFn: rateChartAPI.listRateCharts,
+    staleTime: 0,
+    refetchInterval: 3000, // poll every 3s while form is open
+  })
+  const rateCharts = rateChartsQuery.data?.items ?? rateChartsProp
 
   // Find matching rate chart when source/destination/consignment/metrics change
   const findRate = (updatedForm) => {
@@ -269,16 +280,25 @@ export default function TripForm({
       {noRateChart && (
         <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
           <FiAlertTriangle size={15} className="text-amber-500 shrink-0 mt-0.5" />
-          <div>
+          <div className="flex-1">
             <p className="text-sm font-semibold text-amber-800">No rate chart found</p>
             <p className="text-xs text-amber-600 mt-0.5">
               No rate exists for this route + metric combination. Please{' '}
               <a href="/dashboard/rate-charts" target="_blank" rel="noreferrer" className="underline font-semibold hover:text-amber-800">
                 add it in Rate Charts
               </a>{' '}
-              first, or enter the amount manually.
+              then click refresh.
             </p>
           </div>
+          <button
+            type="button"
+            onClick={() => rateChartsQuery.refetch()}
+            disabled={rateChartsQuery.isFetching}
+            className="shrink-0 flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-900 disabled:opacity-50"
+          >
+            <FiRefreshCw size={13} className={rateChartsQuery.isFetching ? 'animate-spin' : ''} />
+            Refresh
+          </button>
         </div>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

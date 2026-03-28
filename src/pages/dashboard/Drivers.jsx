@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { FiPlus, FiTrash2, FiEdit2, FiEye, FiSearch, FiTruck, FiAward, FiAlertTriangle } from 'react-icons/fi'
+import { motion, AnimatePresence } from 'framer-motion'
+import { 
+  FiPlus, FiTrash2, FiEdit2, FiEye, FiSearch, 
+  FiTruck, FiAward, FiAlertTriangle 
+} from 'react-icons/fi'
+
+// UI Components
 import Button from '../../components/ui/Button.jsx'
 import Table from '../../components/ui/Table.jsx'
 import Modal from '../../components/ui/Modal.jsx'
@@ -8,6 +14,8 @@ import EmptyState from '../../components/common/EmptyState.jsx'
 import ConfirmDialog from '../../components/common/ConfirmDialog.jsx'
 import DetailModal from '../../components/common/DetailModal.jsx'
 import UserForm from '../../components/forms/UserForm.jsx'
+
+// APIs
 import * as userAPI from '../../features/users/userAPI.js'
 import * as roleAPI from '../../features/roles/roleAPI.js'
 import * as branchAPI from '../../features/branches/branchAPI.js'
@@ -21,7 +29,7 @@ export default function Drivers() {
   const [view, setView] = useState({ open: false, record: null })
   const [confirm, setConfirm] = useState({ open: false, id: null })
 
-  // Queries
+  // --- Queries & Mutations (Logic preserved) ---
   const rolesQuery = useQuery({ queryKey: ['roles'], queryFn: roleAPI.listRoles })
   const branchesQuery = useQuery({ queryKey: ['branches'], queryFn: branchAPI.listBranches })
   const companiesQuery = useQuery({ queryKey: ['companies'], queryFn: companyAPI.listCompanies })
@@ -41,7 +49,6 @@ export default function Drivers() {
     queryFn: userAPI.listUsers,
   })
 
-  // Mutations
   const createMutation = useMutation({
     mutationFn: userAPI.createUser,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); setModal({ open: false, user: null }) },
@@ -57,7 +64,6 @@ export default function Drivers() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }),
   })
 
-  // Filter Logic
   const allDrivers = useMemo(() => {
     const data = usersQuery.data?.items || usersQuery.data || []
     const all = Array.isArray(data) ? data : []
@@ -72,7 +78,6 @@ export default function Drivers() {
     )
   }, [allDrivers, searchTerm])
 
-  // Drivers whose license expires within 30 days
   const expiringDrivers = useMemo(() => {
     const now = Date.now()
     const in30 = now + 30 * 24 * 60 * 60 * 1000
@@ -83,6 +88,7 @@ export default function Drivers() {
     })
   }, [allDrivers])
 
+  // --- Premium Table Definition ---
   const columns = useMemo(() => [
     {
       key: 'name',
@@ -91,183 +97,153 @@ export default function Drivers() {
         const imgUrl = r.pro_image_url || r.image || ''
         const initial = r.name?.charAt(0).toUpperCase() ?? 'D'
         return (
-          <div className="flex items-center gap-3">
-            <div className="relative h-10 w-10 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold border border-emerald-200 shrink-0">
-              {initial}
+          <div className="flex items-center gap-4 py-1">
+            <div className="relative h-10 w-10 shrink-0 rounded-xl shadow-md ring-2 ring-white overflow-hidden bg-zinc-100">
+              <div className="absolute inset-0 flex items-center justify-center text-zinc-400">
+                <span className="text-sm font-bold">{initial}</span>
+              </div>
               {imgUrl && (
                 <img
                   src={imgUrl}
                   alt={r.name}
-                  className="absolute inset-0 h-full w-full rounded-full object-cover"
+                  className="absolute inset-0 h-full w-full object-cover"
                   onError={(e) => { e.currentTarget.style.display = 'none' }}
                 />
               )}
             </div>
-            <div className="flex flex-col">
-              <span className="font-semibold text-zinc-900 leading-tight">{r.name || 'N/A'}</span>
-              <div className="flex flex-col mt-0.5">
-                <span className="text-xs text-zinc-500 truncate max-w-[180px]">{r.email || 'No Email'}</span>
-                <span className="text-xs font-medium text-zinc-400 flex items-center gap-1">
-                  {r.mobile ? (
-                    <>
-                      <span className="text-[10px] bg-zinc-100 px-1 rounded text-zinc-500">TEL</span>
-                      {r.mobile}
-                    </>
-                  ) : (
-                    'No Phone'
-                  )}
-                </span>
-              </div>
+            <div className="flex flex-col min-w-0">
+              <span className="font-semibold text-zinc-900 truncate leading-tight">{r.name || 'N/A'}</span>
+              <span className="text-[11px] text-zinc-500 font-medium tracking-wide truncate">{r.email || 'No Email'}</span>
             </div>
           </div>
         )
-      },
+      }
     },
     {
       key: 'license',
       header: 'License Info',
       render: (r) => {
-        const isExpiring = (() => {
-          if (!r.license_expiry_date) return false
-          const exp = new Date(r.license_expiry_date).getTime()
-          const in30 = Date.now() + 30 * 24 * 60 * 60 * 1000
-          return exp >= Date.now() && exp <= in30
-        })()
+        const isExpiring = expiringDrivers.some(d => (d._id || d.id) === (r._id || r.id))
         return (
-          <div className="flex items-center gap-2">
-            <div className={`p-1.5 rounded ${isExpiring ? 'bg-red-50 text-red-500' : 'bg-zinc-100 text-zinc-500'}`}>
-              <FiAlertTriangle size={14} className={isExpiring ? '' : 'opacity-0 w-0'} />
-              {!isExpiring && <span className="text-xs font-mono">DL</span>}
-            </div>
+          <div className={`flex items-center gap-3 px-3 py-1.5 rounded-lg border w-fit ${isExpiring ? 'bg-red-50 border-red-100' : 'bg-zinc-50 border-zinc-100'}`}>
+            {isExpiring ? <FiAlertTriangle className="text-red-500 text-xs" /> : <div className="text-[10px] font-black text-zinc-400">DL</div>}
             <div className="flex flex-col">
-              <span className="text-xs font-mono font-bold text-zinc-700">{r.license_number || 'PENDING'}</span>
-              <span className={`text-[10px] uppercase tracking-wider ${isExpiring ? 'text-red-500 font-semibold' : 'text-zinc-400'}`}>
-                {r.license_expiry_date ? `Exp: ${formatDate(r.license_expiry_date)}` : (r.license_type || 'General')}
+              <span className="text-xs font-bold text-zinc-700 uppercase tracking-tighter">{r.license_number || 'PENDING'}</span>
+              <span className={`text-[10px] font-bold uppercase ${isExpiring ? 'text-red-600' : 'text-zinc-400'}`}>
+                {r.license_expiry_date ? `Exp: ${formatDate(r.license_expiry_date)}` : 'General'}
               </span>
             </div>
           </div>
         )
-      },
+      }
     },
     {
       key: 'experience',
       header: 'Experience',
       render: (r) => (
-        <div className="flex items-center gap-1">
-          <FiAward className="text-amber-500" />
-          <span className="text-sm font-medium">{r.year_of_experience ?? 0} Years</span>
+        <div className="flex items-center gap-2">
+          <FiAward className="text-amber-500 text-sm" />
+          <span className="text-xs font-bold text-zinc-700 uppercase tracking-wider">{r.year_of_experience ?? 0} Years</span>
         </div>
-      ),
+      )
     },
     {
       key: 'actions',
-      header: '',
+      header: 'Actions',
       render: (r) => (
-        <div className="flex justify-end gap-1">
-          <Button variant="ghost" size="sm" onClick={() => setView({ open: true, record: r })} className="hover:bg-zinc-100 text-zinc-500">
-            <FiEye size={16} />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setModal({ open: true, user: r })} className="hover:bg-blue-50 text-blue-600">
-            <FiEdit2 size={16} />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setConfirm({ open: true, id: r._id || r.id })} className="hover:bg-red-50 text-red-600">
-            <FiTrash2 size={16} />
-          </Button>
+        <div className="flex justify-end gap-1.5">
+          <ActionBtn icon={<FiEye />} onClick={() => setView({ open: true, record: r })} hover="hover:text-indigo-600 hover:bg-indigo-50" />
+          <ActionBtn icon={<FiEdit2 />} onClick={() => setModal({ open: true, user: r })} hover="hover:text-amber-600 hover:bg-amber-50" />
+          <ActionBtn icon={<FiTrash2 />} onClick={() => setConfirm({ open: true, id: r._id || r.id })} hover="hover:text-red-600 hover:bg-red-50" />
         </div>
       ),
     },
-  ], [])
+  ], [expiringDrivers])
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto p-2">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">Driver</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">Manage personnel, licenses, and deployment status.</p>
-        </div>
-        <Button 
-          variant="primary" 
-          className="bg-zinc-900 hover:bg-zinc-800 text-white shadow-lg shadow-zinc-200"
-          leftIcon={<FiPlus />} 
-          onClick={() => setModal({ open: true, user: null })} 
-          disabled={!driverRole}
-        >
-          Add Driver
-        </Button>
-      </div>
-
-      {/* Quick Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
-        <StatCard label="Active Drivers" value={allDrivers.length} icon={<FiTruck />} color="blue" />
-        {/* <StatCard label="Avg. Experience" value={
-          allDrivers.length
-            ? `${(allDrivers.reduce((s, d) => s + (Number(d.year_of_experience) || 0), 0) / allDrivers.length).toFixed(1)} Yrs`
-            : '—'
-        } icon={<FiAward />} color="amber" /> */}
-        <StatCard
-          label="Expiring Soon (30d)"
-          value={expiringDrivers.length}
-          icon={<FiAlertTriangle />}
-          color={expiringDrivers.length > 0 ? 'red' : 'emerald'}
-          sub={expiringDrivers.length > 0 ? expiringDrivers.map(d => d.name).join(', ') : 'All licenses valid'}
-        />
-      </div>
-
-      {/* Filter Bar */}
-      <div className="relative group">
-        <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-zinc-900 transition-colors" />
-        <input 
-          type="text"
-          placeholder="Search by driver name or license number..."
-          className="w-full pl-11 pr-4 py-3 bg-white border border-zinc-200 rounded-xl shadow-sm focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition-all text-sm"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-
-      {/* Content Area */}
-      <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
-        {rolesQuery.isLoading || usersQuery.isLoading ? (
-          <div className="p-20 flex flex-col items-center justify-center gap-4">
-            <div className="w-10 h-10 border-4 border-zinc-200 border-t-zinc-900 rounded-full animate-spin" />
-            <p className="text-zinc-500 font-medium animate-pulse">Syncing fleet data...</p>
+    <div className="min-h-screen p-6">
+      <div className="max-w-7xl mx-auto space-y-8">
+        
+        {/* Header Section */}
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-black text-zinc-900 tracking-tight">Drivers</h1>
+            <p className="text-zinc-500 font-medium">Manage personnel, licenses, and deployment status.</p>
           </div>
-        ) : filteredRows.length ? (
-          <Table columns={columns} rows={filteredRows} rowKey={(r) => r._id || r.id} />
-        ) : (
-          <EmptyState
-            title={searchTerm ? "No results found" : "Fleet is empty"}
-            description={searchTerm ? `No driver matches "${searchTerm}"` : "Add your first driver to start managing your fleet."}
-            actionLabel={!searchTerm ? "Add Driver" : undefined}
-            onAction={() => setModal({ open: true, user: null })}
-          />
-        )}
-      </div>
+          <Button
+            variant="primary"
+            className="bg-zinc-900 hover:bg-emerald-600 text-white p-4 rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.2)] transition-all active:scale-95"
+            leftIcon={<FiPlus className="stroke-[3px]" />}
+            onClick={() => setModal({ open: true, user: null })}
+            disabled={!driverRole}
+          >
+            Register Driver
+          </Button>
+        </header>
 
-      {/* Form Modal */}
-      <Modal open={modal.open} title={modal.user ? 'Edit Driver Profile' : 'Register New Driver'} onClose={() => setModal({ open: false, user: null })}>
-        <div className="p-1">
-          <UserForm
-            defaultValues={modal.user}
-            lockedRoleId={driverRole?.id}
-            lockedRoleLabel={driverRole?.designation ?? 'Driver'}
-            branches={branchesQuery.data?.items ?? []}
-            companies={companiesQuery.data?.items ?? []}
-            loading={createMutation.isPending || updateMutation.isPending}
-            onSubmit={async (values) => {
-              const id = modal.user?._id || modal.user?.id
-              if (modal.user) {
-                await updateMutation.mutateAsync({ id, values })
-              } else {
-                await createMutation.mutateAsync({ ...values, role_id: driverRole?.id })
-              }
-            }}
+        {/* Stats Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <StatCard title="Active Drivers" value={allDrivers.length} icon={<FiTruck />} gradient="from-blue-500 to-indigo-600" />
+          <StatCard 
+            title="Expiring (30d)" 
+            value={expiringDrivers.length} 
+            icon={<FiAlertTriangle />} 
+            gradient={expiringDrivers.length > 0 ? "from-red-500 to-orange-500" : "from-emerald-500 to-teal-500"} 
           />
         </div>
+
+        {/* Controls */}
+        <div className="relative">
+          <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
+          <input
+            type="text"
+            placeholder="Search by driver name or license number..."
+            className="w-full pl-14 pr-6 py-5 bg-white border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-zinc-900/10 outline-none transition-all font-medium text-zinc-700 placeholder:text-zinc-400"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        {/* Premium Table Wrapper */}
+        <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-xl overflow-hidden">
+          <div className="overflow-x-auto">
+            {usersQuery.isLoading ? (
+              <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-zinc-900 border-t-transparent rounded-full" /></div>
+            ) : filteredRows.length ? (
+              <Table
+                columns={columns}
+                rows={filteredRows}
+                rowKey={(r) => r._id || r.id}
+                headerClassName="bg-zinc-900 !text-white uppercase text-[10px] tracking-[0.2em] font-black py-5 px-6"
+                rowClassName="group hover:bg-zinc-50/80 transition-colors border-b border-zinc-50 last:border-none"
+              />
+            ) : (
+              <EmptyState title="Fleet is empty" description="Add your first driver to start managing your fleet." />
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Modals */}
+      <Modal open={modal.open} title={modal.user ? 'Edit Driver Profile' : 'Register New Driver'} onClose={() => setModal({ open: false, user: null })}>
+        <UserForm
+          defaultValues={modal.user}
+          lockedRoleId={driverRole?.id}
+          lockedRoleLabel={driverRole?.designation ?? 'Driver'}
+          branches={branchesQuery.data?.items ?? []}
+          companies={companiesQuery.data?.items ?? []}
+          loading={createMutation.isPending || updateMutation.isPending}
+          onSubmit={async (values) => {
+            const id = modal.user?._id || modal.user?.id
+            if (modal.user) {
+              await updateMutation.mutateAsync({ id, values })
+            } else {
+              await createMutation.mutateAsync({ ...values, role_id: driverRole?.id })
+            }
+          }}
+        />
       </Modal>
 
-      {/* Confirm and Detail Modals */}
       <ConfirmDialog
         open={confirm.open}
         title="Remove Driver?"
@@ -287,24 +263,29 @@ export default function Drivers() {
   )
 }
 
-function StatCard({ label, value, icon, color, sub }) {
-  const colors = {
-    blue: 'bg-blue-50 text-blue-600 border-blue-100',
-    amber: 'bg-amber-50 text-amber-600 border-amber-100',
-    emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-    red: 'bg-red-50 text-red-600 border-red-100',
-  }
+// --- Specialized UI Components ---
 
+function StatCard({ title, value, icon, gradient }) {
   return (
-    <div className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm flex items-center justify-between hover:border-zinc-300 transition-colors">
-      <div className="min-w-0 flex-1 pr-3">
-        <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">{label}</p>
-        <p className="text-2xl font-bold text-zinc-900">{value}</p>
-        {sub && <p className="text-[11px] text-zinc-400 mt-1 truncate">{sub}</p>}
+    <div className="group bg-white p-7 rounded-[2rem] border border-zinc-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+      <div className="space-y-1">
+        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{title}</p>
+        <p className="text-3xl font-bold text-zinc-900">{value}</p>
       </div>
-      <div className={`p-3 rounded-xl border shrink-0 ${colors[color] ?? colors.blue}`}>
+      <div className={`p-4 rounded-2xl bg-gradient-to-tr ${gradient} text-white shadow-lg`}>
         {icon}
       </div>
     </div>
+  )
+}
+
+function ActionBtn({ icon, onClick, hover }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`p-2.5 rounded-xl text-zinc-400 transition-all active:scale-90 ${hover}`}
+    >
+      <div className="text-lg">{icon}</div>
+    </button>
   )
 }

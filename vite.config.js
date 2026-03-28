@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [tailwindcss(),react()],
   server: {
     allowedHosts: [
-      'humans-effective-selections-students.trycloudflare.com'
+      'treat-tyler-schedule-caribbean.trycloudflare.com'
     ]
   }
 })

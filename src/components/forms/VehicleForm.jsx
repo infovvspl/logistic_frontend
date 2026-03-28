@@ -137,6 +137,12 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       'vehicle_mining_gps_device_expiry_date',
       'vehicle_vts_device_expiry_date',
       'andhra_permit_expiry_date',
+      'vehicle_andhra_permit_issue_date',
+      'vehicle_andhra_permit_expiry_date',
+      'vehicle_odisha_permit_issue_date',
+      'vehicle_odisha_permit_expiry_date',
+      'vehicle_national_permit_issue_date',
+      'vehicle_national_permit_expiry_date',
     ]
     dateFields.forEach((f) => (src[f] = formatDate(src[f])))
     // normalise file fields — only keep http URLs
@@ -144,6 +150,8 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       'vehicle_image', 'vehicle_registration_certificate_file',
       'vehicle_insurance_file', 'vehicle_pollution_under_control_certificate_file',
       'vehicle_fitness_certificate_file', 'vehicle_permit_file',
+      'vehicle_andhra_permit_file', 'vehicle_odisha_permit_file',
+      'vehicle_national_permit_file', 'andhra_tax_file', 'odisha_tax_file',
     ]
     fileFields.forEach((f) => {
       const v = src[f] || ''
@@ -192,6 +200,19 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       andhra_permit_expiry_date: '',
       andhra_tax: '',
       odisha_tax: '',
+      odisha_permit_status: '',
+      national_permit_status: '',
+      vehicle_andhra_permit_issue_date: '',
+      vehicle_andhra_permit_expiry_date: '',
+      vehicle_andhra_permit_file: '',
+      vehicle_odisha_permit_issue_date: '',
+      vehicle_odisha_permit_expiry_date: '',
+      vehicle_odisha_permit_file: '',
+      vehicle_national_permit_issue_date: '',
+      vehicle_national_permit_expiry_date: '',
+      vehicle_national_permit_file: '',
+      andhra_tax_file: '',
+      odisha_tax_file: '',
       vehicle_gps_company: '',
       vehicle_gps_device_id: '',
       vehicle_gps_device_expiry_date: '',
@@ -228,7 +249,9 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       // remove empty file fields so existing files are preserved
       const fileFields = ['vehicle_image', 'vehicle_registration_certificate_file',
         'vehicle_insurance_file', 'vehicle_pollution_under_control_certificate_file',
-        'vehicle_fitness_certificate_file', 'vehicle_permit_file']
+        'vehicle_fitness_certificate_file', 'vehicle_permit_file',
+        'vehicle_andhra_permit_file', 'vehicle_odisha_permit_file',
+        'vehicle_national_permit_file', 'andhra_tax_file', 'odisha_tax_file']
       fileFields.forEach((f) => { if (!values[f] || typeof values[f] === 'string') delete values[f] })
       onSubmit(values)
     })} className="w-full space-y-4">
@@ -369,34 +392,34 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       <SectionDivider label="Permit & Operations" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Controller control={control} name="vehicle_permit_type"
+        {/* <Controller control={control} name="vehicle_permit_type"
           render={({ field }) => <Select label="Permit Type" options={PERMIT_TYPES} {...field} />}
-        />
+        /> */}
         <Input
           label="Owner Name" placeholder="John Doe"
           leftIcon={<FiUser />}
           {...register('vehicle_owner_name')}
         />
-        <Input
+        {/* <Input
           label="Permit Issue" type="date"
           leftIcon={<FiCalendar />}
           {...register('vehicle_permit_issue_date')}
-        />
-        <Input
+        /> */}
+        {/* <Input
           label="Permit Expiry" type="date"
           leftIcon={<FiCalendar />}
           {...register('vehicle_permit_expiry_date')}
-        />
+        /> */}
         <Input
           label="Vehicle Purchase Date" type="date"
           leftIcon={<FiCalendar />}
           {...register('vehicle_purchase_date')}
         />
-        <Input
+        {/* <Input
           label="GPS Device ID" placeholder="GPS987..."
           leftIcon={<FiCpu />}
           {...register('vehicle_gps_device_id')}
-        />
+        /> */}
       </div>
 
       {/* ── GPS / VTS Devices ───────────────────────────────── */}
@@ -417,10 +440,52 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       <SectionDivider label="Andhra Permit & Tax" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Input label="Andhra Permit Status" placeholder="VALID / EXPIRED" {...register('andhra_permit_status')} />
-        <Input label="Andhra Permit Expiry" type="date" leftIcon={<FiCalendar />} {...register('andhra_permit_expiry_date')} />
+        <Controller control={control} name="andhra_permit_status"
+          render={({ field }) => (
+            <Select label="Andhra Permit" options={[{ value: '', label: 'Select' }, { value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]} {...field} />
+          )}
+        />
+        {watch('andhra_permit_status') === 'yes' && (<>
+          <Input label="Andhra Permit Issue Date" type="date" leftIcon={<FiCalendar />} {...register('vehicle_andhra_permit_issue_date')} />
+          <Input label="Andhra Permit Expiry Date" type="date" leftIcon={<FiCalendar />} {...register('vehicle_andhra_permit_expiry_date')} />
+          <FileUpload label="Andhra Permit File" fieldName="vehicle_andhra_permit_file" setValue={setValue} watch={watch} />
+        </>)}
         <Input label="Andhra Tax (₹)" type="number" placeholder="2500" {...register('andhra_tax')} />
+        <FileUpload label="Andhra Tax File" fieldName="andhra_tax_file" setValue={setValue} watch={watch} />
+      </div>
+
+      {/* ── Odisha Permit & Tax ─────────────────────────────── */}
+      <SectionDivider label="Odisha Permit & Tax" />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Controller control={control} name="odisha_permit_status"
+          render={({ field }) => (
+            <Select label="Odisha Permit" options={[{ value: '', label: 'Select' }, { value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]} {...field} />
+          )}
+        />
+        {watch('odisha_permit_status') === 'yes' && (<>
+          <Input label="Odisha Permit Issue Date" type="date" leftIcon={<FiCalendar />} {...register('vehicle_odisha_permit_issue_date')} />
+          <Input label="Odisha Permit Expiry Date" type="date" leftIcon={<FiCalendar />} {...register('vehicle_odisha_permit_expiry_date')} />
+          <FileUpload label="Odisha Permit File" fieldName="vehicle_odisha_permit_file" setValue={setValue} watch={watch} />
+        </>)}
         <Input label="Odisha Tax (₹)" type="number" placeholder="1850" {...register('odisha_tax')} />
+        <FileUpload label="Odisha Tax File" fieldName="odisha_tax_file" setValue={setValue} watch={watch} />
+      </div>
+
+      {/* ── National Permit ─────────────────────────────────── */}
+      <SectionDivider label="National Permit" />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Controller control={control} name="national_permit_status"
+          render={({ field }) => (
+            <Select label="National Permit" options={[{ value: '', label: 'Select' }, { value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }]} {...field} />
+          )}
+        />
+        {watch('national_permit_status') === 'yes' && (<>
+          <Input label="National Permit Issue Date" type="date" leftIcon={<FiCalendar />} {...register('vehicle_national_permit_issue_date')} />
+          <Input label="National Permit Expiry Date" type="date" leftIcon={<FiCalendar />} {...register('vehicle_national_permit_expiry_date')} />
+          <FileUpload label="National Permit File" fieldName="vehicle_national_permit_file" setValue={setValue} watch={watch} />
+        </>)}
       </div>
 
       {/* ── Assignment ──────────────────────────────────────── */}

@@ -41,7 +41,8 @@ const navItems = [
   { to: "/dashboard/consignments",  label: "Consignments",  icon: FiPackage },
   { to: "/dashboard/metrics",       label: "Metrics",       icon: FiBarChart2 },
   { to: "/dashboard/rate-charts",   label: "Rate Charts",   icon: FaRupeeSign },
-  { to: "/dashboard/challans",      label: "Challans",      icon: FiClipboard },
+  { to: "/dashboard/challans", label: "Challans", icon: FiClipboard },
+  { to: "/dashboard/bills",    label: "Bills",    icon: FiDollarSign },
 ];
 
 const navGroups = [

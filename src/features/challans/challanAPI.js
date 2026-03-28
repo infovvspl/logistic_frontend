@@ -4,8 +4,11 @@ import { USE_MOCKS } from '../../utils/constants.js'
 const ALLOWED_CHALLAN_FIELDS = [
   'challan_no', 'bill_no', 'challan_date', 'trip_id', 'unloading_date', 'permit_number', 'transport',
   'vehicle_number', 'description', 'weight_at_loading', 'weight_at_unloading',
-  'shortage', 'hsn_code', 'total_amount', 'tds', 'remark', 'advance',
+  'shortage', 'shortage_rate', 'shortage_amount', 'hsn_code',
+  'total_amount', 'tds_percentage', 'tds_amount', 'remark', 'advance',
+  'diesel_advance', 'cgst_percentage', 'cgst_amount', 'sgst_percentage', 'sgst_amount',
   'tc_date', 'balance',
+  'advance_type', 'advance_amount', 'advance_date', 'advance_account_number', 'other_expense',
 ]
 
 let mockChallans = []

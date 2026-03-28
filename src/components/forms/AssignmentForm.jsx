@@ -110,7 +110,7 @@ export default function AssignmentForm({ drivers = [], helpers = [], onSubmit, l
       <div className="flex justify-end pt-4 border-t border-zinc-100">
         <Button
           loading={loading}
-          disabled={showDriver && !driverId}
+          disabled={(showDriver && !driverId) || (showHelper && !showDriver && !helperId)}
           onClick={() => onSubmit({ driver_id: driverId || undefined, helper_id: helperId || undefined, vehicle_id: undefined, status })}
           className="w-full md:w-auto"
         >

@@ -40,6 +40,20 @@ const ALLOWED_VEHICLE_FIELDS = [
   'andhra_permit_expiry_date',
   'andhra_tax',
   'odisha_tax',
+  // State permits
+  'odisha_permit_status',
+  'vehicle_odisha_permit_issue_date',
+  'vehicle_odisha_permit_expiry_date',
+  'vehicle_odisha_permit_file',
+  'vehicle_andhra_permit_issue_date',
+  'vehicle_andhra_permit_expiry_date',
+  'vehicle_andhra_permit_file',
+  'national_permit_status',
+  'vehicle_national_permit_issue_date',
+  'vehicle_national_permit_expiry_date',
+  'vehicle_national_permit_file',
+  'andhra_tax_file',
+  'odisha_tax_file',
   // GPS / VTS
   'vehicle_gps_company',
   'vehicle_gps_device_id',
@@ -53,7 +67,6 @@ const ALLOWED_VEHICLE_FIELDS = [
   'vehicle_purchase_date',
   // Assignment
   'branch_id',
-  'company_id',
   // Files
   'vehicle_image',
   'vehicle_registration_certificate_file',
@@ -70,6 +83,11 @@ const VEHICLE_FILE_FIELDS = [
   'vehicle_pollution_under_control_certificate_file',
   'vehicle_fitness_certificate_file',
   'vehicle_permit_file',
+  'vehicle_andhra_permit_file',
+  'vehicle_odisha_permit_file',
+  'vehicle_national_permit_file',
+  'andhra_tax_file',
+  'odisha_tax_file',
 ]
 
 function buildFormData(clean) {

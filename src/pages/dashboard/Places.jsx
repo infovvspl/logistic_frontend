@@ -20,107 +20,86 @@ export default function Places() {
     mutationFn: placeAPI.createPlace,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['places'] }); setModal({ open: false, place: null }) },
   })
-
   const updateMutation = useMutation({
     mutationFn: ({ id, values }) => placeAPI.updatePlace(id, values),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['places'] }); setModal({ open: false, place: null }) },
   })
-
   const deleteMutation = useMutation({
     mutationFn: placeAPI.deletePlace,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['places'] }),
   })
 
+  const allRows = placesQuery.data?.items ?? []
+
   const filteredRows = useMemo(() => {
-    const rows = placesQuery.data?.items ?? []
-    if (!searchTerm) return rows
-    return rows.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()))
-  }, [placesQuery.data, searchTerm])
+    if (!searchTerm) return allRows
+    return allRows.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()))
+  }, [allRows, searchTerm])
 
   return (
-    <div className="space-y-6 max-w-[900px] mx-auto p-2">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-zinc-200 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">Places</h1>
-          <p className="text-sm text-zinc-500 mt-0.5">Manage pickup and drop-off locations.</p>
-        </div>
-        <Button
-          variant="primary"
-          className="bg-zinc-900 hover:bg-zinc-800 text-white shadow-lg shadow-zinc-200"
-          leftIcon={<FiPlus />}
-          onClick={() => setModal({ open: true, place: null })}
-        >
-          Add Place
-        </Button>
-      </div>
+    <div className="min-h-screen p-6">
+      <div className="max-w-4xl mx-auto space-y-8">
 
-      {/* Stat */}
-      <div className="bg-white p-5 rounded-2xl border border-zinc-200 shadow-sm flex items-center justify-between">
-        <div>
-          <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Total Places</p>
-          <p className="text-2xl font-bold text-zinc-900">{(placesQuery.data?.items ?? []).length}</p>
-        </div>
-        <div className="p-3 rounded-xl border bg-blue-50 text-blue-600 border-blue-100">
-          <FiMapPin size={20} />
-        </div>
-      </div>
-
-      {/* Search */}
-      <div className="relative group">
-        <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-zinc-900 transition-colors" />
-        <input
-          type="text"
-          placeholder="Search places..."
-          className="w-full pl-11 pr-4 py-3 bg-white border border-zinc-200 rounded-xl shadow-sm focus:ring-2 focus:ring-zinc-900 focus:border-transparent outline-none transition-all text-sm"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-
-      {/* List */}
-      <div className="bg-white rounded-2xl border border-zinc-200 shadow-sm overflow-hidden">
-        {placesQuery.isLoading ? (
-          <div className="p-20 flex flex-col items-center justify-center gap-4">
-            <div className="w-10 h-10 border-4 border-zinc-200 border-t-zinc-900 rounded-full animate-spin" />
-            <p className="text-zinc-500 font-medium animate-pulse">Loading places...</p>
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-black text-zinc-900 tracking-tight">Places</h1>
+            <p className="text-zinc-500 font-medium">Manage pickup and drop-off locations.</p>
           </div>
-        ) : filteredRows.length ? (
-          <ul className="divide-y divide-zinc-100">
-            {filteredRows.map((place) => (
-              <li key={place.id} className="flex items-center justify-between px-5 py-4 hover:bg-zinc-50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
-                    <FiMapPin size={16} />
-                  </div>
-                  <span className="font-medium text-zinc-900">{place.name}</span>
-                </div>
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="sm" onClick={() => setModal({ open: true, place })} className="text-zinc-400 hover:text-blue-600">
-                    <FiEdit2 size={16} />
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setConfirm({ open: true, id: place.id })} className="text-zinc-400 hover:text-red-600">
-                    <FiTrash2 size={16} />
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <EmptyState
-            title={searchTerm ? 'No results found' : 'No places yet'}
-            description={searchTerm ? `No place matches "${searchTerm}"` : 'Add your first place to get started.'}
-            actionLabel={!searchTerm ? 'Add Place' : undefined}
-            onAction={() => setModal({ open: true, place: null })}
+          <Button
+            variant="primary"
+            className="bg-zinc-900 hover:bg-blue-600 text-white p-4 rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.2)] transition-all active:scale-95"
+            leftIcon={<FiPlus className="stroke-[3px]" />}
+            onClick={() => setModal({ open: true, place: null })}
+          >
+            Add Place
+          </Button>
+        </header>
+
+        <StatCard title="Total Places" value={allRows.length} icon={<FiMapPin />} gradient="from-blue-500 to-indigo-500" />
+
+        <div className="relative">
+          <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
+          <input
+            type="text"
+            placeholder="Search places..."
+            className="w-full pl-14 pr-6 py-5 bg-white border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-medium text-zinc-700 placeholder:text-zinc-400"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
-        )}
+        </div>
+
+        <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-xl overflow-hidden">
+          {placesQuery.isLoading ? (
+            <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full" /></div>
+          ) : filteredRows.length ? (
+            <ul className="divide-y divide-zinc-50">
+              {filteredRows.map((place) => (
+                <li key={place.id} className="flex items-center justify-between px-6 py-4 hover:bg-blue-50/30 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2.5 bg-blue-50 rounded-xl text-blue-600 border border-blue-100">
+                      <FiMapPin size={16} />
+                    </div>
+                    <span className="font-semibold text-zinc-900">{place.name}</span>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <ActionBtn icon={<FiEdit2 />} onClick={() => setModal({ open: true, place })} hover="hover:text-amber-600 hover:bg-amber-50" />
+                    <ActionBtn icon={<FiTrash2 />} onClick={() => setConfirm({ open: true, id: place.id })} hover="hover:text-red-600 hover:bg-red-50" />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState
+              title={searchTerm ? 'No results found' : 'No places yet'}
+              description={searchTerm ? `No place matches "${searchTerm}"` : 'Add your first place to get started.'}
+              actionLabel={!searchTerm ? 'Add Place' : undefined}
+              onAction={() => setModal({ open: true, place: null })}
+            />
+          )}
+        </div>
       </div>
 
-      <Modal
-        open={modal.open}
-        title={modal.place ? 'Edit Place' : 'Add Place'}
-        onClose={() => setModal({ open: false, place: null })}
-      >
+      <Modal open={modal.open} title={modal.place ? 'Edit Place' : 'Add Place'} onClose={() => setModal({ open: false, place: null })}>
         <PlaceForm
           defaultValues={modal.place}
           loading={createMutation.isPending || updateMutation.isPending}
@@ -132,15 +111,31 @@ export default function Places() {
       </Modal>
 
       <ConfirmDialog
-        open={confirm.open}
-        title="Delete place?"
-        description="This action cannot be undone."
-        danger
-        confirmText="Delete"
-        loading={deleteMutation.isPending}
+        open={confirm.open} title="Delete place?" description="This action cannot be undone."
+        danger confirmText="Delete" loading={deleteMutation.isPending}
         onClose={() => setConfirm({ open: false, id: null })}
         onConfirm={async () => { await deleteMutation.mutateAsync(confirm.id); setConfirm({ open: false, id: null }) }}
       />
     </div>
+  )
+}
+
+function StatCard({ title, value, icon, gradient }) {
+  return (
+    <div className="group bg-white p-7 rounded-[2rem] border border-zinc-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
+      <div className="space-y-1">
+        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{title}</p>
+        <p className="text-3xl font-bold text-zinc-900">{value}</p>
+      </div>
+      <div className={`p-4 rounded-2xl bg-gradient-to-tr ${gradient} text-white shadow-lg`}>{icon}</div>
+    </div>
+  )
+}
+
+function ActionBtn({ icon, onClick, hover }) {
+  return (
+    <button onClick={onClick} className={`p-2.5 rounded-xl text-zinc-400 transition-all active:scale-90 ${hover}`}>
+      <div className="text-lg">{icon}</div>
+    </button>
   )
 }
