@@ -21,6 +21,7 @@ import {
   FiDollarSign,
   FiClipboard,
 } from "react-icons/fi";
+import { RiBillLine } from "react-icons/ri";
 import { FaRupeeSign } from "react-icons/fa";
 import { APP_NAME } from "../utils/constants.js";
 import { useAuth } from "../hooks/useAuth.js";
@@ -42,7 +43,7 @@ const navItems = [
   { to: "/dashboard/metrics",       label: "Metrics",       icon: FiBarChart2 },
   { to: "/dashboard/rate-charts",   label: "Rate Charts",   icon: FaRupeeSign },
   { to: "/dashboard/challans", label: "Challans", icon: FiClipboard },
-  { to: "/dashboard/bills",    label: "Bills",    icon: FiDollarSign },
+  { to: "/dashboard/bills",    label: "Bills",    icon: RiBillLine },
 ];
 
 const navGroups = [
@@ -56,7 +57,8 @@ const navGroups = [
   },
   {
     label: "Operations",
-    items: [navItems[4], navItems[5], navItems[6], navItems[8], navItems[9], navItems[10], navItems[11], navItems[12], navItems[13]],
+    items: [navItems[4], navItems[5], navItems[6], navItems[8], navItems[9],
+     navItems[10], navItems[11], navItems[12], navItems[13], navItems[14]],
   },
 ];
 
@@ -89,6 +91,7 @@ export default function DashboardLayout() {
           background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
           font-family: 'Inter', sans-serif;
           display: flex;
+          align-items: flex-start;
           padding: 24px;
           gap: 24px;
         }
@@ -107,7 +110,11 @@ export default function DashboardLayout() {
             inset 0 1px 0 rgba(255, 255, 255, 0.6);
           border: 1px solid rgba(255, 255, 255, 0.2);
           overflow: hidden;
-          position: relative;
+          position: sticky;
+          top: 24px;
+          max-height: calc(100vh - 48px);
+          display: flex;
+          flex-direction: column;
         }
 
         .db-sidebar::before {
@@ -125,6 +132,13 @@ export default function DashboardLayout() {
           padding: 32px 24px 28px;
           position: relative;
           z-index: 2;
+          overflow-y: auto;
+          overflow-x: hidden;
+          scrollbar-width: none;
+        }
+
+        .db-sidebar-inner::-webkit-scrollbar {
+          display: none;
         }
 
         /* ── Brand ── */
@@ -312,6 +326,7 @@ export default function DashboardLayout() {
           flex-direction: column;
           gap: 24px;
           min-width: 0;
+          min-height: 0;
         }
 
         /* Top bar */
@@ -458,7 +473,6 @@ export default function DashboardLayout() {
             0 1px 3px rgba(0, 0, 0, 0.05),
             inset 0 1px 0 rgba(255, 255, 255, 0.8);
           border: 1px solid rgba(255, 255, 255, 0.3);
-          overflow: auto;
         }
 
         /* ── Responsive ── */

@@ -222,8 +222,17 @@ export default function Bills() {
           loading={createMutation.isPending || updateMutation.isPending}
           serverError={createMutation.error?.message ?? updateMutation.error?.message ?? null}
           onSubmit={async (values) => {
-            if (modal.bill) await updateMutation.mutateAsync({ id: modal.bill.id, values })
-            else await createMutation.mutateAsync(values)
+            if (modal.bill) {
+              await updateMutation.mutateAsync({ id: modal.bill.id, values })
+            } else {
+              // create one bill per selected challan
+              const { bill_no, challan_ids } = values
+              await Promise.all(
+                challan_ids.map((challan_id) =>
+                  createMutation.mutateAsync({ bill_no, challan_id })
+                )
+              )
+            }
           }}
         />
       </Modal>
