@@ -43,7 +43,8 @@ const navItems = [
   { to: "/dashboard/metrics",       label: "Metrics",       icon: FiBarChart2 },
   { to: "/dashboard/rate-charts",   label: "Rate Charts",   icon: FaRupeeSign },
   { to: "/dashboard/challans", label: "Challans", icon: FiClipboard },
-  { to: "/dashboard/bills",    label: "Bills",    icon: RiBillLine },
+  { to: "/dashboard/bills",   label: "Bills",   icon: RiBillLine },
+  { to: "/dashboard/ledger", label: "Ledger",  icon: FiDollarSign },
 ];
 
 const navGroups = [
@@ -58,7 +59,7 @@ const navGroups = [
   {
     label: "Operations",
     items: [navItems[4], navItems[5], navItems[6], navItems[8], navItems[9],
-     navItems[10], navItems[11], navItems[12], navItems[13], navItems[14]],
+     navItems[10], navItems[11], navItems[12], navItems[13], navItems[14], navItems[15]],
   },
 ];
 

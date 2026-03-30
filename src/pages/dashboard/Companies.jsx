@@ -300,37 +300,118 @@ export default function Companies() {
       </Modal>
 
       <Modal open={details.open} title="Company Details" onClose={() => setDetails({ open: false, company: null })}>
-         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-           {[
-             ['Entity Name', details.company?.name],
-             ['Official Email', details.company?.email],
-             ['Contact', details.company?.mobile],
-             ['GST Number', details.company?.gst_no],
-             ['CIN Number', details.company?.cin_no],
-             ['TIN Number', details.company?.tin_no],
-             ['PAN Number', details.company?.pan_no],
-             ['Service Tax No', details.company?.service_tax_no],
-             ['PF Code', details.company?.pf],
-             ['ESIS', details.company?.esis],
-             ['ESI', details.company?.esi],
-             ['Senior Allowance', details.company?.senior_allowance],
-             ['Account No 1', details.company?.account_no_1],
-             ['Bank Name 1', details.company?.bank_name],
-             ['IFSC Code 1', details.company?.ifsc_code],
-             ['SWIFT Code 1', details.company?.swift_code],
-             ['Branch 1', details.company?.branch],
-             ['Account No 2', details.company?.account_no_2],
-             ['Bank Name 2', details.company?.bank_name_2],
-             ['IFSC Code 2', details.company?.ifsc_code_2],
-             ['SWIFT Code 2', details.company?.swift_code_2],
-             ['Branch 2', details.company?.branch_2],
-           ].map(([l, v]) => (
-             <div key={l} className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
-               <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{l}</div>
-               <div className="mt-1 text-sm font-bold text-zinc-800">{v ?? '—'}</div>
-             </div>
-           ))}
-         </div>
+        {details.company && (
+          <div className="space-y-4 max-h-[72vh] overflow-y-auto pr-1 -mr-1">
+
+            {/* Identity section */}
+            <div className="rounded-2xl border border-zinc-100 bg-white overflow-hidden">
+              <div className="px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-400 flex items-center gap-2">
+                <div className="w-1.5 h-4 rounded-full bg-white/60" />
+                <span className="text-[11px] font-black uppercase tracking-widest text-white">Company Info</span>
+              </div>
+              <div className="px-4">
+                {[
+                  ['Entity Name', details.company.name],
+                  ['Official Email', details.company.email],
+                  ['Contact', details.company.mobile],
+                ].map(([l, v]) => (
+                  <div key={l} className="flex items-start justify-between gap-4 py-3 border-b border-zinc-100 last:border-0">
+                    <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider shrink-0 w-36 pt-0.5">{l}</span>
+                    <span className="text-sm font-semibold text-zinc-700 text-right break-words">{v ?? '—'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Tax & Registration */}
+            <div className="rounded-2xl border border-zinc-100 bg-white overflow-hidden">
+              <div className="px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-400 flex items-center gap-2">
+                <div className="w-1.5 h-4 rounded-full bg-white/60" />
+                <span className="text-[11px] font-black uppercase tracking-widest text-white">Tax & Registration</span>
+              </div>
+              <div className="px-4">
+                {[
+                  ['GST Number', details.company.gst_no],
+                  ['CIN Number', details.company.cin_no],
+                  ['TIN Number', details.company.tin_no],
+                  ['PAN Number', details.company.pan_no],
+                  ['Service Tax No', details.company.service_tax_no],
+                ].map(([l, v]) => (
+                  <div key={l} className="flex items-start justify-between gap-4 py-3 border-b border-zinc-100 last:border-0">
+                    <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider shrink-0 w-36 pt-0.5">{l}</span>
+                    <span className="text-sm font-semibold text-zinc-700 text-right break-words">{v ?? '—'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Compliance */}
+            <div className="rounded-2xl border border-zinc-100 bg-white overflow-hidden">
+              <div className="px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-400 flex items-center gap-2">
+                <div className="w-1.5 h-4 rounded-full bg-white/60" />
+                <span className="text-[11px] font-black uppercase tracking-widest text-white">Compliance</span>
+              </div>
+              <div className="px-4">
+                {[
+                  ['PF Code', details.company.pf],
+                  ['ESIS', details.company.esis],
+                  ['ESI', details.company.esi],
+                  ['Senior Allowance', details.company.senior_allowance != null ? `₹${Number(details.company.senior_allowance).toLocaleString('en-IN')}` : null],
+                ].map(([l, v]) => (
+                  <div key={l} className="flex items-start justify-between gap-4 py-3 border-b border-zinc-100 last:border-0">
+                    <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider shrink-0 w-36 pt-0.5">{l}</span>
+                    <span className="text-sm font-semibold text-zinc-700 text-right break-words">{v ?? '—'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bank Account 1 */}
+            <div className="rounded-2xl border border-zinc-100 bg-white overflow-hidden">
+              <div className="px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-400 flex items-center gap-2">
+                <div className="w-1.5 h-4 rounded-full bg-white/60" />
+                <span className="text-[11px] font-black uppercase tracking-widest text-white">Bank Account 1</span>
+              </div>
+              <div className="px-4">
+                {[
+                  ['Account No', details.company.account_no_1],
+                  ['Bank Name', details.company.bank_name],
+                  ['IFSC Code', details.company.ifsc_code],
+                  ['SWIFT Code', details.company.swift_code],
+                  ['Branch', details.company.branch],
+                ].map(([l, v]) => (
+                  <div key={l} className="flex items-start justify-between gap-4 py-3 border-b border-zinc-100 last:border-0">
+                    <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider shrink-0 w-36 pt-0.5">{l}</span>
+                    <span className="text-sm font-semibold text-zinc-700 text-right break-words">{v ?? '—'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Bank Account 2 */}
+            <div className="rounded-2xl border border-zinc-100 bg-white overflow-hidden">
+              <div className="px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-400 flex items-center gap-2">
+                <div className="w-1.5 h-4 rounded-full bg-white/60" />
+                <span className="text-[11px] font-black uppercase tracking-widest text-white">Bank Account 2</span>
+              </div>
+              <div className="px-4">
+                {[
+                  ['Account No', details.company.account_no_2],
+                  ['Bank Name', details.company.bank_name_2],
+                  ['IFSC Code', details.company.ifsc_code_2],
+                  ['SWIFT Code', details.company.swift_code_2],
+                  ['Branch', details.company.branch_2],
+                ].map(([l, v]) => (
+                  <div key={l} className="flex items-start justify-between gap-4 py-3 border-b border-zinc-100 last:border-0">
+                    <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider shrink-0 w-36 pt-0.5">{l}</span>
+                    <span className="text-sm font-semibold text-zinc-700 text-right break-words">{v ?? '—'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        )}
       </Modal>
 
       {/* Branch Modals */}
@@ -343,19 +424,27 @@ export default function Companies() {
       </Modal>
 
       <Modal open={branchDetails.open} title="Branch Details" onClose={() => setBranchDetails({ open: false, branch: null })}>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {[
-            ['Branch Name', branchDetails.branch?.branch_name],
-            ['Email', branchDetails.branch?.branch_email],
-            ['Phone', branchDetails.branch?.branch_phone],
-            ['Address', branchDetails.branch?.branch_address],
-          ].map(([l, v]) => (
-            <div key={l} className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4">
-              <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{l}</div>
-              <div className="mt-1 text-sm font-bold text-zinc-800">{v ?? '—'}</div>
+        {branchDetails.branch && (
+          <div className="rounded-2xl border border-zinc-100 bg-white overflow-hidden">
+            <div className="px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-400 flex items-center gap-2">
+              <div className="w-1.5 h-4 rounded-full bg-white/60" />
+              <span className="text-[11px] font-black uppercase tracking-widest text-white">Branch Info</span>
             </div>
-          ))}
-        </div>
+            <div className="px-4">
+              {[
+                ['Branch Name', branchDetails.branch.branch_name],
+                ['Email', branchDetails.branch.branch_email],
+                ['Phone', branchDetails.branch.branch_phone],
+                ['Address', branchDetails.branch.branch_address],
+              ].map(([l, v]) => (
+                <div key={l} className="flex items-start justify-between gap-4 py-3 border-b border-zinc-100 last:border-0">
+                  <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider shrink-0 w-36 pt-0.5">{l}</span>
+                  <span className="text-sm font-semibold text-zinc-700 text-right break-words">{v ?? '—'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </Modal>
 
       <ConfirmDialog

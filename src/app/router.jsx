@@ -19,6 +19,7 @@ import Metrics from '../pages/dashboard/Metrics.jsx'
 import RateCharts from '../pages/dashboard/RateCharts.jsx'
 import Challans from '../pages/dashboard/Challans.jsx'
 import Bills from '../pages/dashboard/Bills.jsx'
+import Ledger from '../pages/dashboard/Ledger.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { usePermissions } from '../hooks/usePermissions.js'
 
@@ -101,6 +102,7 @@ export const router = createBrowserRouter([
       { path: 'rate-charts', element: <RateCharts /> },
       { path: 'challans', element: <Challans /> },
       { path: 'bills', element: <Bills /> },
+      { path: 'ledger', element: <Ledger /> },
     ],
   },
   { path: '*', element: <NotFound /> },

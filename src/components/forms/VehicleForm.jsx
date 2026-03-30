@@ -45,13 +45,16 @@ function formatDate(v) {
   return d.toISOString().slice(0, 10)
 }
 
-function SectionDivider({ label }) {
+function SectionDivider({ label, icon: Icon }) {
   return (
-    <div className="flex items-center gap-3 pt-1 pb-0.5">
-      <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 whitespace-nowrap">
-        {label}
-      </span>
-      <div className="h-px flex-1 bg-zinc-100" />
+    <div className="flex items-center gap-3 pt-2">
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-blue-400 shadow-sm shadow-blue-200">
+        {Icon && <Icon size={11} className="text-white/80" />}
+        <span className="text-[10px] font-black uppercase tracking-widest text-white whitespace-nowrap">
+          {label}
+        </span>
+      </div>
+      <div className="h-px flex-1 bg-gradient-to-r from-blue-100 to-transparent" />
     </div>
   )
 }
@@ -70,48 +73,58 @@ function FileUpload({ label, fieldName, setValue, watch }) {
   }, [file, hasFile])
 
   const previewSrc = preview || existingUrl
-
   const isPdf = hasFile
     ? file.type === 'application/pdf'
     : existingUrl ? /\.pdf($|\?)/i.test(existingUrl) : false
+  const hasAny = hasFile || !!existingUrl
 
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-sm font-medium text-zinc-700">{label}</label>
+
       {previewSrc && (
         isPdf ? (
           <a href={previewSrc} target="_blank" rel="noreferrer"
-            className="flex items-center justify-center gap-2 h-28 rounded-lg border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 transition-colors text-xs font-semibold text-blue-600">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            Click to open PDF
+            className="flex items-center justify-center gap-2 h-24 rounded-xl border border-blue-100 bg-blue-50 hover:bg-blue-100 transition-colors text-xs font-semibold text-blue-600">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            Open PDF
           </a>
         ) : (
           <a href={previewSrc} target="_blank" rel="noreferrer" className="block">
             <img src={previewSrc} alt={label}
-              className="w-full h-28 object-cover rounded-lg border border-zinc-200 shadow-sm hover:opacity-90 transition-opacity"
+              className="w-full h-24 object-cover rounded-xl border border-zinc-200 shadow-sm hover:opacity-90 transition-opacity"
               onError={(e) => { e.currentTarget.style.display = 'none' }}
             />
           </a>
         )
       )}
-      <div className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-colors ${hasFile ? 'border-blue-200 bg-blue-50' : 'border-zinc-200 bg-zinc-50'}`}>
-        <FiFile size={16} className={hasFile ? 'text-blue-500' : 'text-zinc-400'} />
+
+      <label className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all ${
+        hasAny
+          ? 'border-blue-200 bg-blue-50 hover:bg-blue-100'
+          : 'border-dashed border-zinc-300 bg-zinc-50 hover:border-blue-300 hover:bg-blue-50'
+      }`}>
+        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${hasAny ? 'bg-blue-600' : 'bg-zinc-200'}`}>
+          {hasAny
+            ? <FiFile size={13} className="text-white" />
+            : <FiUpload size={13} className="text-zinc-500" />
+          }
+        </div>
         <span className="flex-1 text-xs text-zinc-600 truncate">
-          {hasFile ? file.name : existingUrl ? 'File uploaded' : 'No file chosen'}
+          {hasFile ? file.name : existingUrl ? 'File uploaded' : 'Click to upload'}
         </span>
-        <label className="cursor-pointer text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 shrink-0">
-          <FiUpload size={12} />
-          {existingUrl || hasFile ? 'Change' : 'Upload'}
-          <input type="file" accept="image/*,.pdf" className="hidden"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) setValue(fieldName, f) }}
-          />
-        </label>
-        {(hasFile || existingUrl) && (
-          <button type="button" onClick={() => setValue(fieldName, '')} className="text-xs text-rose-500 font-semibold hover:underline shrink-0">
+        {hasAny && (
+          <button type="button" onClick={(e) => { e.preventDefault(); setValue(fieldName, '') }}
+            className="text-[11px] font-bold text-rose-500 hover:text-rose-700 shrink-0 px-1">
             Remove
           </button>
         )}
-      </div>
+        <input type="file" accept="image/*,.pdf" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) setValue(fieldName, f) }}
+        />
+      </label>
     </div>
   )
 }
@@ -257,7 +270,7 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
     })} className="w-full space-y-4">
 
       {/* ── General Information ─────────────────────────────── */}
-      <SectionDivider label="General Information" />
+      <SectionDivider label="General Information" icon={FiTruck} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input
@@ -304,7 +317,7 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       </div>
 
       {/* ── Specifications ──────────────────────────────────── */}
-      <SectionDivider label="Specifications" />
+      <SectionDivider label="Specifications" icon={FiCpu} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input
@@ -324,7 +337,7 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       </div>
 
       {/* ── Registration & Insurance ────────────────────────── */}
-      <SectionDivider label="Registration & Insurance" />
+      <SectionDivider label="Registration & Insurance" icon={FiShield} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input
@@ -360,7 +373,7 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       </div>
 
       {/* ── Certificates ───────────────────────────────────── */}
-      <SectionDivider label="Certificates" />
+      <SectionDivider label="Certificates" icon={FiFileText} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1.5">
@@ -389,7 +402,7 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       </div>
 
       {/* ── Permit & Operations ─────────────────────────────── */}
-      <SectionDivider label="Permit & Operations" />
+      <SectionDivider label="Permit & Operations" icon={FiFileText} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* <Controller control={control} name="vehicle_permit_type"
@@ -423,7 +436,7 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       </div>
 
       {/* ── GPS / VTS Devices ───────────────────────────────── */}
-      <SectionDivider label="GPS / VTS Devices" />
+      <SectionDivider label="GPS / VTS Devices" icon={FiCpu} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input label="GPS Company" placeholder="SecureTrack Solutions" leftIcon={<FiCpu />} {...register('vehicle_gps_company')} />
@@ -437,7 +450,7 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       </div>
 
       {/* ── Andhra Permit & Tax ─────────────────────────────── */}
-      <SectionDivider label="Andhra Permit & Tax" />
+      <SectionDivider label="Andhra Permit & Tax" icon={FiFileText} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Controller control={control} name="andhra_permit_status"
@@ -455,7 +468,7 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       </div>
 
       {/* ── Odisha Permit & Tax ─────────────────────────────── */}
-      <SectionDivider label="Odisha Permit & Tax" />
+      <SectionDivider label="Odisha Permit & Tax" icon={FiFileText} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Controller control={control} name="odisha_permit_status"
@@ -473,7 +486,7 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       </div>
 
       {/* ── National Permit ─────────────────────────────────── */}
-      <SectionDivider label="National Permit" />
+      <SectionDivider label="National Permit" icon={FiFileText} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Controller control={control} name="national_permit_status"
@@ -489,7 +502,7 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       </div>
 
       {/* ── Assignment ──────────────────────────────────────── */}
-      <SectionDivider label="Assignment" />
+      <SectionDivider label="Assignment" icon={FiUser} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Controller control={control} name="branch_id"
@@ -508,7 +521,7 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       </div>
 
       {/* ── Documents & Images ──────────────────────────────── */}
-      <SectionDivider label="Documents & Images" />
+      <SectionDivider label="Documents & Images" icon={FiCamera} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <FileUpload label="Vehicle Image" fieldName="vehicle_image" setValue={setValue} watch={watch} />

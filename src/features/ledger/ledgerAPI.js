@@ -1,0 +1,86 @@
+import { api } from '../../services/axios.js'
+import { USE_MOCKS } from '../../utils/constants.js'
+
+const ALLOWED_FIELDS = [
+  'trip_id', 'bill_no', 'company_id',
+  'payer_type', 'payer_id',
+  'payee_type', 'payee_id',
+  'amount', 'transaction_type',
+]
+
+let mockLedger = []
+
+function normalize(raw) {
+  if (!raw || typeof raw !== 'object') return raw
+  return { ...raw, id: raw.id ?? raw._id ?? raw.ledger_id }
+}
+
+function normalizeList(data) {
+  if (Array.isArray(data)) return { items: data.map(normalize) }
+  if (data?.items) return { ...data, items: data.items.map(normalize) }
+  if (data?.data && Array.isArray(data.data)) return { items: data.data.map(normalize) }
+  return { items: [] }
+}
+
+function cleanPayload(payload) {
+  const clean = {}
+  ALLOWED_FIELDS.forEach((f) => {
+    const v = payload[f]
+    if (v === undefined || v === null) return
+    if (typeof v === 'string' && v.trim() === '') return
+    clean[f] = v
+  })
+  return clean
+}
+
+function extractError(err, fallback) {
+  return err?.response?.data?.message ?? err?.response?.data?.error ?? err?.message ?? fallback
+}
+
+export async function listLedger() {
+  try {
+    if (USE_MOCKS) return { items: mockLedger }
+    const { data } = await api.get('/ledger')
+    return normalizeList(data)
+  } catch (err) { throw new Error(extractError(err, 'Failed to load ledger')) }
+}
+
+export async function getLedger(id) {
+  try {
+    const { data } = await api.get(`/ledger/${id}`)
+    return normalize(data?.data ?? data)
+  } catch (err) { throw new Error(extractError(err, 'Failed to load ledger entry')) }
+}
+
+export async function createLedger(payload) {
+  try {
+    const clean = cleanPayload(payload)
+    if (USE_MOCKS) {
+      const next = { ...clean, id: `led${Date.now()}` }
+      mockLedger = [next, ...mockLedger]
+      return next
+    }
+    const { data } = await api.post('/ledger', clean)
+    return normalize(data?.data ?? data)
+  } catch (err) { throw new Error(extractError(err, 'Failed to create ledger entry')) }
+}
+
+export async function updateLedger(id, payload) {
+  try {
+    const clean = cleanPayload(payload)
+    if (USE_MOCKS) {
+      mockLedger = mockLedger.map((l) => l.id === id ? { ...l, ...clean } : l)
+      return mockLedger.find((l) => l.id === id)
+    }
+    const { data } = await api.patch(`/ledger/${id}`, clean)
+    return normalize(data?.data ?? data)
+  } catch (err) { throw new Error(extractError(err, 'Failed to update ledger entry')) }
+}
+
+export async function deleteLedger(id) {
+  try {
+    if (USE_MOCKS) { mockLedger = mockLedger.filter((l) => l.id !== id); return { ok: true } }
+    const { data } = await api.delete(`/ledger/${id}`)
+    return data
+  } catch (err) { throw new Error(extractError(err, 'Failed to delete ledger entry')) }
+}
