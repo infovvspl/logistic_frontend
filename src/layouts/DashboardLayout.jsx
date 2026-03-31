@@ -20,6 +20,8 @@ import {
   FiBarChart2,
   FiDollarSign,
   FiClipboard,
+  FiShoppingCart,
+  FiClock,
 } from "react-icons/fi";
 import { RiBillLine } from "react-icons/ri";
 import { FaRupeeSign } from "react-icons/fa";
@@ -44,7 +46,14 @@ const navItems = [
   { to: "/dashboard/rate-charts",   label: "Rate Charts",   icon: FaRupeeSign },
   { to: "/dashboard/challans", label: "Challans", icon: FiClipboard },
   { to: "/dashboard/bills",   label: "Bills",   icon: RiBillLine },
-  { to: "/dashboard/ledger", label: "Ledger",  icon: FiDollarSign },
+  // { to: "/dashboard/ledger",     label: "Ledger",     icon: FiDollarSign },
+  { to: "/dashboard/suppliers",  label: "Suppliers",  icon: FiUsers },
+  { to: "/dashboard/products",   label: "Products",   icon: FiPackage },
+  { to: "/dashboard/purchase",   label: "Purchase",   icon: FiShoppingCart },
+  { to: "/dashboard/attendance", label: "Attendance", icon: FiClock },
+  { to: "/dashboard/wages",      label: "Wages",      icon: FiDollarSign },
+  { to: "/dashboard/salary",               label: "Salary",               icon: FaRupeeSign },
+  { to: "/dashboard/transaction-purposes", label: "Txn Purposes",         icon: FiTag },
 ];
 
 const navGroups = [
@@ -59,7 +68,8 @@ const navGroups = [
   {
     label: "Operations",
     items: [navItems[4], navItems[5], navItems[6], navItems[8], navItems[9],
-     navItems[10], navItems[11], navItems[12], navItems[13], navItems[14], navItems[15]],
+     navItems[10], navItems[11], navItems[12], navItems[13], navItems[14],
+      navItems[15], navItems[16], navItems[17], navItems[18], navItems[19], navItems[20], navItems[21]],
   },
 ];
 

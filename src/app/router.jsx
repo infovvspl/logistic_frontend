@@ -20,6 +20,13 @@ import RateCharts from '../pages/dashboard/RateCharts.jsx'
 import Challans from '../pages/dashboard/Challans.jsx'
 import Bills from '../pages/dashboard/Bills.jsx'
 import Ledger from '../pages/dashboard/Ledger.jsx'
+import Suppliers from '../pages/dashboard/Suppliers.jsx'
+import Products from '../pages/dashboard/Products.jsx'
+import Purchase from '../pages/dashboard/Purchase.jsx'
+import Attendance from '../pages/dashboard/Attendance.jsx'
+import Wages from '../pages/dashboard/Wages.jsx'
+import Salary from '../pages/dashboard/Salary.jsx'
+import TransactionPurposes from '../pages/dashboard/TransactionPurposes.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { usePermissions } from '../hooks/usePermissions.js'
 
@@ -103,6 +110,13 @@ export const router = createBrowserRouter([
       { path: 'challans', element: <Challans /> },
       { path: 'bills', element: <Bills /> },
       { path: 'ledger', element: <Ledger /> },
+      { path: 'suppliers', element: <Suppliers /> },
+      { path: 'products', element: <Products /> },
+      { path: 'purchase', element: <Purchase /> },
+      { path: 'attendance', element: <Attendance /> },
+      { path: 'wages', element: <Wages /> },
+      { path: 'salary', element: <Salary /> },
+      { path: 'transaction-purposes', element: <TransactionPurposes /> },
     ],
   },
   { path: '*', element: <NotFound /> },

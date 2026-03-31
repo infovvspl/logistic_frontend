@@ -12,6 +12,7 @@ const DOC_IMAGE_KEYS = [
   'vehicle_fitness_certificate_file', 'vehicle_permit_file', 'andhra_tax_file',
   'odisha_tax_file', 'vehicle_national_permit_file',
   'vehicle_andhra_permit_file', 'vehicle_odisha_permit_file',
+  'purchase_bill_file',
 ]
 
 function isImageKey(key) {
