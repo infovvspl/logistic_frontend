@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   FiPlus, FiTrash2, FiEdit2, FiEye, FiSearch, 
-  FiTruck, FiAward, FiAlertTriangle 
+  FiTruck, FiAward, FiAlertTriangle, FiFilter, FiCheck,
 } from 'react-icons/fi'
 
 // UI Components
@@ -20,19 +20,33 @@ import * as userAPI from '../../features/users/userAPI.js'
 import * as roleAPI from '../../features/roles/roleAPI.js'
 import * as branchAPI from '../../features/branches/branchAPI.js'
 import * as companyAPI from '../../features/companies/companyAPI.js'
+import * as tripAPI from '../../features/trips/tripAPI.js'
+import * as assignmentAPI from '../../features/assignments/assignmentAPI.js'
 import { formatDate } from '../../utils/formatDate.js'
 
 export default function Drivers() {
   const qc = useQueryClient()
   const [searchTerm, setSearchTerm] = useState('')
+  const [activeFilter, setActiveFilter] = useState(null) // null | 'active' | 'experience' | 'in_trip'
+  const [filterOpen, setFilterOpen] = useState(false)
+  const filterRef = useRef(null)
   const [modal, setModal] = useState({ open: false, user: null })
   const [view, setView] = useState({ open: false, record: null })
   const [confirm, setConfirm] = useState({ open: false, id: null })
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handler(e) { if (filterRef.current && !filterRef.current.contains(e.target)) setFilterOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   // --- Queries & Mutations (Logic preserved) ---
   const rolesQuery = useQuery({ queryKey: ['roles'], queryFn: roleAPI.listRoles })
   const branchesQuery = useQuery({ queryKey: ['branches'], queryFn: branchAPI.listBranches })
   const companiesQuery = useQuery({ queryKey: ['companies'], queryFn: companyAPI.listCompanies })
+  const tripsQuery = useQuery({ queryKey: ['trips'], queryFn: tripAPI.listTrips })
+  const assignmentsQuery = useQuery({ queryKey: ['assignments'], queryFn: assignmentAPI.listAssignments })
 
   const driverRole = useMemo(() => {
     const roles = rolesQuery.data?.items ?? []
@@ -70,13 +84,87 @@ export default function Drivers() {
     return driverRole?.id ? all.filter((u) => u.role_id === driverRole.id) : all
   }, [usersQuery.data, driverRole?.id])
 
+  // Set of driver IDs scheduled for tomorrow (SCHEDULED trips with start_date_time = tomorrow)
+  const scheduledTomorrowDriverIds = useMemo(() => {
+    const trips = tripsQuery.data?.items ?? []
+    const assignments = assignmentsQuery.data?.items ?? []
+    const assignDriverMap = new Map()
+    assignments.forEach((a) => {
+      const driverId = a.driver_id ?? a.user_id
+      if (driverId) assignDriverMap.set(String(a.id), String(driverId))
+    })
+
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const tomorrowDate = tomorrow.toISOString().slice(0, 10) // "YYYY-MM-DD"
+
+    const ids = new Set()
+    trips.forEach((t) => {
+      if (t.status !== 'SCHEDULED') return
+      if (!t.start_date_time) return
+      const tripDate = new Date(t.start_date_time).toISOString().slice(0, 10)
+      if (tripDate !== tomorrowDate) return
+      if (t.driver_id) ids.add(String(t.driver_id))
+      if (t.vehicle_assign_id) {
+        const driverId = assignDriverMap.get(String(t.vehicle_assign_id))
+        if (driverId) ids.add(driverId)
+      }
+    })
+    return ids
+  }, [tripsQuery.data, assignmentsQuery.data])
+  // Driver is linked via trip.vehicle_assign_id → assignment.driver_id
+  const inTransitDriverIds = useMemo(() => {
+    const trips = tripsQuery.data?.items ?? []
+    const assignments = assignmentsQuery.data?.items ?? []
+
+    // assignment_id → driver_id
+    const assignDriverMap = new Map()
+    assignments.forEach((a) => {
+      const driverId = a.driver_id ?? a.user_id
+      if (driverId) assignDriverMap.set(String(a.id), String(driverId))
+    })
+
+    const ids = new Set()
+    trips.forEach((t) => {
+      if (t.status !== 'IN_TRANSIT') return
+      // direct driver_id on trip
+      if (t.driver_id) ids.add(String(t.driver_id))
+      // via vehicle_assign_id → assignment
+      if (t.vehicle_assign_id) {
+        const driverId = assignDriverMap.get(String(t.vehicle_assign_id))
+        if (driverId) ids.add(driverId)
+      }
+    })
+    return ids
+  }, [tripsQuery.data, assignmentsQuery.data])
+
   const filteredRows = useMemo(() => {
-    if (!searchTerm) return allDrivers
-    return allDrivers.filter(d =>
-      d.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      d.license_number?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  }, [allDrivers, searchTerm])
+    let rows = allDrivers
+
+    // search
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase()
+      rows = rows.filter((d) =>
+        d.name?.toLowerCase().includes(q) ||
+        d.license_number?.toLowerCase().includes(q)
+      )
+    }
+
+    // filter
+    if (activeFilter === 'active') {
+      rows = rows.filter((d) => d.is_active !== false && d.status !== 'inactive')
+    } else if (activeFilter === 'experience') {
+      rows = [...rows].sort((a, b) => (Number(b.year_of_experience) || 0) - (Number(a.year_of_experience) || 0))
+    } else if (activeFilter === 'experience_lh') {
+      rows = [...rows].sort((a, b) => (Number(a.year_of_experience) || 0) - (Number(b.year_of_experience) || 0))
+    } else if (activeFilter === 'in_trip') {
+      rows = rows.filter((d) => inTransitDriverIds.has(String(d._id ?? d.id)))
+    } else if (activeFilter === 'SCHEDULED') {
+      rows = rows.filter((d) => scheduledTomorrowDriverIds.has(String(d._id ?? d.id)))
+    }
+
+    return rows
+  }, [allDrivers, searchTerm, activeFilter, inTransitDriverIds, scheduledTomorrowDriverIds])
 
   const expiringDrivers = useMemo(() => {
     const now = Date.now()
@@ -126,7 +214,7 @@ export default function Drivers() {
         const isExpiring = expiringDrivers.some(d => (d._id || d.id) === (r._id || r.id))
         return (
           <div className={`flex items-center gap-3 px-3 py-1.5 rounded-lg border w-fit ${isExpiring ? 'bg-red-50 border-red-100' : 'bg-zinc-50 border-zinc-100'}`}>
-            {isExpiring ? <FiAlertTriangle className="text-red-500 text-xs" /> : <div className="text-[10px] font-black text-zinc-400">DL</div>}
+            {/* {isExpiring ? <FiAlertTriangle className="text-red-500 text-xs" /> : <div className="text-[10px] font-black text-zinc-400">DL</div>} */}
             <div className="flex flex-col">
               <span className="text-xs font-bold text-zinc-700 uppercase tracking-tighter">{r.license_number || 'PENDING'}</span>
               <span className={`text-[10px] font-bold uppercase ${isExpiring ? 'text-red-600' : 'text-zinc-400'}`}>
@@ -182,26 +270,75 @@ export default function Drivers() {
         </header>
 
         {/* Stats Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <StatCard title="Active Drivers" value={allDrivers.length} icon={<FiTruck />} gradient="from-blue-500 to-indigo-600" />
-          <StatCard 
-            title="Expiring (30d)" 
-            value={expiringDrivers.length} 
-            icon={<FiAlertTriangle />} 
-            gradient={expiringDrivers.length > 0 ? "from-red-500 to-orange-500" : "from-emerald-500 to-teal-500"} 
-          />
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+          <StatCard title="Total Drivers" value={allDrivers.length} icon={<FiTruck />} gradient="from-zinc-600 to-zinc-800" />
+          <StatCard title="Active Drivers" value={allDrivers.filter(d => d.is_active !== false && d.status !== 'inactive').length} icon={<FiTruck />} gradient="from-blue-500 to-indigo-600" />
+          <StatCard title="On Trip" value={inTransitDriverIds.size} icon={<FiTruck />} gradient="from-emerald-500 to-teal-500" />
+          <StatCard title="Tomorrow driver schedule" value={scheduledTomorrowDriverIds.size} icon={<FiTruck />} gradient="from-violet-500 to-purple-600" />
+          <StatCard title="Expiring (30d)" value={expiringDrivers.length} icon={<FiAlertTriangle />} gradient={expiringDrivers.length > 0 ? 'from-red-500 to-orange-500' : 'from-amber-400 to-orange-400'} />
         </div>
 
         {/* Controls */}
-        <div className="relative">
-          <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
-          <input
-            type="text"
-            placeholder="Search by driver name or license number..."
-            className="w-full pl-14 pr-6 py-5 bg-white border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-zinc-900/10 outline-none transition-all font-medium text-zinc-700 placeholder:text-zinc-400"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
+            <input
+              type="text"
+              placeholder="Search by driver name or license number..."
+              className="w-full pl-14 pr-6 py-5 bg-white border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-zinc-900/10 outline-none transition-all font-medium text-zinc-700 placeholder:text-zinc-400"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {/* Filter dropdown */}
+          <div className="relative" ref={filterRef}>
+            <button
+              onClick={() => setFilterOpen((o) => !o)}
+              className={`flex items-center gap-2 px-5 py-5 rounded-2xl font-semibold text-sm transition-all shadow-sm border
+                ${activeFilter ? 'bg-zinc-900 text-white border-transparent' : 'bg-white text-zinc-600 border-zinc-100 hover:border-zinc-200'}`}
+            >
+              <FiFilter size={16} />
+              {activeFilter === 'active' ? 'Active' : activeFilter === 'experience' ? 'Exp H→L' : activeFilter === 'experience_lh' ? 'Exp L→H' : activeFilter === 'in_trip' ? 'In Trip' : activeFilter === 'SCHEDULED' ? 'Tomorrow' : 'Filter'}
+            </button>
+
+            <AnimatePresence>
+              {filterOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 p-2 top-full mt-2 w-52 bg-white rounded-2xl shadow-xl border border-zinc-100 overflow-hidden z-20"
+                >
+                  {[
+                    { key: 'active',        label: 'Active Drivers' },
+                    { key: 'experience',    label: 'Experience (High → Low)' },
+                    { key: 'experience_lh', label: 'Experience (Low → High)' },
+                    { key: 'in_trip',       label: 'Drivers in Trip' },
+                    { key: 'SCHEDULED',       label: 'Drivers Scheduled' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.key}
+                      onClick={() => { setActiveFilter(activeFilter === opt.key ? null : opt.key); setFilterOpen(false) }}
+                      className="w-full flex items-center justify-between p-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 transition-colors"
+                    >
+                      {opt.label}
+                      {activeFilter === opt.key && <FiCheck size={14} className="text-zinc-900" />}
+                    </button>
+                  ))}
+                  {activeFilter && (
+                    <button
+                      onClick={() => { setActiveFilter(null); setFilterOpen(false) }}
+                      className="w-full px-4 py-3 text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors border-t border-zinc-100 text-left"
+                    >
+                      Clear filter
+                    </button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* Premium Table Wrapper */}
@@ -267,13 +404,10 @@ export default function Drivers() {
 
 function StatCard({ title, value, icon, gradient }) {
   return (
-    <div className="group bg-white p-7 rounded-[2rem] border border-zinc-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-      <div className="space-y-1">
-        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{title}</p>
-        <p className="text-3xl font-bold text-zinc-900">{value}</p>
-      </div>
-      <div className={`p-4 rounded-2xl bg-gradient-to-tr ${gradient} text-white shadow-lg`}>
-        {icon}
+    <div className={`p-[2px] rounded-[2rem] bg-gradient-to-br ${gradient ?? 'from-zinc-400 to-zinc-600'} shadow-sm hover:shadow-md transition-all`}>
+      <div className="bg-white px-6 py-4 rounded-[calc(2rem-2px)] flex flex-col items-center justify-center text-center h-full">
+        <p className="text-[10px] font-black text-zinc-700 uppercase tracking-widest">{title}</p>
+        <p className="text-3xl font-bold text-zinc-900 mt-1">{value}</p>
       </div>
     </div>
   )

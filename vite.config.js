@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [tailwindcss(),react()],
   server: {
     allowedHosts: [
-      'apache-otherwise-window-trails.trycloudflare.com'
+      'assignment-attribute-opened-poor.trycloudflare.com'
     ]
   }
 })

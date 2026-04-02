@@ -131,6 +131,7 @@ function FileUpload({ label, fieldName, setValue, watch }) {
 
 export default function VehicleForm({ defaultValues, onSubmit, loading, branches = [], companies = [] }) {
   const isEdit = !!defaultValues
+  const [serverError, setServerError] = useState('')
 
   const processedDefaults = useMemo(() => {
     if (!defaultValues) return null
@@ -258,7 +259,8 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
   }, [selectedCompany, setValue])
 
   return (
-    <form onSubmit={handleSubmit((values) => {
+    <form onSubmit={handleSubmit(async (values) => {
+      setServerError('')
       // remove empty file fields so existing files are preserved
       const fileFields = ['vehicle_image', 'vehicle_registration_certificate_file',
         'vehicle_insurance_file', 'vehicle_pollution_under_control_certificate_file',
@@ -266,7 +268,12 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
         'vehicle_andhra_permit_file', 'vehicle_odisha_permit_file',
         'vehicle_national_permit_file', 'andhra_tax_file', 'odisha_tax_file']
       fileFields.forEach((f) => { if (!values[f] || typeof values[f] === 'string') delete values[f] })
-      onSubmit(values)
+      try {
+        await onSubmit(values)
+      } catch (err) {
+        const msg = err?.response?.data?.message ?? err?.response?.data?.error ?? err?.message ?? 'Something went wrong. Please try again.'
+        setServerError(msg)
+      }
     })} className="w-full space-y-4">
 
       {/* ── General Information ─────────────────────────────── */}
@@ -533,14 +540,22 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       </div>
 
       {/* ── Submit ──────────────────────────────────────────── */}
-      <div className="flex justify-end pt-3 border-t border-zinc-100">
-        <Button
-          type="submit" loading={loading}
-          className="min-w-[160px]"
-          leftIcon={<FiCheckCircle size={16} />}
-        >
-          {isEdit ? 'Update Vehicle' : 'Create Vehicle'}
-        </Button>
+      <div className="flex flex-col gap-3 pt-3 border-t border-zinc-100">
+        {serverError && (
+          <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+            <span className="text-red-500 text-base shrink-0">⚠</span>
+            <p className="text-sm text-red-700 font-medium">{serverError}</p>
+          </div>
+        )}
+        <div className="flex justify-end">
+          <Button
+            type="submit" loading={loading}
+            className="min-w-[160px]"
+            leftIcon={<FiCheckCircle size={16} />}
+          >
+            {isEdit ? 'Update Vehicle' : 'Create Vehicle'}
+          </Button>
+        </div>
       </div>
     </form>
   )

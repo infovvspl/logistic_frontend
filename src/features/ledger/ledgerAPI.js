@@ -5,14 +5,20 @@ const ALLOWED_FIELDS = [
   'trip_id', 'bill_no', 'company_id',
   'payer_type', 'payer_id',
   'payee_type', 'payee_id',
-  'amount', 'transaction_type',
+  'amount', 'transaction_type', 'transaction_purpose',
 ]
 
 let mockLedger = []
 
 function normalize(raw) {
   if (!raw || typeof raw !== 'object') return raw
-  return { ...raw, id: raw.id ?? raw._id ?? raw.ledger_id }
+  // Preserve both bill_no and bill_id — API may use either field name
+  const bill_no = raw.bill_no ?? raw.bill_id ?? raw.bill_ref ?? ''
+  return {
+    ...raw,
+    id: raw.id ?? raw._id ?? raw.ledger_id,
+    bill_no,
+  }
 }
 
 function normalizeList(data) {

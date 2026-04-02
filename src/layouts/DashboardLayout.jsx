@@ -22,38 +22,60 @@ import {
   FiClipboard,
   FiShoppingCart,
   FiClock,
+  FiArrowRight,
+  FiChevronDown,
 } from "react-icons/fi";
-import { RiBillLine } from "react-icons/ri";
-import { FaRupeeSign } from "react-icons/fa";
+import { MdOutlineAccountBalance, MdAddBusiness, MdSwapHorizontalCircle } from "react-icons/md";
+import { PiCoinsFill } from "react-icons/pi";
+import { RiBillFill, RiMoneyRupeeCircleFill } from "react-icons/ri";
 import { APP_NAME } from "../utils/constants.js";
 import { useAuth } from "../hooks/useAuth.js";
 import { usePermissions } from "../hooks/usePermissions.js";
-import { GrUserPolice } from "react-icons/gr";
+import { FaUserTie, FaUsers, FaBalanceScale, FaRupeeSign, FaTruckLoading, FaShoppingCart, FaClock, FaClipboardList, FaClipboard } from "react-icons/fa";
+import { FaUserGroup, FaTruckFront, FaLocationDot, FaShield } from "react-icons/fa6";
+import { GrUserWorker } from "react-icons/gr";
+import { GoHomeFill } from "react-icons/go";
+import { IoMapSharp } from "react-icons/io5";
+import { TbPackages } from "react-icons/tb";
+import { BiSolidPackage } from "react-icons/bi";
+// import Img from "../../public"
+
+const reportSubItems = [
+  { to: "/dashboard/reports/attendance", label: "Attendance", icon: FiClock },
+  { to: "/dashboard/reports/salary", label: "Salary", icon: FaRupeeSign },
+  { to: "/dashboard/reports/ledger", label: "Ledger", icon: MdOutlineAccountBalance },
+  { to: "/dashboard/reports/products", label: "Products", icon: FiPackage },
+  { to: "/dashboard/reports/purchase", label: "Purchase", icon: FiShoppingCart },
+  { to: "/dashboard/reports/product-transfers", label: "Product Transfers", icon: FiArrowRight },
+  { to: "/dashboard/reports/trips", label: "Trips", icon: FiMap },
+];
 
 const navItems = [
-  { to: "/dashboard",           label: "Overview",      icon: FiHome, end: true },
-  { to: "/dashboard/admins",    label: "Create Admins", icon: FiShield },
-  { to: "/dashboard/drivers",   label: "Drivers",       icon: GrUserPolice },
-  { to: "/dashboard/helpers",   label: "Helpers",       icon: FiUserCheck },
-  { to: "/dashboard/vehicles",  label: "Vehicles",      icon: FiTruck },
-  { to: "/dashboard/companies", label: "Companies",     icon: FiBriefcase },
-  { to: "/dashboard/customers", label: "Customers",     icon: FiUsers },
-  { to: "/dashboard/roles",     label: "Roles",         icon: FiTag },
-  { to: "/dashboard/trips",     label: "Trips",         icon: FiMap },
-  { to: "/dashboard/places",        label: "Places",        icon: FiMapPin },
-  { to: "/dashboard/consignments",  label: "Consignments",  icon: FiPackage },
-  { to: "/dashboard/metrics",       label: "Metrics",       icon: FiBarChart2 },
-  { to: "/dashboard/rate-charts",   label: "Rate Charts",   icon: FaRupeeSign },
-  { to: "/dashboard/challans", label: "Challans", icon: FiClipboard },
-  { to: "/dashboard/bills",   label: "Bills",   icon: RiBillLine },
+  { to: "/dashboard", label: "Home", icon: GoHomeFill, end: true },
+  { to: "/dashboard/admins", label: "Create Admins", icon: FaShield },
+  { to: "/dashboard/drivers", label: "Drivers", icon: FaUserTie },
+  { to: "/dashboard/helpers", label: "Helpers", icon: GrUserWorker },
+  { to: "/dashboard/vehicles", label: "Vehicles", icon: FaTruckFront },
+  { to: "/dashboard/companies", label: "Companies", icon: MdAddBusiness  },
+  { to: "/dashboard/customers", label: "Customers", icon: FaUsers },
+  { to: "/dashboard/roles", label: "Roles", icon: FaUserGroup },
+  { to: "/dashboard/trips", label: "Trips", icon: IoMapSharp },
+  { to: "/dashboard/places", label: "Places", icon: FaLocationDot },
+  { to: "/dashboard/consignments", label: "Consignments", icon: TbPackages },
+  { to: "/dashboard/metrics", label: "Metrics", icon: FaBalanceScale },
+  { to: "/dashboard/rate-charts", label: "Rate Charts", icon: FaRupeeSign },
+  { to: "/dashboard/challans", label: "Challans", icon: FaClipboard },
+  { to: "/dashboard/bills", label: "Bills", icon: RiBillFill },
   // { to: "/dashboard/ledger",     label: "Ledger",     icon: FiDollarSign },
-  { to: "/dashboard/suppliers",  label: "Suppliers",  icon: FiUsers },
-  { to: "/dashboard/products",   label: "Products",   icon: FiPackage },
-  { to: "/dashboard/purchase",   label: "Purchase",   icon: FiShoppingCart },
-  { to: "/dashboard/attendance", label: "Attendance", icon: FiClock },
-  { to: "/dashboard/wages",      label: "Wages",      icon: FiDollarSign },
-  { to: "/dashboard/salary",               label: "Salary",               icon: FaRupeeSign },
-  { to: "/dashboard/transaction-purposes", label: "Txn Purposes",         icon: FiTag },
+  { to: "/dashboard/suppliers", label: "Suppliers", icon: FaTruckLoading },
+  { to: "/dashboard/products", label: "Products", icon: BiSolidPackage },
+  { to: "/dashboard/purchase", label: "Purchase", icon: FaShoppingCart },
+  { to: "/dashboard/attendance", label: "Attendance", icon: FaClock },
+  { to: "/dashboard/wages", label: "Wages", icon: PiCoinsFill },
+  { to: "/dashboard/salary", label: "Salary", icon: RiMoneyRupeeCircleFill },
+  { to: "/dashboard/transaction-purposes", label: "Txn Purposes", icon: FaClipboardList },
+  { to: "/dashboard/product-transfers", label: "Product Transfers", icon: MdSwapHorizontalCircle },
+  // Reports is handled as an expandable group, not a plain nav item
 ];
 
 const navGroups = [
@@ -68,8 +90,8 @@ const navGroups = [
   {
     label: "Operations",
     items: [navItems[4], navItems[5], navItems[6], navItems[8], navItems[9],
-     navItems[10], navItems[11], navItems[12], navItems[13], navItems[14],
-      navItems[15], navItems[16], navItems[17], navItems[18], navItems[19], navItems[20], navItems[21]],
+    navItems[10], navItems[11], navItems[12], navItems[13], navItems[14],
+    navItems[15], navItems[16], navItems[17], navItems[18], navItems[19], navItems[20], navItems[21], navItems[22]],
   },
 ];
 
@@ -78,10 +100,17 @@ export default function DashboardLayout() {
   const { isSuperAdmin } = usePermissions();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  const currentPage = navItems.find((n) =>
-    n.end ? location.pathname === n.to : location.pathname.startsWith(n.to),
+  const [reportsOpen, setReportsOpen] = useState(
+    location.pathname.startsWith('/dashboard/reports')
   );
+
+  const isReportsActive = location.pathname.startsWith('/dashboard/reports');
+
+  const currentPage = isReportsActive
+    ? { label: 'Reports' }
+    : navItems.find((n) =>
+      n.end ? location.pathname === n.to : location.pathname.startsWith(n.to),
+    );
 
   const visibleNavGroups = navGroups.map((group) => ({
     ...group,
@@ -93,8 +122,8 @@ export default function DashboardLayout() {
   const allVisibleItems = visibleNavGroups.flatMap((g) => g.items);
 
   return (<>
-      <style>
-        {`
+    <style>
+      {`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
         .db-root {
@@ -166,13 +195,14 @@ export default function DashboardLayout() {
           width: 44px;
           height: 44px;
           border-radius: 16px;
-          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          background: white;
+          // background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 
-            0 10px 30px rgba(59, 130, 246, 0.3),
-            0 4px 12px rgba(59, 130, 246, 0.2);
+          // box-shadow: 
+          //   0 10px 30px rgba(59, 130, 246, 0.3),
+          //   0 4px 12px rgba(59, 130, 246, 0.2);
         }
 
         .db-brand-icon svg {
@@ -589,24 +619,203 @@ export default function DashboardLayout() {
           color: #1e293b;
         }
         `}
-      </style>
-      <div className="db-root">
-        {/* ── Sidebar ── */}
-        <aside className="db-sidebar">
-          <div className="db-sidebar-inner">
-            {/* Brand */}
-            <div className="db-brand">
-              <div className="db-brand-icon">
-                <FiGrid />
+    </style>
+    <div className="db-root">
+      {/* ── Sidebar ── */}
+      <aside className="db-sidebar">
+        <div className="db-sidebar-inner">
+          {/* Brand */}
+          <div className="db-brand">
+            <div className="db-brand-icon">
+               <img src="/favicon.png" alt="Brand Icon" />
+            </div>
+            <div className="db-brand-text">
+              <div className="db-brand-name">{APP_NAME}</div>
+              <div className="db-brand-sub">Dashboard</div>
+            </div>
+          </div>
+
+          {/* Nav */}
+          <nav>
+            {visibleNavGroups.map((group) => (
+              <div className="db-nav-group" key={group.label}>
+                <div className="db-nav-group-label">{group.label}</div>
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      className={({ isActive }) =>
+                        `db-nav-item${isActive ? " active" : ""}`
+                      }
+                    >
+                      <Icon className="nav-icon" />
+                      <span>{item.label}</span>
+                    </NavLink>
+                  );
+                })}
               </div>
+            ))}
+
+            {/* Reports expandable group */}
+            <div className="db-nav-group">
+              <div className="db-nav-group-label">Reports</div>
+              <button
+                onClick={() => setReportsOpen((o) => !o)}
+                className={`db-nav-item w-full text-left${isReportsActive ? ' active' : ''}`}
+                style={{ background: isReportsActive ? undefined : 'none', border: isReportsActive ? undefined : 'none' }}
+              >
+                <FiBarChart2 className="nav-icon" />
+                <span style={{ flex: 1 }}>Reports</span>
+                <FiChevronDown size={14} style={{ transition: 'transform 0.2s', transform: reportsOpen ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }} />
+              </button>
+              <AnimatePresence initial={false}>
+                {reportsOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2, ease: 'easeInOut' }}
+                    style={{ overflow: 'hidden', paddingLeft: 12 }}
+                  >
+                    {reportSubItems.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <NavLink key={item.to} to={item.to}
+                          className={({ isActive }) => `db-nav-item${isActive ? ' active' : ''}`}
+                          style={{ fontSize: 13 }}
+                        >
+                          <Icon className="nav-icon" style={{ width: 16, height: 16 }} />
+                          <span>{item.label}</span>
+                        </NavLink>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </nav>
+
+          {/* User */}
+          <div className="db-user-card">
+            <div className="db-user-info">
+              <div className="db-avatar">
+                {(user?.email ?? "A")[0].toUpperCase()}
+              </div>
+              <div>
+                <div className="db-user-name">{user?.name || user?.email?.split('@')[0] || 'Admin'}</div>
+                <div className="db-user-role">{isSuperAdmin ? 'Super Admin' : 'Administrator'}</div>
+              </div>
+            </div>
+            <button className="db-logout-btn" onClick={logout}>
+              <FiLogOut size={16} />
+              Sign out
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── Main ── */}
+      <div className="db-main-wrap">
+        {/* Top bar */}
+        <div className="db-topbar">
+          <div className="db-breadcrumb">
+            <span className="db-breadcrumb-root">{APP_NAME}</span>
+            <FiChevronRight className="db-breadcrumb-sep" size={16} />
+            <span className="db-breadcrumb-current">
+              {currentPage?.label ?? "Dashboard"}
+            </span>
+          </div>
+          <div className="db-topbar-right">
+            <div className="db-status">
+              <div className="db-status-dot" />
+              <span className="db-status-text">Online</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Page content */}
+        <div className="db-content">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              style={{ height: "100%" }}
+            >
+              <Outlet />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+    </div>
+
+    {/* ── Mobile bottom navbar ── */}
+    <nav className="db-mobile-nav md:hidden">
+      <div className="db-mobile-nav-inner">
+        {allVisibleItems.slice(0, 4).map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end}
+              className={({ isActive }) => `db-mobile-nav-item${isActive ? ' active' : ''}`}
+            >
+              <Icon />
+              <span>{item.label.split(' ')[0]}</span>
+            </NavLink>
+          );
+        })}
+        <button className="db-mobile-nav-item" onClick={() => setDrawerOpen(true)}>
+          <FiMenu />
+          <span>More</span>
+        </button>
+      </div>
+    </nav>
+
+    {/* ── Mobile drawer — rendered via portal-like fixed overlay, no CSS display toggling ── */}
+    <AnimatePresence>
+      {drawerOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          onClick={() => setDrawerOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(0,0,0,0.45)',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <motion.div
+            className="db-drawer"
+            initial={{ x: -280 }}
+            animate={{ x: 0 }}
+            exit={{ x: -280 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button className="db-drawer-close" onClick={() => setDrawerOpen(false)}>
+              <FiX size={16} />
+            </button>
+
+            <div className="db-brand" style={{ marginBottom: 24 }}>
+              <div className="db-brand-icon"><FiGrid /></div>
               <div className="db-brand-text">
                 <div className="db-brand-name">{APP_NAME}</div>
                 <div className="db-brand-sub">Dashboard</div>
               </div>
             </div>
 
-            {/* Nav */}
-            <nav>
+            <nav style={{ flex: 1 }}>
               {visibleNavGroups.map((group) => (
                 <div className="db-nav-group" key={group.label}>
                   <div className="db-nav-group-label">{group.label}</div>
@@ -617,9 +826,8 @@ export default function DashboardLayout() {
                         key={item.to}
                         to={item.to}
                         end={item.end}
-                        className={({ isActive }) =>
-                          `db-nav-item${isActive ? " active" : ""}`
-                        }
+                        onClick={() => setDrawerOpen(false)}
+                        className={({ isActive }) => `db-nav-item${isActive ? ' active' : ''}`}
                       >
                         <Icon className="nav-icon" />
                         <span>{item.label}</span>
@@ -628,21 +836,55 @@ export default function DashboardLayout() {
                   })}
                 </div>
               ))}
+
+              {/* Reports expandable — drawer */}
+              <div className="db-nav-group">
+                <div className="db-nav-group-label">Reports</div>
+                <button
+                  onClick={() => setReportsOpen((o) => !o)}
+                  className={`db-nav-item w-full text-left${isReportsActive ? ' active' : ''}`}
+                  style={{ background: isReportsActive ? undefined : 'none', border: isReportsActive ? undefined : 'none' }}
+                >
+                  <FiBarChart2 className="nav-icon" />
+                  <span style={{ flex: 1 }}>Reports</span>
+                  <FiChevronDown size={14} style={{ transition: 'transform 0.2s', transform: reportsOpen ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }} />
+                </button>
+                <AnimatePresence initial={false}>
+                  {reportsOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: 'easeInOut' }}
+                      style={{ overflow: 'hidden', paddingLeft: 12 }}
+                    >
+                      {reportSubItems.map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <NavLink
+                            key={item.to}
+                            to={item.to}
+                            onClick={() => setDrawerOpen(false)}
+                            className={({ isActive }) => `db-nav-item${isActive ? ' active' : ''}`}
+                            style={{ fontSize: 13 }}
+                          >
+                            <Icon className="nav-icon" style={{ width: 16, height: 16 }} />
+                            <span>{item.label}</span>
+                          </NavLink>
+                        );
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </nav>
 
-            {/* User */}
             <div className="db-user-card">
               <div className="db-user-info">
-                <div className="db-avatar">
-                  {(user?.email ?? "A")[0].toUpperCase()}
-                </div>
+                <div className="db-avatar">{(user?.email ?? 'A')[0].toUpperCase()}</div>
                 <div>
-                  <div className="db-user-name">
-                    {user?.name || user?.email?.split('@')[0] || 'Admin'}
-                  </div>
-                  <div className="db-user-role">
-                    {isSuperAdmin ? 'Super Admin' : 'Administrator'}
-                  </div>
+                  <div className="db-user-name">{user?.name || user?.email?.split('@')[0] || 'Admin'}</div>
+                  <div className="db-user-role">{isSuperAdmin ? 'Super Admin' : 'Administrator'}</div>
                 </div>
               </div>
               <button className="db-logout-btn" onClick={logout}>
@@ -650,150 +892,10 @@ export default function DashboardLayout() {
                 Sign out
               </button>
             </div>
-          </div>
-        </aside>
-
-        {/* ── Main ── */}
-        <div className="db-main-wrap">
-          {/* Top bar */}
-          <div className="db-topbar">
-            <div className="db-breadcrumb">
-              <span className="db-breadcrumb-root">{APP_NAME}</span>
-              <FiChevronRight className="db-breadcrumb-sep" size={16} />
-              <span className="db-breadcrumb-current">
-                {currentPage?.label ?? "Dashboard"}
-              </span>
-            </div>
-            <div className="db-topbar-right">
-              <div className="db-status">
-                <div className="db-status-dot" />
-                <span className="db-status-text">Online</span>
-              </div>
-              {/* <button className="db-mobile-topbar-menu lg:hidden" onClick={() => setDrawerOpen(true)}>
-                <FiMenu size={18} />
-              </button> */}
-            </div>
-          </div>
-
-          {/* Page content */}
-          <div className="db-content">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-                style={{ height: "100%" }}
-              >
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Mobile bottom navbar ── */}
-      <nav className="db-mobile-nav md:hidden">
-        <div className="db-mobile-nav-inner">
-          {allVisibleItems.slice(0, 4).map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) => `db-mobile-nav-item${isActive ? ' active' : ''}`}
-              >
-                <Icon />
-                <span>{item.label.split(' ')[0]}</span>
-              </NavLink>
-            );
-          })}
-          <button className="db-mobile-nav-item" onClick={() => setDrawerOpen(true)}>
-            <FiMenu />
-            <span>More</span>
-          </button>
-        </div>
-      </nav>
-
-      {/* ── Mobile drawer — rendered via portal-like fixed overlay, no CSS display toggling ── */}
-      <AnimatePresence>
-        {drawerOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            onClick={() => setDrawerOpen(false)}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 9999,
-              background: 'rgba(0,0,0,0.45)',
-              backdropFilter: 'blur(4px)',
-            }}
-          >
-            <motion.div
-              className="db-drawer"
-              initial={{ x: -280 }}
-              animate={{ x: 0 }}
-              exit={{ x: -280 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button className="db-drawer-close" onClick={() => setDrawerOpen(false)}>
-                <FiX size={16} />
-              </button>
-
-              <div className="db-brand" style={{ marginBottom: 24 }}>
-                <div className="db-brand-icon"><FiGrid /></div>
-                <div className="db-brand-text">
-                  <div className="db-brand-name">{APP_NAME}</div>
-                  <div className="db-brand-sub">Dashboard</div>
-                </div>
-              </div>
-
-              <nav style={{ flex: 1 }}>
-                {visibleNavGroups.map((group) => (
-                  <div className="db-nav-group" key={group.label}>
-                    <div className="db-nav-group-label">{group.label}</div>
-                    {group.items.map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <NavLink
-                          key={item.to}
-                          to={item.to}
-                          end={item.end}
-                          onClick={() => setDrawerOpen(false)}
-                          className={({ isActive }) => `db-nav-item${isActive ? ' active' : ''}`}
-                        >
-                          <Icon className="nav-icon" />
-                          <span>{item.label}</span>
-                        </NavLink>
-                      );
-                    })}
-                  </div>
-                ))}
-              </nav>
-
-              <div className="db-user-card">
-                <div className="db-user-info">
-                  <div className="db-avatar">{(user?.email ?? 'A')[0].toUpperCase()}</div>
-                  <div>
-                    <div className="db-user-name">{user?.name || user?.email?.split('@')[0] || 'Admin'}</div>
-                    <div className="db-user-role">{isSuperAdmin ? 'Super Admin' : 'Administrator'}</div>
-                  </div>
-                </div>
-                <button className="db-logout-btn" onClick={logout}>
-                  <FiLogOut size={16} />
-                  Sign out
-                </button>
-              </div>
-            </motion.div>
           </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </>
   );
 }

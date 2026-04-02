@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { FiPlus, FiTrash2, FiEdit2, FiEye, FiSearch, FiArrowUpRight, FiArrowDownLeft } from 'react-icons/fi'
+import { FiPlus, FiTrash2, FiEdit2, FiEye, FiSearch, FiArrowDownLeft } from 'react-icons/fi'
 import Button from '../../components/ui/Button.jsx'
 import Table from '../../components/ui/Table.jsx'
 import Modal from '../../components/ui/Modal.jsx'
@@ -16,6 +16,7 @@ import * as customerAPI from '../../features/customers/customerAPI.js'
 import * as userAPI from '../../features/users/userAPI.js'
 import * as companyAPI from '../../features/companies/companyAPI.js'
 import * as placeAPI from '../../features/places/placeAPI.js'
+import * as txnPurposeAPI from '../../features/transactionPurposes/transactionPurposeAPI.js'
 
 export default function Ledger() {
   const qc = useQueryClient()
@@ -31,7 +32,8 @@ export default function Ledger() {
   const customersQuery = useQuery({ queryKey: ['customers'], queryFn: customerAPI.listCustomers })
   const usersQuery    = useQuery({ queryKey: ['users'],     queryFn: userAPI.listUsers })
   const companiesQuery = useQuery({ queryKey: ['companies'], queryFn: companyAPI.listCompanies })
-  const placesQuery   = useQuery({ queryKey: ['places'],    queryFn: placeAPI.listPlaces })
+  const placesQuery   = useQuery({ queryKey: ['places'],                queryFn: placeAPI.listPlaces })
+  const txnPurposesQuery = useQuery({ queryKey: ['transaction-purposes'], queryFn: txnPurposeAPI.listTransactionPurposes })
 
   const createMutation = useMutation({
     mutationFn: ledgerAPI.createLedger,
@@ -51,6 +53,12 @@ export default function Ledger() {
   const companies = companiesQuery.data?.items ?? []
   const trips     = tripsQuery.data?.items ?? []
   const bills     = billsQuery.data?.items ?? []
+
+  const billById = useMemo(() => {
+    const m = new Map()
+    bills.forEach((b) => m.set(String(b.id), b))
+    return m
+  }, [bills])
 
   const placeById = useMemo(() => {
     const m = new Map()
@@ -108,8 +116,7 @@ export default function Ledger() {
 
   const allRows = ledgerQuery.data?.items ?? []
 
-  const totalCredit = allRows.filter((r) => r.transaction_type === 'credit').reduce((s, r) => s + (Number(r.amount) || 0), 0)
-  const totalDebit  = allRows.filter((r) => r.transaction_type === 'debit').reduce((s, r) => s + (Number(r.amount) || 0), 0)
+  const totalAmount = allRows.reduce((s, r) => s + (Number(r.amount) || 0), 0)
 
   const filteredRows = useMemo(() => {
     if (!searchTerm) return allRows
@@ -125,17 +132,15 @@ export default function Ledger() {
 
   const columns = useMemo(() => [
     {
-      key: 'type',
-      header: 'Type',
+      key: 'purpose',
+      header: 'Purpose',
       render: (r) => {
-        const isCredit = r.transaction_type === 'credit'
+        const p = (txnPurposesQuery.data?.items ?? []).find((x) => String(x.id) === String(r.transaction_purpose))
+        const label = p?.transaction_purpose_name ?? '—'
         return (
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl w-fit font-bold text-xs ${
-            isCredit ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-red-50 text-red-700 border border-red-100'
-          }`}>
-            {isCredit ? <FiArrowDownLeft size={13} /> : <FiArrowUpRight size={13} />}
-            {isCredit ? 'Credit' : 'Debit'}
-          </div>
+          <span className="px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-semibold text-xs">
+            {label}
+          </span>
         )
       },
     },
@@ -143,8 +148,17 @@ export default function Ledger() {
       key: 'amount',
       header: 'Amount',
       render: (r) => (
-        <span className={`text-sm font-black tabular-nums ${r.transaction_type === 'credit' ? 'text-emerald-700' : 'text-red-600'}`}>
-          {r.transaction_type === 'credit' ? '+' : '−'}₹{Number(r.amount || 0).toLocaleString('en-IN')}
+        <span className="text-sm font-black tabular-nums text-zinc-900">
+          ₹{Number(r.amount || 0).toLocaleString('en-IN')}
+        </span>
+      ),
+    },
+    {
+      key: 'txn_type',
+      header: 'Method',
+      render: (r) => (
+        <span className="px-2.5 py-1 rounded-lg bg-zinc-100 text-zinc-600 font-semibold text-xs capitalize">
+          {(r.transaction_type ?? '—').replace(/_/g, ' ')}
         </span>
       ),
     },
@@ -179,7 +193,7 @@ export default function Ledger() {
         </div>
       ),
     },
-  ], [entityLabel])
+  ], [entityLabel, txnPurposesQuery.data])
 
   return (
     <div className="min-h-screen p-6">
@@ -200,10 +214,9 @@ export default function Ledger() {
           </Button>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <StatCard title="Total Entries" value={allRows.length} color="from-indigo-500 to-blue-500" />
-          <StatCard title="Total Credit" value={`₹${totalCredit.toLocaleString('en-IN')}`} color="from-emerald-500 to-teal-500" icon={<FiArrowDownLeft />} />
-          <StatCard title="Total Debit"  value={`₹${totalDebit.toLocaleString('en-IN')}`}  color="from-rose-500 to-red-500"     icon={<FiArrowUpRight />} />
+          <StatCard title="Total Amount" value={`₹${totalAmount.toLocaleString('en-IN')}`} color="from-emerald-500 to-teal-500" icon={<FiArrowDownLeft />} />
         </div>
 
         <div className="relative">
@@ -247,6 +260,7 @@ export default function Ledger() {
           customers={customers}
           users={users}
           companies={companies}
+          transactionPurposes={txnPurposesQuery.data?.items ?? []}
           loading={createMutation.isPending || updateMutation.isPending}
           serverError={createMutation.error?.message ?? updateMutation.error?.message ?? null}
           onSubmit={async (values) => {
@@ -267,17 +281,36 @@ export default function Ledger() {
         <DetailModal
           open={view.open}
           onClose={() => setView({ open: false, record: null })}
-          title="Ledger Entry"
+          title="Ledger Details"
           data={{
-            'Transaction Type': view.record.transaction_type,
             'Amount': view.record.amount ? `₹${Number(view.record.amount).toLocaleString('en-IN')}` : '—',
-            'Payer Type': view.record.payer_type,
+            'Method': view.record.transaction_type ? view.record.transaction_type.replace(/_/g, ' ') : '—',
+            'Transaction Purpose': (() => {
+              const p = (txnPurposesQuery.data?.items ?? []).find((x) => String(x.id) === String(view.record.transaction_purpose))
+              return p?.transaction_purpose_name || '—'
+            })(),
             'Payer': getEntityName(view.record.payer_type, view.record.payer_id),
-            'Payee Type': view.record.payee_type,
+            'Payer Type': view.record.payer_type || '—',
             'Payee': getEntityName(view.record.payee_type, view.record.payee_id),
+            'Payee Type': view.record.payee_type || '—',
             'Company': view.record.company_id ? getEntityName('company', view.record.company_id) : '—',
-            'Trip ID': view.record.trip_id || '—',
-            'Bill': view.record.bill_no || '—',
+            'Trip': view.record.trip_id ? (tripMeta[String(view.record.trip_id)]?.label || view.record.trip_id) : '—',
+            'Bill No': (() => {
+              // First try: bill_no/bill_id directly on the record
+              const ref = view.record.bill_no ?? view.record.bill_id ?? view.record.bill_ref ?? ''
+              if (ref) {
+                const b = billById.get(String(ref))
+                if (b?.bill_no) return b.bill_no
+                // ref might already be the bill_no string
+                if (bills.find((x) => String(x.bill_no) === String(ref))) return String(ref)
+              }
+              // Fallback: derive from trip_id via billByTripId
+              if (view.record.trip_id) {
+                const b = billByTripId.get(String(view.record.trip_id))
+                if (b?.bill_no) return b.bill_no
+              }
+              return '—'
+            })(),
           }}
         />
       )}

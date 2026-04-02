@@ -97,6 +97,7 @@ export default function LedgerForm({
   customers = [],
   users = [],
   companies = [],
+  transactionPurposes = [],
 }) {
   const isEdit = !!defaultValues
 
@@ -110,6 +111,7 @@ export default function LedgerForm({
     payee_id:         defaultValues?.payee_id         ?? '',
     amount:           defaultValues?.amount           ?? '',
     transaction_type: defaultValues?.transaction_type ?? '',
+    transaction_purpose: defaultValues?.transaction_purpose ?? '',
   })
   const [errors, setErrors] = useState({})
 
@@ -160,18 +162,17 @@ export default function LedgerForm({
   }, [trips, tripSearch, tripMeta])
 
   const handleTripSelect = (tripId) => {
-    // auto-fill bill if this trip has one
     const bill = billByTripId.get(String(tripId))
     setForm((prev) => ({
       ...prev,
       trip_id: tripId,
-      bill_no: bill ? bill.id : prev.bill_no,
+      bill_no: bill ? bill.bill_no : prev.bill_no,
     }))
     setTripSearch('')
   }
 
-  // bill display
-  const selectedBill = bills.find((b) => String(b.id) === String(form.bill_no))
+  // bill display — form.bill_no now stores the bill_no string (e.g. "BILL-001")
+  const selectedBill = bills.find((b) => String(b.bill_no) === String(form.bill_no))
   const [billSearch, setBillSearch] = useState('')
   const filteredBills = useMemo(() => {
     const q = billSearch.toLowerCase()
@@ -205,6 +206,7 @@ export default function LedgerForm({
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
     const payload = { ...form, amount: Number(form.amount) }
+    if (!payload.transaction_purpose) delete payload.transaction_purpose
     onSubmit(payload)
   }
 
@@ -219,6 +221,14 @@ export default function LedgerForm({
         <Input label="Amount (₹)" type="number" placeholder="5000"
           value={form.amount} onChange={(e) => set('amount', e.target.value)}
           error={errors.amount} />
+        <div className="sm:col-span-2">
+          <Select
+            label="Transaction Purpose"
+            options={[{ value: '', label: 'Select purpose...' }, ...transactionPurposes.map((p) => ({ value: p.id, label: p.transaction_purpose_name }))]}
+            value={form.transaction_purpose}
+            onChange={(e) => set('transaction_purpose', e.target.value)}
+          />
+        </div>
       </div>
 
       <SectionDivider label="Payer → Payee" />
@@ -329,7 +339,7 @@ export default function LedgerForm({
               {filteredBills.length > 0 ? filteredBills.map((b) => (
                 <button key={b.id} type="button"
                   className="w-full px-3 py-2 text-left hover:bg-zinc-50 transition-colors"
-                  onClick={() => { set('bill_no', b.id); setBillSearch('') }}>
+                  onClick={() => { set('bill_no', b.bill_no); setBillSearch('') }}>
                   <div className="font-medium text-zinc-900">{b.bill_no}</div>
                 </button>
               )) : <div className="p-3 text-center text-zinc-400 text-xs">No bills</div>}

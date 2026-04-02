@@ -253,7 +253,7 @@ export default function Companies() {
                                         { key: 'branch_phone', header: 'Contact' },
                                         { 
                                           key: 'actions', 
-                                          header: '', 
+                                          header: 'Actions', 
                                           render: (b) => (
                                             <div className="flex justify-end gap-1">
                                               <ActionBtn icon={<FiEye size={14}/>} onClick={() => setBranchDetails({ open: true, branch: b })} hover="hover:text-indigo-600 hover:bg-indigo-50" />
@@ -478,7 +478,7 @@ function StatCard({ title, value, icon, gradient }) {
 
 function ActionBtn({ icon, onClick, hover }) {
   return (
-    <button onClick={onClick} className={`p-2.5 rounded-xl text-zinc-400 transition-all active:scale-90 ${hover}`}>
+    <button onClick={onClick} className={`p-2 rounded-xl text-zinc-400 transition-all active:scale-90 ${hover}`}>
       <div className="text-lg">{icon}</div>
     </button>
   )
