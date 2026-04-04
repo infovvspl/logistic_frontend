@@ -7,6 +7,7 @@ import Modal from '../../components/ui/Modal.jsx'
 import Table from '../../components/ui/Table.jsx'
 import EmptyState from '../../components/common/EmptyState.jsx'
 import ConfirmDialog from '../../components/common/ConfirmDialog.jsx'
+import PageStatCard from '../../components/common/PageStatCard.jsx'
 import RateChartForm from '../../components/forms/RateChartForm.jsx'
 import * as rateChartAPI from '../../features/rateCharts/rateChartAPI.js'
 import * as placeAPI from '../../features/places/placeAPI.js'
@@ -114,7 +115,7 @@ export default function RateCharts() {
           </Button>
         </header>
 
-        <StatCard title="Total Rates" value={allRows.length} icon={<FaRupeeSign />} gradient="from-blue-500 to-indigo-600" />
+        <PageStatCard title="Total Rates" value={allRows.length} icon={<FaRupeeSign size={20} />} gradient="from-blue-500 to-indigo-600" />
 
         <div className="relative">
           <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
@@ -169,18 +170,6 @@ export default function RateCharts() {
         onClose={() => setConfirm({ open: false, id: null })}
         onConfirm={async () => { await deleteMutation.mutateAsync(confirm.id); setConfirm({ open: false, id: null }) }}
       />
-    </div>
-  )
-}
-
-function StatCard({ title, value, icon, gradient }) {
-  return (
-    <div className="group bg-white p-7 rounded-[2rem] border border-zinc-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-      <div className="space-y-1">
-        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{title}</p>
-        <p className="text-3xl font-bold text-zinc-900">{value}</p>
-      </div>
-      <div className={`p-4 rounded-2xl bg-gradient-to-tr ${gradient} text-white shadow-lg`}>{icon}</div>
     </div>
   )
 }

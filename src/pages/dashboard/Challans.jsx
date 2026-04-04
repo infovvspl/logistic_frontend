@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { FiPlus, FiTrash2, FiEdit2, FiEye, FiSearch, FiFileText } from 'react-icons/fi'
+import { motion, AnimatePresence } from 'framer-motion'
+import { FiPlus, FiTrash2, FiEdit2, FiEye, FiSearch, FiFileText, FiFilter, FiCheck, FiX, FiCalendar } from 'react-icons/fi'
 import { FaRupeeSign } from 'react-icons/fa'
 import Button from '../../components/ui/Button.jsx'
 import Table from '../../components/ui/Table.jsx'
@@ -8,6 +9,7 @@ import Modal from '../../components/ui/Modal.jsx'
 import EmptyState from '../../components/common/EmptyState.jsx'
 import ConfirmDialog from '../../components/common/ConfirmDialog.jsx'
 import DetailModal from '../../components/common/DetailModal.jsx'
+import PageStatCard from '../../components/common/PageStatCard.jsx'
 import ChallanForm from '../../components/forms/ChallanForm.jsx'
 import * as challanAPI from '../../features/challans/challanAPI.js'
 import * as tripAPI from '../../features/trips/tripAPI.js'
@@ -24,9 +26,24 @@ import * as companyAPI from '../../features/companies/companyAPI.js'
 export default function Challans() {
   const qc = useQueryClient()
   const [searchTerm, setSearchTerm] = useState('')
+  const [activeFilter, setActiveFilter] = useState(null)
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [customFilterOpen, setCustomFilterOpen] = useState(false)
+  const filterRef = useRef(null)
+  const customFilterRef = useRef(null)
+  const [customFilter, setCustomFilter] = useState({ startDate: '', endDate: '' })
   const [modal, setModal] = useState({ open: false, challan: null })
   const [view, setView] = useState({ open: false, record: null })
   const [confirm, setConfirm] = useState({ open: false, id: null })
+
+  useEffect(() => {
+    function handler(e) { 
+      if (filterRef.current && !filterRef.current.contains(e.target)) setFilterOpen(false)
+      if (customFilterRef.current && !customFilterRef.current.contains(e.target)) setCustomFilterOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   const challansQuery = useQuery({ queryKey: ['challans'], queryFn: challanAPI.listChallans })
   const tripsQuery = useQuery({ queryKey: ['trips'], queryFn: tripAPI.listTrips })
@@ -108,14 +125,104 @@ export default function Challans() {
   const allRows = challansQuery.data?.items ?? []
 
   const filteredRows = useMemo(() => {
-    if (!searchTerm) return allRows
-    const q = searchTerm.toLowerCase()
-    return allRows.filter((c) =>
-      (c.challan_no ?? '').toLowerCase().includes(q) ||
-      (c.vehicle_number ?? '').toLowerCase().includes(q) ||
-      (tripMeta[String(c.trip_id)]?.customerName ?? '').toLowerCase().includes(q)
-    )
-  }, [allRows, searchTerm, tripMeta])
+    let rows = allRows
+
+    // Debug: Log the raw data and date parsing
+    console.log('Challans - All rows:', allRows)
+    console.log('Challans - Active filter:', activeFilter)
+    console.log('Challans - Custom filter:', customFilter)
+
+    // Apply search filter
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase()
+      rows = rows.filter((c) => {
+        const meta = tripMeta[String(c.trip_id)] ?? {}
+        return (
+          (c.challan_no ?? '').toLowerCase().includes(q) ||
+          (c.vehicle_number ?? '').toLowerCase().includes(q) ||
+          (meta.customerName ?? '').toLowerCase().includes(q) ||
+          (meta.fromPlace ?? '').toLowerCase().includes(q) ||
+          (meta.toPlace ?? '').toLowerCase().includes(q) ||
+          (meta.driverName ?? '').toLowerCase().includes(q) ||
+          (meta.transport ?? '').toLowerCase().includes(q)
+        )
+      })
+    }
+
+    // Apply date filters (using challan_date field instead of tc_date)
+    if (activeFilter === 'today') {
+      const today = new Date()
+      today.setHours(0, 0, 0, 0) // Start of today
+      const tomorrow = new Date(today)
+      tomorrow.setDate(tomorrow.getDate() + 1) // Start of tomorrow
+      
+      console.log('Challans - Today filter:', { today, tomorrow })
+      rows = rows.filter(c => {
+        if (!c.challan_date) {
+          console.log('Challans - No challan_date for record:', c)
+          return false
+        }
+        const challanDate = new Date(c.challan_date)
+        console.log('Challans - Date for record:', challanDate, 'Original:', c.challan_date)
+        return challanDate >= today && challanDate < tomorrow
+      })
+    } else if (activeFilter === 'yesterday') {
+      const yesterday = new Date()
+      yesterday.setDate(yesterday.getDate() - 1)
+      yesterday.setHours(0, 0, 0, 0) // Start of yesterday
+      const today = new Date()
+      today.setHours(0, 0, 0, 0) // Start of today
+      
+      console.log('Challans - Yesterday filter:', { yesterday, today })
+      rows = rows.filter(c => {
+        if (!c.challan_date) {
+          console.log('Challans - No challan_date for record:', c)
+          return false
+        }
+        const challanDate = new Date(c.challan_date)
+        console.log('Challans - Date for record:', challanDate, 'Original:', c.challan_date)
+        return challanDate >= yesterday && challanDate < today
+      })
+    } else if (activeFilter === '7days') {
+      const sevenDaysAgo = new Date()
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+      sevenDaysAgo.setHours(0, 0, 0, 0) // Start of 7 days ago
+      
+      console.log('Challans - 7 days filter:', { sevenDaysAgo })
+      rows = rows.filter(c => {
+        if (!c.challan_date) {
+          console.log('Challans - No challan_date for record:', c)
+          return false
+        }
+        const challanDate = new Date(c.challan_date)
+        console.log('Challans - Date for record:', challanDate, 'Original:', c.challan_date)
+        return challanDate >= sevenDaysAgo
+      })
+    } else if (activeFilter === 'custom') {
+      console.log('Challans - Custom date range filter:', customFilter)
+      rows = rows.filter(c => {
+        if (!c.challan_date) {
+          console.log('Challans - No challan_date for record:', c)
+          return false
+        }
+        const challanDate = new Date(c.challan_date)
+        console.log('Challans - Date for record:', challanDate, 'Original:', c.challan_date)
+        
+        if (customFilter.startDate && customFilter.endDate) {
+          const start = new Date(customFilter.startDate)
+          start.setHours(0, 0, 0, 0) // Start of start date
+          const end = new Date(customFilter.endDate)
+          end.setHours(23, 59, 59, 999) // End of end date
+          console.log('Challans - Date range filter:', { start, end })
+          return challanDate >= start && challanDate <= end
+        }
+        return true
+      })
+    }
+
+    console.log('Challans - Filtered rows count:', rows.length)
+    return rows
+  }, [allRows, searchTerm, activeFilter, tripMeta, customFilter])
 
   const totalAmount = allRows.reduce((s, c) => s + (Number(c.total_amount) || 0), 0)
   const totalBalance = allRows.reduce((s, c) => s + (Number(c.balance) || 0), 0)
@@ -210,20 +317,149 @@ export default function Challans() {
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatCard title="Total Challans" value={allRows.length} icon={<FiFileText />} gradient="from-indigo-500 to-blue-500" />
-          <StatCard title="Total Amount" value={`₹${totalAmount.toLocaleString('en-IN')}`} icon={<FaRupeeSign />} gradient="from-emerald-500 to-teal-500" />
-          <StatCard title="Total Balance" value={`₹${totalBalance.toLocaleString('en-IN')}`} icon={<FaRupeeSign />} gradient="from-amber-500 to-orange-500" />
+          <PageStatCard title="Total Challans" value={allRows.length} icon={<FiFileText size={20} />} gradient="from-indigo-500 to-blue-500" />
+          <PageStatCard title="Total Amount" value={`₹${totalAmount.toLocaleString('en-IN')}`} icon={<FaRupeeSign size={20} />} gradient="from-emerald-500 to-teal-500" />
+          <PageStatCard title="Total Balance" value={`₹${totalBalance.toLocaleString('en-IN')}`} icon={<FaRupeeSign size={20} />} gradient="from-amber-500 to-orange-500" />
         </div>
 
-        <div className="relative">
-          <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
-          <input
-            type="text"
-            placeholder="Search by challan no, vehicle or customer..."
-            className="w-full pl-14 pr-6 py-5 bg-white border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all font-medium text-zinc-700 placeholder:text-zinc-400"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
+            <input
+              type="text"
+              placeholder="Search by challan no, vehicle or customer or trips ..."
+              className="w-full pl-14 pr-6 py-5 bg-white border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all font-medium text-zinc-700 placeholder:text-zinc-400"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {/* Date Filter dropdown */}
+          <div className="relative" ref={filterRef}>
+            <button
+              onClick={() => setFilterOpen((o) => !o)}
+              className={`flex items-center gap-2 px-5 py-5 rounded-2xl font-semibold text-sm transition-all shadow-sm border
+                ${activeFilter && activeFilter !== 'custom' ? 'bg-zinc-900 text-white border-transparent' : 'bg-white text-zinc-600 border-zinc-100 hover:border-zinc-200'}`}
+            >
+              <FiFilter size={16} />
+              {activeFilter === 'today' ? 'Today' : activeFilter === 'yesterday' ? 'Yesterday' : activeFilter === '7days' ? '7 Days' : activeFilter === 'custom' ? 'Custom' : 'Filter'}
+            </button>
+
+            <AnimatePresence>
+              {filterOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 p-2 top-full mt-2 w-52 bg-white rounded-2xl shadow-xl border border-zinc-100 overflow-hidden z-20"
+                >
+                  {[
+                    { key: 'today',     label: 'Today' },
+                    { key: 'yesterday',  label: 'Yesterday' },
+                    { key: '7days',     label: 'Last 7 Days' },
+                    { key: 'custom',    label: 'Custom Filter' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.key}
+                      onClick={() => { 
+                        if (opt.key === 'custom') {
+                          setCustomFilterOpen(true)
+                        } else {
+                          setActiveFilter(activeFilter === opt.key ? null : opt.key)
+                        }
+                        setFilterOpen(false) 
+                      }}
+                      className="w-full flex items-center justify-between p-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 transition-colors"
+                    >
+                      {opt.label}
+                      {activeFilter === opt.key && <FiCheck size={14} className="text-zinc-900" />}
+                    </button>
+                  ))}
+                  {activeFilter && (
+                    <button
+                      onClick={() => { setActiveFilter(null); setCustomFilter({ startDate: '', endDate: '' }); setFilterOpen(false) }}
+                      className="w-full px-4 py-3 text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors border-t border-zinc-100 text-left"
+                    >
+                      Clear filter
+                    </button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Custom Filter dropdown */}
+          <div className="relative" ref={customFilterRef}>
+            <AnimatePresence>
+              {customFilterOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 p-4 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-zinc-100 overflow-hidden z-20"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-zinc-900">Custom Date Range</h3>
+                      <button
+                        onClick={() => setCustomFilterOpen(false)}
+                        className="text-zinc-400 hover:text-zinc-600"
+                      >
+                        <FiX size={16} />
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-zinc-700">Start Date</label>
+                        <input
+                          type="date"
+                          value={customFilter.startDate}
+                          onChange={(e) => setCustomFilter(prev => ({ ...prev, startDate: e.target.value }))}
+                          className="w-full px-3 py-2 text-xs border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-zinc-700">End Date</label>
+                        <input
+                          type="date"
+                          value={customFilter.endDate}
+                          onChange={(e) => setCustomFilter(prev => ({ ...prev, endDate: e.target.value }))}
+                          min={customFilter.startDate}
+                          className="w-full px-3 py-2 text-xs border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        onClick={() => {
+                          setActiveFilter('custom')
+                          setCustomFilterOpen(false)
+                        }}
+                        disabled={!customFilter.startDate || !customFilter.endDate}
+                        className="flex-1 px-4 py-2 text-xs font-semibold text-white bg-zinc-900 rounded-lg hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Apply Filter
+                      </button>
+                      <button
+                        onClick={() => {
+                          setCustomFilter({ startDate: '', endDate: '' })
+                          setCustomFilterOpen(false)
+                        }}
+                        className="flex-1 px-4 py-2 text-xs font-semibold text-zinc-600 bg-zinc-100 rounded-lg hover:bg-zinc-200 transition-colors"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-xl overflow-hidden">
@@ -308,18 +544,6 @@ export default function Challans() {
           />
         )
       })()}
-    </div>
-  )
-}
-
-function StatCard({ title, value, icon, gradient }) {
-  return (
-    <div className="group bg-white p-7 rounded-[2rem] border border-zinc-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-      <div className="space-y-1">
-        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{title}</p>
-        <p className="text-3xl font-bold text-zinc-900">{value}</p>
-      </div>
-      <div className={`p-4 rounded-2xl bg-gradient-to-tr ${gradient} text-white shadow-lg`}>{icon}</div>
     </div>
   )
 }

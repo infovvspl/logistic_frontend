@@ -2,10 +2,13 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { FiPlus, FiEdit2, FiTrash2, FiSearch, FiPackage } from 'react-icons/fi'
 import Button from '../../components/ui/Button.jsx'
+import Table from '../../components/ui/Table.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import Input from '../../components/ui/Input.jsx'
 import EmptyState from '../../components/common/EmptyState.jsx'
 import ConfirmDialog from '../../components/common/ConfirmDialog.jsx'
+import PageStatCard from '../../components/common/PageStatCard.jsx'
+import PageActionBtn from '../../components/common/PageActionBtn.jsx'
 import * as consignmentAPI from '../../features/consignments/consignmentAPI.js'
 
 function ConsignmentForm({ defaultValues, onSubmit, loading }) {
@@ -65,6 +68,31 @@ export default function Consignments() {
     return allRows.filter((r) => r.name?.toLowerCase().includes(searchTerm.toLowerCase()))
   }, [allRows, searchTerm])
 
+  const columns = useMemo(() => [
+    {
+      key: 'name',
+      header: 'Consignment Name',
+      render: (r) => (
+        <div className="flex items-center gap-4 py-1">
+          <div className="p-2.5 bg-amber-50 rounded-xl text-amber-600 border border-amber-100 shrink-0">
+            <FiPackage size={16} />
+          </div>
+          <span className="font-semibold text-zinc-900">{r.name}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: (r) => (
+        <div className="flex justify-end gap-1.5">
+          <PageActionBtn icon={<FiEdit2 />} onClick={() => setModal({ open: true, item: r })} hover="hover:text-amber-600 hover:bg-amber-50" />
+          <PageActionBtn icon={<FiTrash2 />} onClick={() => setConfirm({ open: true, id: r.id })} hover="hover:text-red-600 hover:bg-red-50" />
+        </div>
+      ),
+    },
+  ], [])
+
   return (
     <div className="min-h-screen p-6">
       <div className="max-w-4xl mx-auto space-y-8">
@@ -72,7 +100,6 @@ export default function Consignments() {
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
             <h1 className="text-4xl font-black text-zinc-900 tracking-tight">Consignments</h1>
-            {/* <p className="text-zinc-500 font-medium">Manage consignment types for trips.</p> */}
           </div>
           <Button
             variant="primary"
@@ -84,7 +111,7 @@ export default function Consignments() {
           </Button>
         </header>
 
-        <StatCard title="Total Consignments" value={allRows.length} icon={<FiPackage />} gradient="from-amber-500 to-orange-500" />
+        <PageStatCard title="Total Consignments" value={allRows.length} icon={<FiPackage />} gradient="from-amber-500 to-orange-500" />
 
         <div className="relative">
           <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
@@ -98,33 +125,26 @@ export default function Consignments() {
         </div>
 
         <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-xl overflow-hidden">
-          {query.isLoading ? (
-            <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-amber-500 border-t-transparent rounded-full" /></div>
-          ) : filteredRows.length ? (
-            <ul className="divide-y divide-zinc-50">
-              {filteredRows.map((item) => (
-                <li key={item.id} className="flex items-center justify-between px-6 py-4 hover:bg-amber-50/30 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="p-2.5 bg-amber-50 rounded-xl text-amber-600 border border-amber-100">
-                      <FiPackage size={16} />
-                    </div>
-                    <span className="font-semibold text-zinc-900">{item.name}</span>
-                  </div>
-                  <div className="flex gap-1.5">
-                    <ActionBtn icon={<FiEdit2 />} onClick={() => setModal({ open: true, item })} hover="hover:text-amber-600 hover:bg-amber-50" />
-                    <ActionBtn icon={<FiTrash2 />} onClick={() => setConfirm({ open: true, id: item.id })} hover="hover:text-red-600 hover:bg-red-50" />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <EmptyState
-              title={searchTerm ? 'No results found' : 'No consignments yet'}
-              description={searchTerm ? `No consignment matches "${searchTerm}"` : 'Add your first consignment type.'}
-              actionLabel={!searchTerm ? 'Add Consignment' : undefined}
-              onAction={() => setModal({ open: true, item: null })}
-            />
-          )}
+          <div className="overflow-x-auto">
+            {query.isLoading ? (
+              <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-amber-500 border-t-transparent rounded-full" /></div>
+            ) : filteredRows.length ? (
+              <Table
+                columns={columns}
+                rows={filteredRows}
+                rowKey={(r) => r.id}
+                headerClassName="bg-zinc-900 !text-white uppercase text-[10px] tracking-[0.2em] font-black py-5 px-6"
+                rowClassName="group hover:bg-amber-50/30 transition-colors border-b border-zinc-50 last:border-none"
+              />
+            ) : (
+              <EmptyState
+                title={searchTerm ? 'No results found' : 'No consignments yet'}
+                description={searchTerm ? `No consignment matches "${searchTerm}"` : 'Add your first consignment type.'}
+                actionLabel={!searchTerm ? 'Add Consignment' : undefined}
+                onAction={() => setModal({ open: true, item: null })}
+              />
+            )}
+          </div>
         </div>
       </div>
 
@@ -145,18 +165,6 @@ export default function Consignments() {
         onClose={() => setConfirm({ open: false, id: null })}
         onConfirm={async () => { await deleteMutation.mutateAsync(confirm.id); setConfirm({ open: false, id: null }) }}
       />
-    </div>
-  )
-}
-
-function StatCard({ title, value, icon, gradient }) {
-  return (
-    <div className="group bg-white p-7 rounded-[2rem] border border-zinc-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-      <div className="space-y-1">
-        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{title}</p>
-        <p className="text-3xl font-bold text-zinc-900">{value}</p>
-      </div>
-      <div className={`p-4 rounded-2xl bg-gradient-to-tr ${gradient} text-white shadow-lg`}>{icon}</div>
     </div>
   )
 }

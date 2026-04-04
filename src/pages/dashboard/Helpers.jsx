@@ -2,7 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  FiPlus, FiTrash2, FiEdit2, FiEye, FiSearch, FiFilter, FiCheck,
+  FiPlus, FiTrash2, FiEdit2, FiEye, FiSearch, FiFilter, FiCheck, FiUsers, FiAlertTriangle,
 } from 'react-icons/fi'
 
 // UI Components
@@ -12,6 +12,7 @@ import Modal from '../../components/ui/Modal.jsx'
 import EmptyState from '../../components/common/EmptyState.jsx'
 import ConfirmDialog from '../../components/common/ConfirmDialog.jsx'
 import DetailModal from '../../components/common/DetailModal.jsx'
+import PageStatCard from '../../components/common/PageStatCard.jsx'
 import UserForm from '../../components/forms/UserForm.jsx'
 
 // APIs
@@ -271,11 +272,11 @@ export default function Helpers() {
 
         {/* Stats Section */}
         <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
-          <StatCard title="Total Helpers" value={allHelpers.length} gradient="from-zinc-600 to-zinc-800" />
-          <StatCard title="Active Helpers" value={activeHelpers.length} gradient="from-blue-500 to-indigo-600" />
-          <StatCard title="On Trip" value={inTransitHelperIds.size} gradient="from-emerald-500 to-teal-500" />
-          <StatCard title="Tomorrow Schedule" value={scheduledTomorrowHelperIds.size} gradient="from-violet-500 to-purple-600" />
-          <StatCard title="License Expiring (30d)" value={expiringHelpers.length} gradient={expiringHelpers.length > 0 ? 'from-red-500 to-orange-500' : 'from-amber-400 to-orange-400'} />
+          <PageStatCard title="Total Helpers" value={allHelpers.length} icon={<FiUsers size={20} />} gradient="from-zinc-600 to-zinc-800" />
+          <PageStatCard title="Active Helpers" value={activeHelpers.length} icon={<FiUsers size={20} />} gradient="from-blue-500 to-indigo-600" />
+          <PageStatCard title="On Trip" value={inTransitHelperIds.size} icon={<FiUsers size={20} />} gradient="from-emerald-500 to-teal-500" />
+          <PageStatCard title="Tomorrow Schedule" value={scheduledTomorrowHelperIds.size} icon={<FiUsers size={20} />} gradient="from-violet-500 to-purple-600" />
+          <PageStatCard title="License Expiring (30d)" value={expiringHelpers.length} icon={<FiAlertTriangle size={20} />} gradient={expiringHelpers.length > 0 ? 'from-red-500 to-orange-500' : 'from-amber-400 to-orange-400'} />
         </div>
 
         {/* Controls */}
@@ -400,17 +401,6 @@ export default function Helpers() {
 }
 
 // --- Specialized UI Components ---
-
-function StatCard({ title, value, icon, gradient }) {
-  return (
-    <div className={`p-[2px] rounded-[2rem] bg-gradient-to-br ${gradient ?? 'from-zinc-400 to-zinc-600'} shadow-sm hover:shadow-md transition-all`}>
-      <div className="bg-white px-6 py-4 rounded-[calc(2rem-2px)] flex flex-col items-center justify-center text-center h-full">
-        <p className="text-[10px] font-black text-zinc-700 uppercase tracking-widest">{title}</p>
-        <p className="text-3xl font-bold text-zinc-900 mt-1">{value}</p>
-      </div>
-    </div>
-  )
-}
 
 function ActionBtn({ icon, onClick, hover }) {
   return (

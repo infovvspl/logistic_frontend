@@ -7,6 +7,7 @@ import Modal from '../../components/ui/Modal.jsx'
 import EmptyState from '../../components/common/EmptyState.jsx'
 import ConfirmDialog from '../../components/common/ConfirmDialog.jsx'
 import DetailModal from '../../components/common/DetailModal.jsx'
+import PageStatCard from '../../components/common/PageStatCard.jsx'
 import ProductForm from '../../components/forms/ProductForm.jsx'
 import * as productAPI from '../../features/products/productAPI.js'
 
@@ -121,9 +122,9 @@ export default function Products() {
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatCard title="Total Products" value={allRows.length} gradient="from-indigo-500 to-blue-500" icon={<FiPackage />} />
-          <StatCard title="Total Stock" value={allRows.reduce((s, p) => s + (Number(p.stock) || 0), 0).toLocaleString('en-IN')} gradient="from-emerald-500 to-teal-500" icon={<FiPackage />} />
-          <StatCard title="Low Stock" value={lowStockCount} gradient="from-rose-500 to-red-500" icon={<FiAlertTriangle />} />
+          <PageStatCard title="Total Products" value={allRows.length} gradient="from-indigo-500 to-blue-500" icon={<FiPackage size={20} />} />
+          <PageStatCard title="Total Stock" value={allRows.reduce((s, p) => s + (Number(p.stock) || 0), 0).toLocaleString('en-IN')} gradient="from-emerald-500 to-teal-500" icon={<FiPackage size={20} />} />
+          <PageStatCard title="Low Stock" value={lowStockCount} gradient="from-rose-500 to-red-500" icon={<FiAlertTriangle size={20} />} />
         </div>
 
         <div className="relative">
@@ -182,18 +183,6 @@ export default function Products() {
           }}
         />
       )}
-    </div>
-  )
-}
-
-function StatCard({ title, value, icon, gradient }) {
-  return (
-    <div className="group bg-white p-7 rounded-[2rem] border border-zinc-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-      <div className="space-y-1">
-        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{title}</p>
-        <p className="text-3xl font-bold text-zinc-900">{value}</p>
-      </div>
-      <div className={`p-4 rounded-2xl bg-gradient-to-tr ${gradient} text-white shadow-lg`}>{icon}</div>
     </div>
   )
 }

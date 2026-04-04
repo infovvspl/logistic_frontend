@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { FiPlus, FiTrash2, FiEdit2, FiEye, FiSearch } from 'react-icons/fi'
+import { motion, AnimatePresence } from 'framer-motion'
+import { FiPlus, FiTrash2, FiEdit2, FiEye, FiSearch, FiFilter, FiCheck, FiX } from 'react-icons/fi'
 import { FaRupeeSign } from 'react-icons/fa'
 import Button from '../../components/ui/Button.jsx'
 import Table from '../../components/ui/Table.jsx'
@@ -8,6 +9,7 @@ import Modal from '../../components/ui/Modal.jsx'
 import EmptyState from '../../components/common/EmptyState.jsx'
 import ConfirmDialog from '../../components/common/ConfirmDialog.jsx'
 import DetailModal from '../../components/common/DetailModal.jsx'
+import PageStatCard from '../../components/common/PageStatCard.jsx'
 import SalaryForm from '../../components/forms/SalaryForm.jsx'
 import * as salaryAPI from '../../features/salary/salaryAPI.js'
 import * as wagesAPI from '../../features/wages/wagesAPI.js'
@@ -17,9 +19,20 @@ import * as attendanceAPI from '../../features/attendance/attendanceAPI.js'
 export default function Salary() {
   const qc = useQueryClient()
   const [searchTerm, setSearchTerm] = useState('')
+  const [activeFilter, setActiveFilter] = useState(null)
+  const [filterOpen, setFilterOpen] = useState(false)
+  const filterRef = useRef(null)
   const [modal, setModal] = useState({ open: false, record: null })
   const [view, setView] = useState({ open: false, record: null })
   const [confirm, setConfirm] = useState({ open: false, id: null })
+
+  useEffect(() => {
+    function handler(e) { 
+      if (filterRef.current && !filterRef.current.contains(e.target)) setFilterOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   const salaryQuery    = useQuery({ queryKey: ['salary'],     queryFn: salaryAPI.listSalary })
   const wagesQuery     = useQuery({ queryKey: ['wages'],      queryFn: wagesAPI.listWages })
@@ -47,13 +60,26 @@ export default function Salary() {
   const totalPayout = allRows.reduce((s, r) => s + (Number(r.total_wages) || 0), 0)
 
   const filteredRows = useMemo(() => {
-    if (!searchTerm) return allRows
-    const q = searchTerm.toLowerCase()
-    return allRows.filter((r) => {
-      const u = userById.get(String(r.user_id))
-      return (u?.name ?? '').toLowerCase().includes(q) || (r.month ?? '').toLowerCase().includes(q)
-    })
-  }, [allRows, searchTerm, userById])
+    let rows = allRows
+
+    // Apply search filter
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase()
+      rows = rows.filter((r) => {
+        const u = userById.get(String(r.user_id))
+        return (u?.name ?? '').toLowerCase().includes(q) || (r.month ?? '').toLowerCase().includes(q)
+      })
+    }
+
+    // Apply sorting filter
+    if (activeFilter === 'high-to-low') {
+      rows = [...rows].sort((a, b) => Number(b.total_wages || 0) - Number(a.total_wages || 0))
+    } else if (activeFilter === 'low-to-high') {
+      rows = [...rows].sort((a, b) => Number(a.total_wages || 0) - Number(b.total_wages || 0))
+    }
+
+    return rows
+  }, [allRows, searchTerm, userById, activeFilter])
 
   const columns = useMemo(() => [
     {
@@ -129,15 +155,69 @@ export default function Salary() {
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <StatCard title="Total Records" value={allRows.length} gradient="from-indigo-500 to-blue-500" icon={<FaRupeeSign />} />
-          <StatCard title="Total Payout" value={`₹${totalPayout.toLocaleString('en-IN')}`} gradient="from-emerald-500 to-teal-500" icon={<FaRupeeSign />} />
+          <PageStatCard title="Total Records" value={allRows.length} gradient="from-indigo-500 to-blue-500" icon={<FaRupeeSign size={20} />} />
+          <PageStatCard title="Total Payout" value={`₹${totalPayout.toLocaleString('en-IN')}`} gradient="from-emerald-500 to-teal-500" icon={<FaRupeeSign size={20} />} />
         </div>
 
-        <div className="relative">
-          <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
-          <input type="text" placeholder="Search by employee or month..."
-            className="w-full pl-14 pr-6 py-5 bg-white border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all font-medium text-zinc-700 placeholder:text-zinc-400"
-            value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+        <div className="flex gap-4">
+          <div className="relative flex-1">
+            <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
+            <input type="text" placeholder="Search by employee or month..."
+              className="w-full pl-14 pr-6 py-5 bg-white border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all font-medium text-zinc-700 placeholder:text-zinc-400"
+              value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          </div>
+          
+          {/* Filter Button */}
+          <div className="relative" ref={filterRef}>
+            <button
+              onClick={() => setFilterOpen(!filterOpen)}
+              className={`flex items-center gap-2 px-6 py-5 bg-white border-none rounded-2xl shadow-sm transition-all font-medium ${
+                activeFilter ? 'text-indigo-600 bg-indigo-50' : 'text-zinc-700 hover:bg-zinc-50'
+              }`}
+            >
+              <FiFilter size={18} />
+              <span className="text-sm">
+                {activeFilter === 'high-to-low' ? 'High to Low' : activeFilter === 'low-to-high' ? 'Low to High' : 'Sort'}
+              </span>
+            </button>
+            
+            <AnimatePresence>
+              {filterOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-zinc-100 overflow-hidden z-20"
+                >
+                  {[
+                    { key: 'high-to-low', label: 'High to Low' },
+                    { key: 'low-to-high', label: 'Low to High' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.key}
+                      onClick={() => { 
+                        setActiveFilter(opt.key)
+                        setFilterOpen(false) 
+                      }}
+                      className="w-full flex items-center justify-between p-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50 transition-colors"
+                    >
+                      {opt.label}
+                      {activeFilter === opt.key && <FiCheck size={14} className="text-zinc-900" />}
+                    </button>
+                  ))}
+                  {activeFilter && (
+                    <button
+                      onClick={() => { setActiveFilter(null); setFilterOpen(false) }}
+                      className="w-full px-4 py-3 text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors border-t border-zinc-100 text-left"
+                    >
+                      Clear filter
+                    </button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-xl overflow-hidden">
@@ -189,18 +269,6 @@ export default function Salary() {
             }} />
         )
       })()}
-    </div>
-  )
-}
-
-function StatCard({ title, value, icon, gradient }) {
-  return (
-    <div className="group bg-white p-7 rounded-[2rem] border border-zinc-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-      <div className="space-y-1">
-        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{title}</p>
-        <p className="text-3xl font-bold text-zinc-900">{value}</p>
-      </div>
-      <div className={`p-4 rounded-2xl bg-gradient-to-tr ${gradient} text-white shadow-lg`}>{icon}</div>
     </div>
   )
 }

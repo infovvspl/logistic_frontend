@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { FiPlus, FiTrash2, FiEdit2, FiCalendar, FiEye, FiSearch, FiTruck, FiActivity, FiChevronDown } from 'react-icons/fi'
+import { motion, AnimatePresence } from 'framer-motion'
+import { FiPlus, FiTrash2, FiEdit2, FiCalendar, FiEye, FiSearch, FiTruck, FiActivity, FiChevronDown, FiFilter, FiCheck, FiX } from 'react-icons/fi'
 import { FaRupeeSign } from 'react-icons/fa'
 import Button from '../../components/ui/Button.jsx'
 import Table from '../../components/ui/Table.jsx'
@@ -8,6 +9,7 @@ import Modal from '../../components/ui/Modal.jsx'
 import EmptyState from '../../components/common/EmptyState.jsx'
 import ConfirmDialog from '../../components/common/ConfirmDialog.jsx'
 import DetailModal from '../../components/common/DetailModal.jsx'
+import PageStatCard from '../../components/common/PageStatCard.jsx'
 import TripForm from '../../components/forms/TripForm.jsx'
 import * as tripAPI from '../../features/trips/tripAPI.js'
 import * as customerAPI from '../../features/customers/customerAPI.js'
@@ -79,9 +81,24 @@ function StatusDropdown({ tripId, current, onUpdate, loading }) {
 export default function Trips() {
   const qc = useQueryClient()
   const [searchTerm, setSearchTerm] = useState('')
+  const [activeFilter, setActiveFilter] = useState(null)
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [dateFilterOpen, setDateFilterOpen] = useState(false)
+  const filterRef = useRef(null)
+  const dateFilterRef = useRef(null)
+  const [dateRange, setDateRange] = useState({ type: 'single', startDate: '', endDate: '' })
   const [modal, setModal] = useState({ open: false, trip: null })
   const [view, setView] = useState({ open: false, record: null })
   const [confirm, setConfirm] = useState({ open: false, id: null })
+
+  useEffect(() => {
+    function handler(e) { 
+      if (filterRef.current && !filterRef.current.contains(e.target)) setFilterOpen(false)
+      if (dateFilterRef.current && !dateFilterRef.current.contains(e.target)) setDateFilterOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   const tripsQuery = useQuery({ queryKey: ['trips'], queryFn: tripAPI.listTrips })
   const customersQuery = useQuery({ queryKey: ['customers'], queryFn: customerAPI.listCustomers })
@@ -121,15 +138,48 @@ export default function Trips() {
   const allRows = tripsQuery.data?.items ?? []
 
   const filteredRows = useMemo(() => {
-    if (!searchTerm) return allRows
-    const q = searchTerm.toLowerCase()
-    return allRows.filter((t) =>
-      placeById.get(String(t.source))?.toLowerCase().includes(q) ||
-      placeById.get(String(t.destination))?.toLowerCase().includes(q) ||
-      consignmentById.get(String(t.consignment))?.toLowerCase().includes(q) ||
-      customerById.get(String(t.customer_id))?.customer_name?.toLowerCase().includes(q)
-    )
-  }, [allRows, searchTerm, placeById, consignmentById, customerById])
+    let rows = allRows
+
+    // Apply search filter
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase()
+      rows = rows.filter((t) =>
+        placeById.get(String(t.source))?.toLowerCase().includes(q) ||
+        placeById.get(String(t.destination))?.toLowerCase().includes(q) ||
+        consignmentById.get(String(t.consignment))?.toLowerCase().includes(q) ||
+        customerById.get(String(t.customer_id))?.customer_name?.toLowerCase().includes(q)
+      )
+    }
+
+    // Apply status filter
+    if (activeFilter === 'completed') {
+      rows = rows.filter(t => t.status === 'COMPLETED')
+    } else if (activeFilter === 'ongoing') {
+      rows = rows.filter(t => t.status === 'IN_TRANSIT')
+    } else if (activeFilter === 'scheduled') {
+      rows = rows.filter(t => t.status === 'SCHEDULED')
+    } else if (activeFilter === 'cancelled') {
+      rows = rows.filter(t => t.status === 'CANCELLED')
+    } else if (activeFilter === 'custom_date') {
+      // Apply date filter
+      rows = rows.filter(t => {
+        if (!t.start_date_time) return false
+        const tripDate = new Date(t.start_date_time)
+        
+        if (dateRange.type === 'single' && dateRange.startDate) {
+          const filterDate = new Date(dateRange.startDate)
+          return tripDate.toDateString() === filterDate.toDateString()
+        } else if (dateRange.type === 'range' && dateRange.startDate && dateRange.endDate) {
+          const startDate = new Date(dateRange.startDate)
+          const endDate = new Date(dateRange.endDate)
+          return tripDate >= startDate && tripDate <= endDate
+        }
+        return true
+      })
+    }
+
+    return rows
+  }, [allRows, searchTerm, activeFilter, placeById, consignmentById, customerById, dateRange])
 
   const ongoingCount = allRows.filter((t) => t.status === 'IN_TRANSIT').length
   const completedCount = allRows.filter((t) => t.status === 'COMPLETED').length
@@ -248,20 +298,182 @@ export default function Trips() {
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatCard title="Ongoing Trips" value={ongoingCount} icon={<FiActivity />} gradient="from-blue-500 to-indigo-600" />
-          <StatCard title="Completed" value={completedCount} icon={<FiTruck />} gradient="from-emerald-500 to-teal-500" />
-          <StatCard title="Total Revenue" value={`₹${totalAmount.toLocaleString('en-IN')}`} icon={<FaRupeeSign />} gradient="from-amber-500 to-orange-500" />
+          <PageStatCard title="Ongoing Trips" value={ongoingCount} icon={<FiActivity size={20} />} gradient="from-blue-500 to-indigo-600" />
+          <PageStatCard title="Completed" value={completedCount} icon={<FiTruck size={20} />} gradient="from-emerald-500 to-teal-500" />
+          <PageStatCard title="Total Revenue" value={`₹${totalAmount.toLocaleString('en-IN')}`} icon={<FaRupeeSign size={20} />} gradient="from-amber-500 to-orange-500" />
         </div>
 
-        <div className="relative">
-          <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
-          <input
-            type="text"
-            placeholder="Search by place, consignment or customer..."
-            className="w-full pl-14 pr-6 py-5 bg-white border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-medium text-zinc-700 placeholder:text-zinc-400"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
+            <input
+              type="text"
+              placeholder="Search by place, consignment or customer..."
+              className="w-full pl-14 pr-6 py-5 bg-white border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-500/20 outline-none transition-all font-medium text-zinc-700 placeholder:text-zinc-400"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {/* Status Filter dropdown */}
+          <div className="relative" ref={filterRef}>
+            <button
+              onClick={() => setFilterOpen((o) => !o)}
+              className={`flex items-center gap-2 px-5 py-5 rounded-2xl font-semibold text-sm transition-all shadow-sm border
+                ${activeFilter && activeFilter !== 'custom_date' ? 'bg-zinc-900 text-white border-transparent' : 'bg-white text-zinc-600 border-zinc-100 hover:border-zinc-200'}`}
+            >
+              <FiFilter size={16} />
+              {activeFilter === 'completed' ? 'Completed' : activeFilter === 'ongoing' ? 'Ongoing' : activeFilter === 'scheduled' ? 'Scheduled' : activeFilter === 'cancelled' ? 'Cancelled' : activeFilter === 'custom_date' ? 'Custom Date' : 'Filter'}
+            </button>
+
+            <AnimatePresence>
+              {filterOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 p-2 top-full mt-2 w-52 bg-white rounded-2xl shadow-xl border border-zinc-100 overflow-hidden z-20"
+                >
+                  {[
+                    { key: 'completed',  label: 'Completed Trips' },
+                    { key: 'ongoing',    label: 'Ongoing (In Transit)' },
+                    { key: 'scheduled',  label: 'Scheduled Trips' },
+                    { key: 'cancelled',  label: 'Cancelled Trips' },
+                    { key: 'custom_date', label: 'Custom Date Range' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.key}
+                      onClick={() => { 
+                        if (opt.key === 'custom_date') {
+                          setDateFilterOpen(true)
+                        } else {
+                          setActiveFilter(activeFilter === opt.key ? null : opt.key)
+                        }
+                        setFilterOpen(false) 
+                      }}
+                      className="w-full flex items-center justify-between p-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 transition-colors"
+                    >
+                      {opt.label}
+                      {activeFilter === opt.key && <FiCheck size={14} className="text-zinc-900" />}
+                    </button>
+                  ))}
+                  {activeFilter && (
+                    <button
+                      onClick={() => { setActiveFilter(null); setDateRange({ type: 'single', startDate: '', endDate: '' }); setFilterOpen(false) }}
+                      className="w-full px-4 py-3 text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors border-t border-zinc-100 text-left"
+                    >
+                      Clear filter
+                    </button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Custom Date Filter dropdown */}
+          <div className="relative" ref={dateFilterRef}>
+            <AnimatePresence>
+              {dateFilterOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 p-4 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl border border-zinc-100 overflow-hidden z-20"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-zinc-900">Custom Date Filter</h3>
+                      <button
+                        onClick={() => setDateFilterOpen(false)}
+                        className="text-zinc-400 hover:text-zinc-600"
+                      >
+                        <FiX size={16} />
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-zinc-700">Filter Type</label>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setDateRange(prev => ({ ...prev, type: 'single' }))}
+                          className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg border transition-colors ${
+                            dateRange.type === 'single' 
+                              ? 'bg-zinc-900 text-white border-zinc-900' 
+                              : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
+                          }`}
+                        >
+                          Single Date
+                        </button>
+                        <button
+                          onClick={() => setDateRange(prev => ({ ...prev, type: 'range' }))}
+                          className={`flex-1 px-3 py-2 text-xs font-medium rounded-lg border transition-colors ${
+                            dateRange.type === 'range' 
+                              ? 'bg-zinc-900 text-white border-zinc-900' 
+                              : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-300'
+                          }`}
+                        >
+                          Date Range
+                        </button>
+                      </div>
+                    </div>
+
+                    {dateRange.type === 'single' ? (
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-zinc-700">Select Date</label>
+                        <input
+                          type="date"
+                          value={dateRange.startDate}
+                          onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                          className="w-full px-3 py-2 text-xs border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
+                        />
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <label className="text-xs font-medium text-zinc-700">Start Date</label>
+                        <input
+                          type="date"
+                          value={dateRange.startDate}
+                          onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+                          className="w-full px-3 py-2 text-xs border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
+                        />
+                        <label className="text-xs font-medium text-zinc-700">End Date</label>
+                        <input
+                          type="date"
+                          value={dateRange.endDate}
+                          onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+                          className="w-full px-3 py-2 text-xs border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        onClick={() => {
+                          setActiveFilter('custom_date')
+                          setDateFilterOpen(false)
+                        }}
+                        disabled={(dateRange.type === 'single' && !dateRange.startDate) || (dateRange.type === 'range' && (!dateRange.startDate || !dateRange.endDate))}
+                        className="flex-1 px-4 py-2 text-xs font-semibold text-white bg-zinc-900 rounded-lg hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Apply Filter
+                      </button>
+                      <button
+                        onClick={() => {
+                          setDateRange({ type: 'single', startDate: '', endDate: '' })
+                          setDateFilterOpen(false)
+                        }}
+                        className="flex-1 px-4 py-2 text-xs font-semibold text-zinc-600 bg-zinc-100 rounded-lg hover:bg-zinc-200 transition-colors"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-xl overflow-hidden">
@@ -345,18 +557,6 @@ export default function Trips() {
           />
         )
       })()}
-    </div>
-  )
-}
-
-function StatCard({ title, value, icon, gradient }) {
-  return (
-    <div className="group bg-white p-7 rounded-[2rem] border border-zinc-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-      <div className="space-y-1">
-        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{title}</p>
-        <p className="text-3xl font-bold text-zinc-900">{value}</p>
-      </div>
-      <div className={`p-4 rounded-2xl bg-gradient-to-tr ${gradient} text-white shadow-lg`}>{icon}</div>
     </div>
   )
 }

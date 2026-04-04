@@ -13,6 +13,7 @@ import Modal from '../../components/ui/Modal.jsx'
 import EmptyState from '../../components/common/EmptyState.jsx'
 import ConfirmDialog from '../../components/common/ConfirmDialog.jsx'
 import DetailModal from '../../components/common/DetailModal.jsx'
+import PageStatCard from '../../components/common/PageStatCard.jsx'
 import UserForm from '../../components/forms/UserForm.jsx'
 
 // APIs
@@ -179,9 +180,9 @@ export default function Admins() {
 
         {/* Stats Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatCard title="Total Admins" value={filteredRows.length} icon={<FiUsers />} gradient="from-indigo-500 to-blue-500" />
-          <StatCard title="Active Role" value={adminRole?.designation || 'Admin'} icon={<FiShield />} gradient="from-purple-500 to-pink-500" />
-          <StatCard title="Active branches" value={branchNameById.size} icon={<FiMapPin />} gradient="from-emerald-500 to-teal-500" />
+          <PageStatCard title="Total Admins" value={filteredRows.length} icon={<FiUsers size={20} />} gradient="from-indigo-500 to-blue-500" />
+          <PageStatCard title="Active Role" value={adminRole?.designation || 'Admin'} icon={<FiShield size={20} />} gradient="from-purple-500 to-pink-500" />
+          <PageStatCard title="Active branches" value={branchNameById.size} icon={<FiMapPin size={20} />} gradient="from-emerald-500 to-teal-500" />
         </div>
 
         {/* Controls */}
@@ -257,20 +258,6 @@ export default function Admins() {
 }
 
 // --- Specialized UI Components ---
-
-function StatCard({ title, value, icon, gradient }) {
-  return (
-    <div className="group bg-white p-7 rounded-[2rem] border border-zinc-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-      <div className="space-y-1">
-        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{title}</p>
-        <p className="text-3xl font-bold text-zinc-900">{value}</p>
-      </div>
-      <div className={`p-4 rounded-2xl bg-gradient-to-tr ${gradient} text-white shadow-lg`}>
-        {icon}
-      </div>
-    </div>
-  )
-}
 
 function ActionBtn({ icon, onClick, hover }) {
   return (

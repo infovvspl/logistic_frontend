@@ -1,5 +1,5 @@
 import { useForm } from 'react-hook-form'
-import { FiUser, FiPhone, FiMail, FiMapPin, FiFileText, FiCheckCircle } from 'react-icons/fi'
+import { FiUser, FiPhone, FiMail, FiMapPin, FiFileText, FiCheckCircle, FiCreditCard } from 'react-icons/fi'
 import Input from '../ui/Input.jsx'
 import Button from '../ui/Button.jsx'
 
@@ -20,6 +20,7 @@ export default function SupplierForm({ defaultValues, onSubmit, loading, serverE
     defaultValues: defaultValues ?? {
       supplier_name: '', contact_person_name: '', supplier_phone: '',
       contact_person_phone: '', supplier_email: '', supplier_address: '', supplier_gst_number: '',
+      bank_name: '', account_no_1: '', ifsc_code: '', swift_code: '', branch: '',
     },
   })
 
@@ -53,6 +54,22 @@ export default function SupplierForm({ defaultValues, onSubmit, loading, serverE
           {...register('contact_person_name')} />
         <Input label="Contact Person Phone" placeholder="9123456780" inputMode="numeric" leftIcon={<FiPhone />}
           {...register('contact_person_phone')} />
+      </div>
+
+      <SectionDivider label="Bank Details" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input label="Bank Name" placeholder="State Bank of India" leftIcon={<FiCreditCard />}
+          {...register('bank_name')} />
+        <Input label="Account Number" placeholder="1234567890" inputMode="numeric" leftIcon={<FiCreditCard />}
+          {...register('account_no_1')} />
+        <Input label="IFSC Code" placeholder="SBIN0001234" leftIcon={<FiFileText />}
+          {...register('ifsc_code')} />
+        <Input label="SWIFT Code" placeholder="SBININBB" leftIcon={<FiFileText />}
+          {...register('swift_code')} />
+        <div className="sm:col-span-2">
+          <Input label="Branch" placeholder="MG Road Branch, Kolkata" leftIcon={<FiMapPin />}
+            {...register('branch')} />
+        </div>
       </div>
 
       <div className="flex justify-end pt-3 border-t border-zinc-100">

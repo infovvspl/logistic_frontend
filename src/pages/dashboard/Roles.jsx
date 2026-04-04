@@ -9,6 +9,7 @@ import Table from '../../components/ui/Table.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import EmptyState from '../../components/common/EmptyState.jsx'
 import ConfirmDialog from '../../components/common/ConfirmDialog.jsx'
+import PageStatCard from '../../components/common/PageStatCard.jsx'
 import RoleForm from '../../components/forms/RoleForm.jsx'
 
 // APIs
@@ -111,12 +112,7 @@ export default function Roles() {
 
         {/* Stats Section */}
         <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
-          <StatCard 
-            title="Total Roles Defined" 
-            value={allRoles.length} 
-            icon={<FiLayers />} 
-            gradient="from-indigo-600 to-violet-600" 
-          />
+          <PageStatCard title="Total Roles Defined" value={allRoles.length} icon={<FiLayers size={20} />} gradient="from-indigo-600 to-violet-600" />
         </div>
 
         {/* Controls */}
@@ -223,20 +219,6 @@ export default function Roles() {
 }
 
 // --- Specialized UI Components ---
-
-function StatCard({ title, value, icon, gradient }) {
-  return (
-    <div className="group bg-white p-7 rounded-[2rem] border border-zinc-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-      <div className="space-y-1">
-        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{title}</p>
-        <p className="text-3xl font-bold text-zinc-900">{value}</p>
-      </div>
-      <div className={`p-4 rounded-2xl bg-gradient-to-tr ${gradient} text-white shadow-lg`}>
-        {icon}
-      </div>
-    </div>
-  )
-}
 
 function ActionBtn({ icon, onClick, hover }) {
   return (
