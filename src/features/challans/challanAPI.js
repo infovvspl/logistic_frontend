@@ -6,7 +6,7 @@ const ALLOWED_CHALLAN_FIELDS = [
   'vehicle_number', 'description', 'weight_at_loading', 'weight_at_unloading',
   'shortage', 'shortage_rate', 'shortage_amount', 'hsn_code',
   'total_amount', 'tds_percentage', 'tds_amount', 'remark', 'advance',
-  'diesel_advance', 'cgst_percentage', 'cgst_amount', 'sgst_percentage', 'sgst_amount',
+  'diesel_advance', 'diesel_price_per_litre', 'diesel_quantity', 'cgst_percentage', 'cgst_amount', 'sgst_percentage', 'sgst_amount',
   'tc_date', 'balance',
   'advance_type', 'advance_amount', 'advance_date', 'advance_account_number', 'other_expense',
 ]

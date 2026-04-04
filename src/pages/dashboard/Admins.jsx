@@ -172,7 +172,7 @@ export default function Admins() {
               leftIcon={<FiPlus className="stroke-[3px]" />}
               onClick={() => setModal({ open: true, admin: null })}
             >
-              Register Admin
+              Add Admin
             </Button>
           )}
         </header>

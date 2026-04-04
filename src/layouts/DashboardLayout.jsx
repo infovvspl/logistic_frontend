@@ -508,7 +508,7 @@ export default function DashboardLayout() {
           background: rgba(255, 255, 255, 0.95);
           backdrop-filter: blur(24px);
           border-radius: 24px;
-          padding: 40px;
+          padding: 10px;
           box-shadow: 
             0 20px 60px rgba(0, 0, 0, 0.1),
             0 1px 3px rgba(0, 0, 0, 0.05),
@@ -720,7 +720,7 @@ export default function DashboardLayout() {
       {/* ── Main ── */}
       <div className="db-main-wrap">
         {/* Top bar */}
-        <div className="db-topbar">
+        {/* <div className="db-topbar">
           <div className="db-breadcrumb">
             <span className="db-breadcrumb-root">{APP_NAME}</span>
             <FiChevronRight className="db-breadcrumb-sep" size={16} />
@@ -734,7 +734,7 @@ export default function DashboardLayout() {
               <span className="db-status-text">Online</span>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Page content */}
         <div className="db-content">

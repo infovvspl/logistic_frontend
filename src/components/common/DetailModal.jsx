@@ -12,14 +12,21 @@ const DOC_IMAGE_KEYS = [
   'vehicle_fitness_certificate_file', 'vehicle_permit_file', 'andhra_tax_file',
   'odisha_tax_file', 'vehicle_national_permit_file',
   'vehicle_andhra_permit_file', 'vehicle_odisha_permit_file',
-  'purchase_bill_file',
+  'purchase_bill_file', 'vehicle_vts_paper_file',
 ]
 
 function isImageKey(key) {
   return PROFILE_IMAGE_KEYS.includes(key) || DOC_IMAGE_KEYS.includes(key) || /image|photo|avatar/i.test(key)
 }
 function isProfileImageKey(key) { return PROFILE_IMAGE_KEYS.includes(key) }
-function isValidUrl(val) { return typeof val === 'string' && val.length > 0 && (val.startsWith('http') || val.startsWith('/')) }
+function isValidUrl(val) {
+  if (typeof val !== 'string' || val.trim().length === 0) return false
+  return val.startsWith('http') || val.startsWith('/') || val.startsWith('blob:') || val.includes('://')
+}
+function isDocUrl(val) {
+  // treat any non-empty string for doc keys as a renderable file reference
+  return typeof val === 'string' && val.trim().length > 0
+}
 function formatLabel(key) { return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) }
 
 function formatValue(key, value) {
@@ -43,7 +50,12 @@ function statusConfig(value) {
   return { dot: 'bg-zinc-400', text: 'text-zinc-500', bg: 'bg-zinc-50 border-zinc-200' }
 }
 
-function isAmountKey(key) {
+function isAmountKey(key, rawValue) {
+  // exclude known non-numeric fields regardless of key name
+  if (['advance_type', 'advance_date', 'advance_account_number'].includes(key)) return false
+  // only treat as amount if the raw value is actually numeric
+  if (rawValue === null || rawValue === undefined || rawValue === '') return false
+  if (isNaN(Number(rawValue))) return false
   return /amount|balance|total|advance|tds|cgst|sgst|rate|salary|allowance/i.test(key)
 }
 
@@ -78,7 +90,7 @@ export default function DetailModal({ open, onClose, title, data, extraSections 
 
   const imageEntry = Object.entries(data).find(([k, v]) => isProfileImageKey(k) && isValidUrl(v))
   const imageUrl = imageEntry?.[1] ?? null
-  const docImages = Object.entries(data).filter(([k, v]) => DOC_IMAGE_KEYS.includes(k) && isValidUrl(v))
+  const docImages = Object.entries(data).filter(([k, v]) => DOC_IMAGE_KEYS.includes(k) && isDocUrl(v))
   const entries = Object.entries(data).filter(
     ([k, v]) => !SKIP_KEYS.includes(k) && !isImageKey(k) && typeof v !== 'object'
   )
@@ -93,7 +105,7 @@ export default function DetailModal({ open, onClose, title, data, extraSections 
             <img
               src={imageUrl}
               alt="Profile"
-              className="h-16 w-16 rounded-xl object-cover border-2 border-white/20 shadow-lg shrink-0"
+              className="h-16 w-16 rounded-xl object-cover border-2 border-white/20 bg-white shadow-lg shrink-0"
               onError={(e) => { e.currentTarget.style.display = 'none' }}
             />
             <div>
@@ -118,7 +130,7 @@ export default function DetailModal({ open, onClose, title, data, extraSections 
                 value={formatValue(key, value)}
                 rawValue={value}
                 isStatus={/status/i.test(key)}
-                isAmount={isAmountKey(key)}
+                isAmount={isAmountKey(key, value)}
               />
             ))}
           </div>
@@ -134,39 +146,54 @@ export default function DetailModal({ open, onClose, title, data, extraSections 
             <div className="p-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
               {docImages.map(([key, url]) => {
                 const isPdf = /\.pdf($|\?)/i.test(url)
+                const isLinkable = url.startsWith('http') || url.startsWith('/') || url.startsWith('blob:')
                 return (
                   <div key={key} className="flex flex-col gap-1.5">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                       {formatLabel(key)}
                     </span>
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="group flex items-center justify-center h-28 rounded-xl border border-zinc-200 overflow-hidden hover:border-zinc-400 hover:shadow-lg transition-all duration-200"
-                    >
-                      {isPdf ? (
-                        <div className="flex flex-col items-center justify-center gap-2 w-full h-full bg-zinc-50 group-hover:bg-zinc-100 transition-colors">
-                          <div className="w-10 h-10 rounded-xl bg-zinc-900 flex items-center justify-center">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                              <polyline points="14 2 14 8 20 8"/>
-                            </svg>
+                    {isLinkable ? (
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="group flex items-center justify-center h-28 rounded-xl border border-zinc-200 overflow-hidden hover:border-zinc-400 hover:shadow-lg transition-all duration-200"
+                      >
+                        {isPdf ? (
+                          <div className="flex flex-col items-center justify-center gap-2 w-full h-full bg-zinc-50 group-hover:bg-zinc-100 transition-colors">
+                            <div className="w-10 h-10 rounded-xl bg-zinc-900 flex items-center justify-center">
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                              </svg>
+                            </div>
+                            <span className="text-xs font-bold text-zinc-600">Open PDF</span>
                           </div>
-                          <span className="text-xs font-bold text-zinc-600">Open PDF</span>
-                        </div>
-                      ) : (
-                        <img
-                          src={url}
-                          alt={formatLabel(key)}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          onError={(e) => {
-                            e.currentTarget.parentElement.innerHTML =
-                              '<div class="flex items-center justify-center w-full h-full bg-zinc-50"><span class="text-xs text-zinc-400">Failed to load</span></div>'
-                          }}
-                        />
-                      )}
-                    </a>
+                        ) : (
+                          <img
+                            src={url}
+                            alt={formatLabel(key)}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none'
+                              const wrap = e.currentTarget.parentElement
+                              const fb = document.createElement('div')
+                              fb.className = 'flex flex-col items-center justify-center gap-1.5 w-full h-full bg-zinc-50'
+                              fb.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg><span style="font-size:11px;color:#a1a1aa">No preview</span>'
+                              wrap.appendChild(fb)
+                            }}
+                          />
+                        )}
+                      </a>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-28 rounded-xl border border-zinc-200 bg-zinc-50 gap-1.5">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a1a1aa" strokeWidth="2">
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                          <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                        <span className="text-[11px] text-zinc-400">File uploaded</span>
+                      </div>
+                    )}
                   </div>
                 )
               })}
@@ -189,7 +216,7 @@ export default function DetailModal({ open, onClose, title, data, extraSections 
                   value={formatValue(key, value)}
                   rawValue={value}
                   isStatus={/status/i.test(key)}
-                  isAmount={isAmountKey(key)}
+                  isAmount={isAmountKey(key, value)}
                 />
               ))}
             </div>

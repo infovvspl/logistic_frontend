@@ -17,6 +17,7 @@ export default function CustomerForm({ defaultValues, onSubmit, loading, submitL
         customer_email: '',
         customer_address: '',
         customer_gst: '',
+        customer_tan_number: '',
       },
   })
 
@@ -65,6 +66,12 @@ export default function CustomerForm({ defaultValues, onSubmit, loading, submitL
         placeholder="22AAAAA0000A1Z5"
         error={errors.customer_gst?.message}
         {...register('customer_gst')}
+      />
+      <Input
+        label="Customer TAN Number"
+        placeholder="ABCD12345E"
+        error={errors.customer_tan_number?.message}
+        {...register('customer_tan_number')}
       />
       <div className="flex justify-end">
         <Button type="submit" loading={loading}>

@@ -119,7 +119,7 @@ export default function Bills() {
         return (
           <div className="flex flex-col gap-0.5">
             <span className="text-xs font-bold text-zinc-800">{challan?.challan_no ?? '—'}</span>
-            <span className="text-[11px] text-zinc-400">{m.customerName ?? ''}{m.route ? ` · ${m.route}` : ''}</span>
+            <span className="text-[11px] text-zinc-400">{m.customerName ?? ''} <br /> {m.route ? `  ${m.route}` : ''}</span>
           </div>
         )
       },
@@ -154,7 +154,7 @@ export default function Bills() {
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
             <h1 className="text-4xl font-black text-zinc-900 tracking-tight">Bills</h1>
-            <p className="text-zinc-500 font-medium">Manage billing records linked to challans.</p>
+            {/* <p className="text-zinc-500 font-medium">Manage billing records linked to challans.</p> */}
           </div>
           <Button
             variant="primary"

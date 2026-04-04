@@ -74,6 +74,9 @@ const ALLOWED_VEHICLE_FIELDS = [
   'vehicle_pollution_under_control_certificate_file',
   'vehicle_fitness_certificate_file',
   'vehicle_permit_file',
+  'vehicle_vts_paper_file',
+  'andhra_tax_expiry_date',
+  'odisha_tax_expiry_date',
 ]
 
 const VEHICLE_FILE_FIELDS = [
@@ -88,6 +91,7 @@ const VEHICLE_FILE_FIELDS = [
   'vehicle_national_permit_file',
   'andhra_tax_file',
   'odisha_tax_file',
+  'vehicle_vts_paper_file',
 ]
 
 function buildFormData(clean) {

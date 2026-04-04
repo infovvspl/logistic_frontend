@@ -77,7 +77,7 @@ export default function Customers() {
           <span className="text-xs font-bold text-zinc-700">{r.contact_person_name || '—'}</span>
           {r.contact_person_phone && (
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-zinc-50 border border-zinc-100 w-fit">
-              <span className="text-[10px] font-black text-zinc-400">TEL</span>
+              {/* <span className="text-[10px] font-black text-zinc-400">TEL</span> */}
               <span className="text-[11px] font-bold text-zinc-600 tracking-tighter">{r.contact_person_phone}</span>
             </div>
           )}
@@ -89,7 +89,7 @@ export default function Customers() {
       header: 'Phone',
       render: (r) => (
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-50 border border-zinc-100 w-fit">
-          <span className="text-[10px] font-black text-zinc-400">TEL</span>
+          {/* <span className="text-[10px] font-black text-zinc-400">TEL</span> */}
           <span className="text-xs font-bold text-zinc-700 tracking-tighter">{r.customer_phone || '—'}</span>
         </div>
       ),
@@ -115,7 +115,7 @@ export default function Customers() {
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
             <h1 className="text-4xl font-black text-zinc-900 tracking-tight">Customers</h1>
-            <p className="text-zinc-500 font-medium">Maintain customer records used for assignments and reporting.</p>
+            {/* <p className="text-zinc-500 font-medium">Maintain customer records used for assignments and reporting.</p> */}
           </div>
           <Button
             variant="primary"

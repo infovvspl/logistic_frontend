@@ -8,6 +8,8 @@ const ALLOWED_CUSTOMER_FIELDS = [
   'contact_person_phone',
   'customer_email',
   'customer_address',
+  'customer_gst',
+  'customer_tan_number',
 ]
 
 let mockCustomers = [

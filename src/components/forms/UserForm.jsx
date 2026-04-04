@@ -417,63 +417,59 @@ export default function UserForm({
       </div>
 
       {/* ── License & Professional ──────────────────────────── */}
-      {(isDriver || isEdit) && (
-        <>
-          <SectionDivider label="License & Professional" />
+      <SectionDivider label="License & Professional" />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input
-              label="License Number"
-              placeholder="DL-XXXXXXXXXX"
-              required={isDriver}
-              leftIcon={<FiTruck />}
-              error={errors.license_number?.message}
-              {...register('license_number', { required: isDriver ? 'License number required' : false })}
-            />
-            <Input
-              label="License Type"
-              placeholder="HMV / LMV"
-              required={isDriver}
-              error={errors.license_type?.message}
-              {...register('license_type', { required: isDriver ? 'License type required' : false })}
-            />
-            <Input
-              label="Issue Date"
-              type="date"
-              required={isDriver}
-              leftIcon={<FiCalendar />}
-              error={errors.license_issue_date?.message}
-              {...register('license_issue_date', { required: isDriver ? 'Issue date required' : false })}
-            />
-            <Input
-              label="Expiry Date"
-              type="date"
-              required={isDriver}
-              leftIcon={<FiCalendar />}
-              error={errors.license_expiry_date?.message}
-              {...register('license_expiry_date', { required: isDriver ? 'Expiry date required' : false })}
-            />
-            <Input
-              label="Years of Experience"
-              type="number"
-              placeholder="e.g. 5"
-              required={isDriver}
-              error={errors.year_of_experience?.message}
-              {...register('year_of_experience', { required: isDriver ? 'Experience required' : false })}
-            />
-            <Controller
-              name="preferred_vehicle_type"
-              control={control}
-              render={({ field }) => (
-                <Select label="Preferred Vehicle" options={VEHICLE_TYPES} {...field} />
-              )}
-            />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <FileUpload label="License File" fieldName="license_file" setValue={setValue} watch={watch} />
-          </div>
-        </>
-      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input
+          label="License Number"
+          placeholder="DL-XXXXXXXXXX"
+          required={isDriver}
+          leftIcon={<FiTruck />}
+          error={errors.license_number?.message}
+          {...register('license_number', { required: isDriver ? 'License number required' : false })}
+        />
+        <Input
+          label="License Type"
+          placeholder="HMV / LMV"
+          required={isDriver}
+          error={errors.license_type?.message}
+          {...register('license_type', { required: isDriver ? 'License type required' : false })}
+        />
+        <Input
+          label="Issue Date"
+          type="date"
+          required={isDriver}
+          leftIcon={<FiCalendar />}
+          error={errors.license_issue_date?.message}
+          {...register('license_issue_date', { required: isDriver ? 'Issue date required' : false })}
+        />
+        <Input
+          label="Expiry Date"
+          type="date"
+          required={isDriver}
+          leftIcon={<FiCalendar />}
+          error={errors.license_expiry_date?.message}
+          {...register('license_expiry_date', { required: isDriver ? 'Expiry date required' : false })}
+        />
+        <Input
+          label="Years of Experience"
+          type="number"
+          placeholder="e.g. 5"
+          required={isDriver}
+          error={errors.year_of_experience?.message}
+          {...register('year_of_experience', { required: isDriver ? 'Experience required' : false })}
+        />
+        <Controller
+          name="preferred_vehicle_type"
+          control={control}
+          render={({ field }) => (
+            <Select label="Preferred Vehicle" options={VEHICLE_TYPES} {...field} />
+          )}
+        />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <FileUpload label="License File" fieldName="license_file" setValue={setValue} watch={watch} />
+      </div>
 
       {/* ── Emergency Contact ───────────────────────────────── */}
       <SectionDivider label="Emergency Contact" />

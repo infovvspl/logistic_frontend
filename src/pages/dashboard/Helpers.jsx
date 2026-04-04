@@ -1,9 +1,8 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState, useRef, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  FiPlus, FiTrash2, FiEdit2, FiEye, FiSearch, 
-  FiUsers, FiUserCheck, FiMapPin 
+  FiPlus, FiTrash2, FiEdit2, FiEye, FiSearch, FiFilter, FiCheck,
 } from 'react-icons/fi'
 
 // UI Components
@@ -20,18 +19,31 @@ import * as userAPI from '../../features/users/userAPI.js'
 import * as roleAPI from '../../features/roles/roleAPI.js'
 import * as branchAPI from '../../features/branches/branchAPI.js'
 import * as companyAPI from '../../features/companies/companyAPI.js'
+import * as tripAPI from '../../features/trips/tripAPI.js'
+import * as assignmentAPI from '../../features/assignments/assignmentAPI.js'
 
 export default function Helpers() {
   const qc = useQueryClient()
   const [searchTerm, setSearchTerm] = useState('')
+  const [activeFilter, setActiveFilter] = useState(null)
+  const [filterOpen, setFilterOpen] = useState(false)
+  const filterRef = useRef(null)
   const [modal, setModal] = useState({ open: false, user: null })
   const [view, setView] = useState({ open: false, record: null })
   const [confirm, setConfirm] = useState({ open: false, id: null })
+
+  useEffect(() => {
+    function handler(e) { if (filterRef.current && !filterRef.current.contains(e.target)) setFilterOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   // --- Queries & Mutations (Logic preserved) ---
   const rolesQuery = useQuery({ queryKey: ['roles'], queryFn: roleAPI.listRoles })
   const branchesQuery = useQuery({ queryKey: ['branches'], queryFn: branchAPI.listBranches })
   const companiesQuery = useQuery({ queryKey: ['companies'], queryFn: companyAPI.listCompanies })
+  const tripsQuery = useQuery({ queryKey: ['trips'], queryFn: tripAPI.listTrips })
+  const assignmentsQuery = useQuery({ queryKey: ['assignments'], queryFn: assignmentAPI.listAssignments })
 
   const helperRole = useMemo(() => {
     const roles = rolesQuery.data?.items ?? []
@@ -69,18 +81,95 @@ export default function Helpers() {
     return helperRole?.id ? all.filter((u) => u.role_id === helperRole.id) : all
   }, [usersQuery.data, helperRole?.id])
 
-  const filteredRows = useMemo(() => {
-    if (!searchTerm) return allHelpers
-    return allHelpers.filter(h =>
-      h.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      h.mobile?.includes(searchTerm)
-    )
-  }, [allHelpers, searchTerm])
-
   const activeHelpers = useMemo(
     () => allHelpers.filter(h => (h.status || '').toUpperCase() === 'ACTIVE' || !h.status),
     [allHelpers]
   )
+
+  // helpers currently on an IN_TRANSIT trip (via helper_id or assignment helper_id)
+  const inTransitHelperIds = useMemo(() => {
+    const trips = tripsQuery.data?.items ?? []
+    const assignments = assignmentsQuery.data?.items ?? []
+
+    const assignHelperMap = new Map()
+    assignments.forEach((a) => {
+      const helperId = a.helper_id
+      if (helperId) assignHelperMap.set(String(a.id), String(helperId))
+    })
+
+    const ids = new Set()
+    trips.forEach((t) => {
+      if (t.status !== 'IN_TRANSIT') return
+      if (t.helper_id) ids.add(String(t.helper_id))
+      if (t.vehicle_assign_id) {
+        const helperId = assignHelperMap.get(String(t.vehicle_assign_id))
+        if (helperId) ids.add(helperId)
+      }
+    })
+    return ids
+  }, [tripsQuery.data, assignmentsQuery.data])
+
+  // helpers scheduled for tomorrow
+  const scheduledTomorrowHelperIds = useMemo(() => {
+    const trips = tripsQuery.data?.items ?? []
+    const assignments = assignmentsQuery.data?.items ?? []
+
+    const assignHelperMap = new Map()
+    assignments.forEach((a) => {
+      const helperId = a.helper_id
+      if (helperId) assignHelperMap.set(String(a.id), String(helperId))
+    })
+
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const tomorrowDate = tomorrow.toISOString().slice(0, 10)
+
+    const ids = new Set()
+    trips.forEach((t) => {
+      if (t.status !== 'SCHEDULED') return
+      if (!t.start_date_time) return
+      const tripDate = new Date(t.start_date_time).toISOString().slice(0, 10)
+      if (tripDate !== tomorrowDate) return
+      if (t.helper_id) ids.add(String(t.helper_id))
+      if (t.vehicle_assign_id) {
+        const helperId = assignHelperMap.get(String(t.vehicle_assign_id))
+        if (helperId) ids.add(helperId)
+      }
+    })
+    return ids
+  }, [tripsQuery.data, assignmentsQuery.data])
+
+  // helpers with license expiring within 30 days
+  const expiringHelpers = useMemo(() => {
+    const now = Date.now()
+    const in30 = now + 30 * 24 * 60 * 60 * 1000
+    return allHelpers.filter((h) => {
+      if (!h.license_expiry_date) return false
+      const exp = new Date(h.license_expiry_date).getTime()
+      return exp >= now && exp <= in30
+    })
+  }, [allHelpers])
+
+  const filteredRows = useMemo(() => {
+    let rows = allHelpers
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase()
+      rows = rows.filter(h =>
+        h.name?.toLowerCase().includes(q) ||
+        h.mobile?.includes(searchTerm)
+      )
+    }
+    if (activeFilter === 'active') {
+      rows = rows.filter(h => (h.status || '').toUpperCase() === 'ACTIVE' || !h.status)
+    } else if (activeFilter === 'in_trip') {
+      rows = rows.filter(h => inTransitHelperIds.has(String(h._id ?? h.id)))
+    } else if (activeFilter === 'SCHEDULED') {
+      rows = rows.filter(h => scheduledTomorrowHelperIds.has(String(h._id ?? h.id)))
+    } else if (activeFilter === 'expiring') {
+      rows = rows.filter(h => expiringHelpers.some(e => (e._id || e.id) === (h._id || h.id)))
+    }
+    return rows
+  }, [allHelpers, searchTerm, activeFilter, inTransitHelperIds, scheduledTomorrowHelperIds, expiringHelpers])
 
   // --- Premium Table Definition ---
   const columns = useMemo(() => [
@@ -115,10 +204,10 @@ export default function Helpers() {
     },
     {
       key: 'contact',
-      header: 'Contact Info',
+      header: 'Contact',
       render: (r) => (
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-50 border border-zinc-100 w-fit">
-          <span className="text-[10px] font-black text-zinc-400">TEL</span>
+          {/* <span className="text-[10px] font-black text-zinc-400">TEL</span> */}
           <span className="text-xs font-bold text-zinc-700 tracking-tighter">
             {r.mobile || 'No Phone'}
           </span>
@@ -127,7 +216,7 @@ export default function Helpers() {
     },
     {
       key: 'status',
-      header: 'System Status',
+      header: 'Status',
       render: (r) => {
         const isActive = (r.status || '').toUpperCase() === 'ACTIVE' || !r.status
         return (
@@ -167,7 +256,7 @@ export default function Helpers() {
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
             <h1 className="text-4xl font-black text-zinc-900 tracking-tight">Helpers</h1>
-            <p className="text-zinc-500 font-medium">Manage support staff, contact details, and status.</p>
+            {/* <p className="text-zinc-500 font-medium">Manage support staff, contact details, and status.</p> */}
           </div>
           <Button
             variant="primary"
@@ -176,26 +265,79 @@ export default function Helpers() {
             onClick={() => setModal({ open: true, user: null })}
             disabled={!helperRole}
           >
-            Register Helper
+            Add Helper
           </Button>
         </header>
 
         {/* Stats Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <StatCard title="Total Helpers" value={allHelpers.length} icon={<FiUsers />} gradient="from-blue-500 to-indigo-500" />
-          <StatCard title="Active Status" value={activeHelpers.length} icon={<FiUserCheck />} gradient="from-emerald-500 to-teal-500" />
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+          <StatCard title="Total Helpers" value={allHelpers.length} gradient="from-zinc-600 to-zinc-800" />
+          <StatCard title="Active Helpers" value={activeHelpers.length} gradient="from-blue-500 to-indigo-600" />
+          <StatCard title="On Trip" value={inTransitHelperIds.size} gradient="from-emerald-500 to-teal-500" />
+          <StatCard title="Tomorrow Schedule" value={scheduledTomorrowHelperIds.size} gradient="from-violet-500 to-purple-600" />
+          <StatCard title="License Expiring (30d)" value={expiringHelpers.length} gradient={expiringHelpers.length > 0 ? 'from-red-500 to-orange-500' : 'from-amber-400 to-orange-400'} />
         </div>
 
         {/* Controls */}
-        <div className="relative">
-          <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
-          <input
-            type="text"
-            placeholder="Search by helper name or mobile..."
-            className="w-full pl-14 pr-6 py-5 bg-white border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-zinc-900/10 outline-none transition-all font-medium text-zinc-700 placeholder:text-zinc-400"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
+            <input
+              type="text"
+              placeholder="Search by helper name or mobile..."
+              className="w-full pl-14 pr-6 py-5 bg-white border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-zinc-900/10 outline-none transition-all font-medium text-zinc-700 placeholder:text-zinc-400"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {/* Filter dropdown */}
+          <div className="relative" ref={filterRef}>
+            <button
+              onClick={() => setFilterOpen((o) => !o)}
+              className={`flex items-center gap-2 px-5 py-5 rounded-2xl font-semibold text-sm transition-all shadow-sm border
+                ${activeFilter ? 'bg-zinc-900 text-white border-transparent' : 'bg-white text-zinc-600 border-zinc-100 hover:border-zinc-200'}`}
+            >
+              <FiFilter size={16} />
+              {activeFilter === 'active' ? 'Active' : activeFilter === 'in_trip' ? 'In Trip' : activeFilter === 'SCHEDULED' ? 'Tomorrow' : activeFilter === 'expiring' ? 'Expiring' : 'Filter'}
+            </button>
+
+            <AnimatePresence>
+              {filterOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 p-2 top-full mt-2 w-52 bg-white rounded-2xl shadow-xl border border-zinc-100 overflow-hidden z-20"
+                >
+                  {[
+                    { key: 'active',    label: 'Active Helpers' },
+                    { key: 'in_trip',   label: 'Helpers on Trip' },
+                    { key: 'SCHEDULED', label: 'Scheduled Tomorrow' },
+                    { key: 'expiring',  label: 'License Expiring (30d)' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.key}
+                      onClick={() => { setActiveFilter(activeFilter === opt.key ? null : opt.key); setFilterOpen(false) }}
+                      className="w-full flex items-center justify-between p-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 transition-colors"
+                    >
+                      {opt.label}
+                      {activeFilter === opt.key && <FiCheck size={14} className="text-zinc-900" />}
+                    </button>
+                  ))}
+                  {activeFilter && (
+                    <button
+                      onClick={() => { setActiveFilter(null); setFilterOpen(false) }}
+                      className="w-full px-4 py-3 text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors border-t border-zinc-100 text-left"
+                    >
+                      Clear filter
+                    </button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* Premium Table Wrapper */}
@@ -219,7 +361,7 @@ export default function Helpers() {
       </div>
 
       {/* Modals */}
-      <Modal open={modal.open} title={modal.user ? 'Edit Helper Profile' : 'Register New Helper'} onClose={() => setModal({ open: false, user: null })}>
+      <Modal open={modal.open} title={modal.user ? 'Edit Helper Profile' : 'Add New Helper'} onClose={() => setModal({ open: false, user: null })}>
         <UserForm
           defaultValues={modal.user}
           lockedRoleId={helperRole?.id}
@@ -261,13 +403,10 @@ export default function Helpers() {
 
 function StatCard({ title, value, icon, gradient }) {
   return (
-    <div className="group bg-white p-7 rounded-[2rem] border border-zinc-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-      <div className="space-y-1">
-        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{title}</p>
-        <p className="text-3xl font-bold text-zinc-900">{value}</p>
-      </div>
-      <div className={`p-4 rounded-2xl bg-gradient-to-tr ${gradient} text-white shadow-lg`}>
-        {icon}
+    <div className={`p-[2px] rounded-[2rem] bg-gradient-to-br ${gradient ?? 'from-zinc-400 to-zinc-600'} shadow-sm hover:shadow-md transition-all`}>
+      <div className="bg-white px-6 py-4 rounded-[calc(2rem-2px)] flex flex-col items-center justify-center text-center h-full">
+        <p className="text-[10px] font-black text-zinc-700 uppercase tracking-widest">{title}</p>
+        <p className="text-3xl font-bold text-zinc-900 mt-1">{value}</p>
       </div>
     </div>
   )

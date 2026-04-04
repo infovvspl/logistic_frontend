@@ -179,3 +179,14 @@ export async function fetchLedgerReport(filters) {
   if (reportData?.items) return { ...reportData, items: enriched }
   return enriched
 }
+
+export async function fetchProfitLoss(filters = {}) {
+  try {
+    const params = new URLSearchParams()
+    Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v) })
+    const { data } = await api.get(`/reports/profit-loss?${params.toString()}`)
+    return data
+  } catch (err) {
+    throw new Error(extractError(err, 'Failed to load profit-loss report'))
+  }
+}

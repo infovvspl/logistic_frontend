@@ -197,7 +197,7 @@ export default function Challans() {
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
             <h1 className="text-4xl font-black text-zinc-900 tracking-tight">Challans</h1>
-            <p className="text-zinc-500 font-medium">Manage delivery challans and billing records.</p>
+            {/* <p className="text-zinc-500 font-medium">Manage delivery challans and billing records.</p> */}
           </div>
           <Button
             variant="primary"

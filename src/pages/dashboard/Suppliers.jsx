@@ -105,7 +105,7 @@ export default function Suppliers() {
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
             <h1 className="text-4xl font-black text-zinc-900 tracking-tight">Suppliers</h1>
-            <p className="text-zinc-500 font-medium">Manage your supplier contacts and details.</p>
+            {/* <p className="text-zinc-500 font-medium">Manage your supplier contacts and details.</p> */}
           </div>
           <Button
             variant="primary"

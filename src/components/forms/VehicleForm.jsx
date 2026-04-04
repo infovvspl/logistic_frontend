@@ -157,6 +157,8 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       'vehicle_odisha_permit_expiry_date',
       'vehicle_national_permit_issue_date',
       'vehicle_national_permit_expiry_date',
+      'andhra_tax_expiry_date',
+      'odisha_tax_expiry_date',
     ]
     dateFields.forEach((f) => (src[f] = formatDate(src[f])))
     // normalise file fields — only keep http URLs
@@ -166,10 +168,11 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       'vehicle_fitness_certificate_file', 'vehicle_permit_file',
       'vehicle_andhra_permit_file', 'vehicle_odisha_permit_file',
       'vehicle_national_permit_file', 'andhra_tax_file', 'odisha_tax_file',
+      'vehicle_vts_paper_file',
     ]
     fileFields.forEach((f) => {
       const v = src[f] || ''
-      src[f] = typeof v === 'string' && v.startsWith('http') ? v : ''
+      src[f] = typeof v === 'string' && v.trim().length > 0 ? v.trim() : ''
     })
     return src
   }, [defaultValues])
@@ -213,7 +216,9 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       andhra_permit_status: '',
       andhra_permit_expiry_date: '',
       andhra_tax: '',
+      andhra_tax_expiry_date: '',
       odisha_tax: '',
+      odisha_tax_expiry_date: '',
       odisha_permit_status: '',
       national_permit_status: '',
       vehicle_andhra_permit_issue_date: '',
@@ -244,6 +249,7 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       vehicle_pollution_under_control_certificate_file: '',
       vehicle_fitness_certificate_file: '',
       vehicle_permit_file: '',
+      vehicle_vts_paper_file: '',
     },
   })
 
@@ -266,7 +272,8 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
         'vehicle_insurance_file', 'vehicle_pollution_under_control_certificate_file',
         'vehicle_fitness_certificate_file', 'vehicle_permit_file',
         'vehicle_andhra_permit_file', 'vehicle_odisha_permit_file',
-        'vehicle_national_permit_file', 'andhra_tax_file', 'odisha_tax_file']
+        'vehicle_national_permit_file', 'andhra_tax_file', 'odisha_tax_file',
+        'vehicle_vts_paper_file']
       fileFields.forEach((f) => { if (!values[f] || typeof values[f] === 'string') delete values[f] })
       try {
         await onSubmit(values)
@@ -471,6 +478,7 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
           <FileUpload label="Andhra Permit File" fieldName="vehicle_andhra_permit_file" setValue={setValue} watch={watch} />
         </>)}
         <Input label="Andhra Tax (₹)" type="number" placeholder="2500" {...register('andhra_tax')} />
+        <Input label="Andhra Tax Expiry Date" type="date" leftIcon={<FiCalendar />} {...register('andhra_tax_expiry_date')} />
         <FileUpload label="Andhra Tax File" fieldName="andhra_tax_file" setValue={setValue} watch={watch} />
       </div>
 
@@ -489,6 +497,7 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
           <FileUpload label="Odisha Permit File" fieldName="vehicle_odisha_permit_file" setValue={setValue} watch={watch} />
         </>)}
         <Input label="Odisha Tax (₹)" type="number" placeholder="1850" {...register('odisha_tax')} />
+        <Input label="Odisha Tax Expiry Date" type="date" leftIcon={<FiCalendar />} {...register('odisha_tax_expiry_date')} />
         <FileUpload label="Odisha Tax File" fieldName="odisha_tax_file" setValue={setValue} watch={watch} />
       </div>
 
@@ -536,7 +545,7 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
         <FileUpload label="Insurance File" fieldName="vehicle_insurance_file" setValue={setValue} watch={watch} />
         <FileUpload label="PUC Certificate" fieldName="vehicle_pollution_under_control_certificate_file" setValue={setValue} watch={watch} />
         <FileUpload label="Fitness Certificate" fieldName="vehicle_fitness_certificate_file" setValue={setValue} watch={watch} />
-        <FileUpload label="Permit File" fieldName="vehicle_permit_file" setValue={setValue} watch={watch} />
+        <FileUpload label="VTS Paper File" fieldName="vehicle_vts_paper_file" setValue={setValue} watch={watch} />
       </div>
 
       {/* ── Submit ──────────────────────────────────────────── */}

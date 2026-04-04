@@ -125,7 +125,7 @@ export default function Companies() {
     },
     {
       key: 'gst',
-      header: 'Tax Identifier',
+      header: 'GST Number',
       render: (r) => (
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-50 border border-zinc-100 w-fit">
           <span className="text-xs font-bold text-zinc-700 uppercase tracking-tighter">
@@ -136,7 +136,7 @@ export default function Companies() {
     },
     {
       key: 'branches',
-      header: 'Network Status',
+      header: 'No. of Branches',
       render: (r) => {
         const count = (branchesByCompanyId.get(r.id) ?? []).length
         return (
@@ -173,7 +173,7 @@ export default function Companies() {
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
             <h1 className="text-4xl font-black text-zinc-900 tracking-tight">Companies</h1>
-            <p className="text-zinc-500 font-medium">Overview of corporate entities and branch networks.</p>
+            {/* <p className="text-zinc-500 font-medium">Overview of corporate entities and branch networks.</p> */}
           </div>
           <Button
             variant="primary"

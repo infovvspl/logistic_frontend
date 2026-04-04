@@ -161,7 +161,7 @@ export default function Vehicles() {
     },
     {
       key: 'branch',
-      header: 'Location',
+      header: 'Branch',
       render: (r) => (
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-50 border border-zinc-100 w-fit">
           <FiMapPin size={12} className="text-zinc-400" />
@@ -269,7 +269,7 @@ export default function Vehicles() {
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
             <h1 className="text-4xl font-black text-zinc-900 tracking-tight">Vehicles</h1>
-            <p className="text-zinc-500 font-medium">Manage fleet inventory, assignments, and vehicle status.</p>
+            {/* <p className="text-zinc-500 font-medium">Manage fleet inventory, assignments, and vehicle status.</p> */}
           </div>
           <Button
             variant="primary"

@@ -118,7 +118,7 @@ export default function Salary() {
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
             <h1 className="text-4xl font-black text-zinc-900 tracking-tight">Salary</h1>
-            <p className="text-zinc-500 font-medium">Generate and manage monthly salary records.</p>
+            {/* <p className="text-zinc-500 font-medium">Generate and manage monthly salary records.</p> */}
           </div>
           <Button variant="primary"
             className="bg-zinc-900 hover:bg-indigo-600 text-white p-4 rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.2)] transition-all active:scale-95"

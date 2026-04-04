@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect } from 'react'
+﻿import { useMemo, useState, useRef, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
@@ -256,7 +256,7 @@ export default function Drivers() {
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
             <h1 className="text-4xl font-black text-zinc-900 tracking-tight">Drivers</h1>
-            <p className="text-zinc-500 font-medium">Manage personnel, licenses, and deployment status.</p>
+            {/* <p className="text-zinc-500 font-medium">Manage personnel, licenses, and deployment status.</p> */}
           </div>
           <Button
             variant="primary"
@@ -265,7 +265,7 @@ export default function Drivers() {
             onClick={() => setModal({ open: true, user: null })}
             disabled={!driverRole}
           >
-            Register Driver
+            Add Driver
           </Button>
         </header>
 
@@ -275,7 +275,7 @@ export default function Drivers() {
           <StatCard title="Active Drivers" value={allDrivers.filter(d => d.is_active !== false && d.status !== 'inactive').length} icon={<FiTruck />} gradient="from-blue-500 to-indigo-600" />
           <StatCard title="On Trip" value={inTransitDriverIds.size} icon={<FiTruck />} gradient="from-emerald-500 to-teal-500" />
           <StatCard title="Tomorrow driver schedule" value={scheduledTomorrowDriverIds.size} icon={<FiTruck />} gradient="from-violet-500 to-purple-600" />
-          <StatCard title="Expiring (30d)" value={expiringDrivers.length} icon={<FiAlertTriangle />} gradient={expiringDrivers.length > 0 ? 'from-red-500 to-orange-500' : 'from-amber-400 to-orange-400'} />
+          <StatCard title="License Expiring (30d)" value={expiringDrivers.length} icon={<FiAlertTriangle />} gradient={expiringDrivers.length > 0 ? 'from-red-500 to-orange-500' : 'from-amber-400 to-orange-400'} />
         </div>
 
         {/* Controls */}
@@ -362,7 +362,7 @@ export default function Drivers() {
       </div>
 
       {/* Modals */}
-      <Modal open={modal.open} title={modal.user ? 'Edit Driver Profile' : 'Register New Driver'} onClose={() => setModal({ open: false, user: null })}>
+      <Modal open={modal.open} title={modal.user ? 'Edit Driver Profile' : 'Add New Driver'} onClose={() => setModal({ open: false, user: null })}>
         <UserForm
           defaultValues={modal.user}
           lockedRoleId={driverRole?.id}

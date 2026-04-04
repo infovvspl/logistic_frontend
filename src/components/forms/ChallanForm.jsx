@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { FiSearch, FiX, FiFileText, FiCalendar, FiCheckCircle, FiTruck, FiAlertTriangle, FiCreditCard } from 'react-icons/fi'
 import Input from '../ui/Input.jsx'
 import Button from '../ui/Button.jsx'
@@ -34,13 +34,26 @@ function ReadOnlyField({ label, value, highlight }) {
   )
 }
 
-function recalc(f) {
+function recalc(f, focusedDieselKey = null) {
   const next = { ...f }
 
   const loadingTon = Number(f.weight_at_loading)  || 0
   const unloadTon  = Number(f.weight_at_unloading) || 0
   if (loadingTon > 0 && unloadTon > 0) {
     next.shortage = String(Math.max(0, (loadingTon - unloadTon) * 1000))
+  }
+
+  // auto-calculate diesel: any 2 of 3 filled → compute the third
+  // never overwrite the field currently being typed into (focusedDieselKey)
+  const price = Number(f.diesel_price_per_litre) || 0
+  const qty   = Number(f.diesel_quantity) || 0
+  const adv   = Number(f.diesel_advance) || 0
+  if (focusedDieselKey !== 'diesel_advance' && price > 0 && qty > 0) {
+    next.diesel_advance = String((price * qty).toFixed(2))
+  } else if (focusedDieselKey !== 'diesel_quantity' && adv > 0 && price > 0) {
+    next.diesel_quantity = String((adv / price).toFixed(2))
+  } else if (focusedDieselKey !== 'diesel_price_per_litre' && adv > 0 && qty > 0) {
+    next.diesel_price_per_litre = String((adv / qty).toFixed(2))
   }
 
   const shortageKg   = Number(next.shortage) || 0
@@ -53,7 +66,7 @@ function recalc(f) {
   const tdsPct      = Number(f.tds_percentage) || 0
   const cgstPct     = Number(f.cgst_percentage) || 0
   const sgstPct     = Number(f.sgst_percentage) || 0
-  const dieselAdv   = Number(f.diesel_advance) || 0
+  const dieselAdv   = Number(next.diesel_advance) || 0
   const driverAdv   = Number(f.advance) || 0
   const shortageAmt = Number(next.shortage_amount) || 0
   const otherExp    = Number(f.other_expense) || 0
@@ -86,12 +99,20 @@ export default function ChallanForm({
   const isEdit = !!defaultValues
   const today = new Date().toISOString().slice(0, 10)
 
+  // normalize any date value to YYYY-MM-DD
+  const nd = (v) => {
+    if (!v) return ''
+    if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v.trim())) return v.trim()
+    const d = new Date(v)
+    return isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10)
+  }
+
   const [form, setForm] = useState(() => recalc({
     challan_no:          defaultValues?.challan_no          ?? '',
     bill_no:             defaultValues?.bill_no             ?? '',
-    challan_date:        defaultValues?.challan_date        ?? today,
+    challan_date:        nd(defaultValues?.challan_date)    || today,
     trip_id:             defaultValues?.trip_id             ?? '',
-    unloading_date:      defaultValues?.unloading_date      ?? '',
+    unloading_date:      nd(defaultValues?.unloading_date)  || '',
     permit_number:       defaultValues?.permit_number       ?? '',
     transport:           defaultValues?.transport           ?? '',
     vehicle_number:      defaultValues?.vehicle_number      ?? '',
@@ -106,6 +127,8 @@ export default function ChallanForm({
     tds_percentage:      defaultValues?.tds_percentage      ?? '',
     tds_amount:          defaultValues?.tds_amount          ?? '',
     diesel_advance:      defaultValues?.diesel_advance      ?? '',
+    diesel_price_per_litre: defaultValues?.diesel_price_per_litre ?? '',
+    diesel_quantity:     defaultValues?.diesel_quantity     ?? '',
     advance:             defaultValues?.advance             ?? '',
     cgst_percentage:     defaultValues?.cgst_percentage     ?? '',
     cgst_amount:         defaultValues?.cgst_amount         ?? '',
@@ -113,16 +136,17 @@ export default function ChallanForm({
     sgst_amount:         defaultValues?.sgst_amount         ?? '',
     other_expense:       defaultValues?.other_expense       ?? '',
     balance:             defaultValues?.balance             ?? '',
-    tc_date:             defaultValues?.tc_date             ?? '',
+    tc_date:             nd(defaultValues?.tc_date)         || '',
     remark:              defaultValues?.remark              ?? '',
     advance_type:        defaultValues?.advance_type        ?? '',
     advance_amount:      defaultValues?.advance_amount      ?? '',
-    advance_date:        defaultValues?.advance_date        ?? '',
+    advance_date:        nd(defaultValues?.advance_date)    || '',
     advance_account_number: defaultValues?.advance_account_number ?? '',
   }))
 
   const [errors, setErrors] = useState({})
   const [tripSearch, setTripSearch] = useState('')
+  const dieselFocusRef = useRef(null)
 
   const set = (key, val) => {
     setForm((prev) => {
@@ -135,9 +159,14 @@ export default function ChallanForm({
       }
       // clear account when switching away from bank transfer
       if (key === 'advance_type' && val !== 'BANK_TRANSFER') next.advance_account_number = ''
-      return recalc(next)
+      return recalc(next, dieselFocusRef.current)
     })
     setErrors((e) => ({ ...e, [key]: '' }))
+  }
+
+  // fires on blur of a diesel field — calculates the missing third value
+  const onDieselBlur = (key) => {
+    setForm((prev) => recalc(calcDiesel(prev, key)))
   }
 
   const handleTripSelect = (tripId) => {
@@ -195,6 +224,7 @@ export default function ChallanForm({
     const numFields = [
       'weight_at_loading', 'weight_at_unloading', 'shortage', 'shortage_rate', 'shortage_amount',
       'total_amount', 'tds_percentage', 'tds_amount', 'diesel_advance', 'advance',
+      'diesel_price_per_litre', 'diesel_quantity',
       'cgst_percentage', 'cgst_amount', 'sgst_percentage', 'sgst_amount',
       'other_expense', 'advance_amount', 'balance',
     ]
@@ -335,8 +365,22 @@ export default function ChallanForm({
           value={form.tds_percentage} onChange={(e) => set('tds_percentage', e.target.value)} />
         <ReadOnlyField label="TDS Amount (₹)" value={fmt(form.tds_amount)} highlight="amber" />
 
+        {/* Diesel 3-way: any 2 filled → 3rd auto-calculated instantly */}
+        <Input label="Diesel Price/Litre (₹)" type="number" placeholder="e.g. 95"
+          value={form.diesel_price_per_litre}
+          onFocus={() => { dieselFocusRef.current = 'diesel_price_per_litre' }}
+          onBlur={() => { dieselFocusRef.current = null; setForm((prev) => recalc(prev, null)) }}
+          onChange={(e) => set('diesel_price_per_litre', e.target.value)} />
+        <Input label="Diesel Quantity (Litres)" type="number" placeholder="e.g. 50"
+          value={form.diesel_quantity}
+          onFocus={() => { dieselFocusRef.current = 'diesel_quantity' }}
+          onBlur={() => { dieselFocusRef.current = null; setForm((prev) => recalc(prev, null)) }}
+          onChange={(e) => set('diesel_quantity', e.target.value)} />
         <Input label="Diesel Advance (₹)" type="number" placeholder="0"
-          value={form.diesel_advance} onChange={(e) => set('diesel_advance', e.target.value)} />
+          value={form.diesel_advance}
+          onFocus={() => { dieselFocusRef.current = 'diesel_advance' }}
+          onBlur={() => { dieselFocusRef.current = null; setForm((prev) => recalc(prev, null)) }}
+          onChange={(e) => set('diesel_advance', e.target.value)} />
         {/* <Input label="Driver Advance (₹)" type="number" placeholder="0"
           value={form.advance} onChange={(e) => set('advance', e.target.value)} /> */}
 
