@@ -6,7 +6,7 @@ import {
   FiLogOut,
   FiTruck,
   FiGrid,
-  FiChevronRight,
+  FiChevronLeft,
   FiShield,
   FiUsers,
   FiMap,
@@ -100,6 +100,7 @@ export default function DashboardLayout() {
   const { isSuperAdmin } = usePermissions();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(
     location.pathname.startsWith('/dashboard/reports')
   );
@@ -149,12 +150,17 @@ export default function DashboardLayout() {
             0 1px 3px rgba(0, 0, 0, 0.05),
             inset 0 1px 0 rgba(255, 255, 255, 0.6);
           border: 1px solid rgba(255, 255, 255, 0.2);
-          overflow: hidden;
           position: sticky;
           top: 24px;
           max-height: calc(100vh - 48px);
           display: flex;
           flex-direction: column;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          z-index: 50;
+        }
+
+        .db-sidebar.collapsed {
+          width: 84px;
         }
 
         .db-sidebar::before {
@@ -169,12 +175,18 @@ export default function DashboardLayout() {
           display: flex;
           flex-direction: column;
           height: 100%;
-          padding: 32px 24px 28px;
+          padding: 32px 20px 28px;
           position: relative;
           z-index: 2;
           overflow-y: auto;
           overflow-x: hidden;
           scrollbar-width: none;
+          transition: padding 0.3s ease;
+          border-radius: 24px;
+        }
+
+        .db-sidebar.collapsed .db-sidebar-inner {
+          padding: 32px 12px 28px;
         }
 
         .db-sidebar-inner::-webkit-scrollbar {
@@ -213,6 +225,16 @@ export default function DashboardLayout() {
 
         .db-brand-text {
           flex: 1;
+          transition: all 0.3s ease;
+          white-space: nowrap;
+        }
+
+        .db-sidebar.collapsed .db-brand-text {
+          opacity: 0;
+          width: 0;
+          padding: 0;
+          pointer-events: none;
+          margin-left: -20px;
         }
 
         .db-brand-name {
@@ -248,6 +270,15 @@ export default function DashboardLayout() {
           color: #64748b;
           padding: 0 4px;
           margin-bottom: 12px;
+          transition: all 0.3s ease;
+          white-space: nowrap;
+        }
+
+        .db-sidebar.collapsed .db-nav-group-label {
+          opacity: 0;
+          height: 0;
+          margin: 0;
+          overflow: hidden;
         }
 
         .db-nav-item {
@@ -255,7 +286,6 @@ export default function DashboardLayout() {
           align-items: center;
           gap: 12px;
           padding: 8px 10px;
-          // padding: 12px 16px;
           border-radius: 16px;
           font-size: 14px;
           font-weight: 500;
@@ -264,6 +294,24 @@ export default function DashboardLayout() {
           transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
           position: relative;
           margin-bottom: 4px;
+          white-space: nowrap;
+        }
+
+        .db-sidebar.collapsed .db-nav-item {
+          justify-content: center;
+          padding: 10px;
+        }
+
+        .db-nav-item span {
+          transition: all 0.3s ease;
+          display: inline-block;
+          overflow: hidden;
+        }
+
+        .db-sidebar.collapsed .db-nav-item span {
+          opacity: 0;
+          width: 0;
+          margin: 0;
         }
 
         .db-nav-item:hover {
@@ -327,11 +375,23 @@ export default function DashboardLayout() {
           font-size: 14px;
           font-weight: 600;
           color: #1e293b;
+          white-space: nowrap;
+          transition: all 0.3s ease;
         }
 
         .db-user-role {
           font-size: 12px;
           color: #64748b;
+          white-space: nowrap;
+          transition: all 0.3s ease;
+        }
+
+        .db-sidebar.collapsed .db-user-name,
+        .db-sidebar.collapsed .db-user-role {
+          opacity: 0;
+          width: 0;
+          height: 0;
+          overflow: hidden;
         }
 
         .db-logout-btn {
@@ -350,6 +410,23 @@ export default function DashboardLayout() {
           cursor: pointer;
           transition: all 0.2s ease;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+          overflow: hidden;
+        }
+
+        .db-sidebar.collapsed .db-logout-btn {
+          padding: 12px;
+        }
+
+        .db-logout-btn span {
+          transition: all 0.3s ease;
+          overflow: hidden;
+          white-space: nowrap;
+        }
+
+        .db-sidebar.collapsed .db-logout-btn span {
+          width: 0;
+          opacity: 0;
+          margin: 0;
         }
 
         .db-logout-btn:hover {
@@ -358,6 +435,46 @@ export default function DashboardLayout() {
           border-color: rgba(255, 107, 107, 0.3);
           box-shadow: 0 8px 25px rgba(255, 107, 107, 0.3);
           transform: translateY(-1px);
+        }
+
+        /* ── Sidebar Toggle Button ── */
+        .db-sidebar-toggle {
+          position: absolute;
+          right: -14px;
+          top: 40px;
+          z-index: 100;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: white;
+          border: 1px solid rgba(0, 0, 0, 0.1);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          color: #1d4ed8;
+          // box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+
+        .db-sidebar-toggle:hover {
+          background: #f8fafc;
+          color: #3b82f6;
+          transform: scale(1.1);
+          box-shadow: 0 6px 4px rgba(53, 141, 255, 0.4);
+        }
+
+        .db-sidebar.collapsed .db-sidebar-toggle {
+          right: -14px;
+          transform: rotate(180deg);
+        }
+        .db-sidebar.collapsed .db-sidebar-toggle:hover {
+          transform: rotate(180deg) scale(1.1);
+        }
+
+        .db-sidebar.collapsed .db-sidebar-toggle {
+          right: 24px;
+          top: 4px;
         }
 
         /* ── Main area ── */
@@ -622,7 +739,16 @@ export default function DashboardLayout() {
     </style>
     <div className="db-root">
       {/* ── Sidebar ── */}
-      <aside className="db-sidebar">
+      <aside className={`db-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+        {/* Toggle Button */}
+        <button 
+          className="db-sidebar-toggle"
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+          <FiChevronLeft size={18} />
+        </button>
+
         <div className="db-sidebar-inner">
           {/* Brand */}
           <div className="db-brand">
@@ -709,9 +835,9 @@ export default function DashboardLayout() {
                 <div className="db-user-role">{isSuperAdmin ? 'Super Admin' : 'Administrator'}</div>
               </div>
             </div>
-            <button className="db-logout-btn" onClick={logout}>
+            <button className="db-logout-btn" onClick={logout} title="Sign Out">
               <FiLogOut size={16} />
-              Sign out
+              <span>Sign out</span>
             </button>
           </div>
         </div>
@@ -856,6 +982,7 @@ export default function DashboardLayout() {
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
                       transition={{ duration: 0.2, ease: 'easeInOut' }}
+                      className="motion-div"
                       style={{ overflow: 'hidden', paddingLeft: 12 }}
                     >
                       {reportSubItems.map((item) => {
