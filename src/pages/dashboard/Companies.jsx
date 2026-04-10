@@ -12,6 +12,7 @@ import Table from '../../components/ui/Table.jsx'
 import Modal from '../../components/ui/Modal.jsx'
 import EmptyState from '../../components/common/EmptyState.jsx'
 import ConfirmDialog from '../../components/common/ConfirmDialog.jsx'
+import PageStatCard from '../../components/common/PageStatCard.jsx'
 import CompanyForm from '../../components/forms/CompanyForm.jsx'
 import BranchForm from '../../components/forms/BranchForm.jsx'
 
@@ -187,8 +188,8 @@ export default function Companies() {
 
         {/* Stats Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <StatCard title="Total Entities" value={allRows.length} icon={<FiGlobe />} gradient="from-indigo-500 to-blue-500" />
-          <StatCard title="Active Branches" value={branches.length} icon={<FiGitBranch />} gradient="from-emerald-500 to-teal-500" />
+          <PageStatCard title="Total Entities" value={allRows.length} icon={<FiGlobe size={20} />} gradient="from-indigo-500 to-blue-500" />
+          <PageStatCard title="Active Branches" value={branches.length} icon={<FiGitBranch size={20} />} gradient="from-emerald-500 to-teal-500" />
         </div>
 
         {/* Search Controls */}
@@ -463,18 +464,6 @@ export default function Companies() {
 }
 
 // --- Specialized UI Components ---
-
-function StatCard({ title, value, icon, gradient }) {
-  return (
-    <div className="group bg-white p-7 rounded-[2rem] border border-zinc-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-      <div className="space-y-1">
-        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{title}</p>
-        <p className="text-3xl font-bold text-zinc-900">{value}</p>
-      </div>
-      <div className={`p-4 rounded-2xl bg-gradient-to-tr ${gradient} text-white shadow-lg`}>{icon}</div>
-    </div>
-  )
-}
 
 function ActionBtn({ icon, onClick, hover }) {
   return (

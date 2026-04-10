@@ -4,6 +4,7 @@ import { USE_MOCKS } from '../../utils/constants.js'
 const ALLOWED_FIELDS = [
   'supplier_name', 'contact_person_name', 'supplier_phone',
   'contact_person_phone', 'supplier_email', 'supplier_address', 'supplier_gst_number',
+  'bank_name', 'account_no_1', 'ifsc_code', 'swift_code', 'branch',
 ]
 
 let mockSuppliers = []

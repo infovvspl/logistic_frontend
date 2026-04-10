@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { motion, AnimatePresence } from 'framer-motion'
 import { 
   FiPlus, FiTrash2, FiEdit2, FiUser, FiEye, FiTruck, 
-  FiSearch, FiMapPin, FiRefreshCw, FiCheckCircle 
+  FiSearch, FiMapPin, FiRefreshCw, FiCheckCircle, FiFilter, FiCheck
 } from 'react-icons/fi'
 
 // UI Components
@@ -12,6 +13,7 @@ import Modal from '../../components/ui/Modal.jsx'
 import EmptyState from '../../components/common/EmptyState.jsx'
 import ConfirmDialog from '../../components/common/ConfirmDialog.jsx'
 import DetailModal from '../../components/common/DetailModal.jsx'
+import PageStatCard from '../../components/common/PageStatCard.jsx'
 import VehicleForm from '../../components/forms/VehicleForm.jsx'
 import AssignmentForm from '../../components/forms/AssignmentForm.jsx'
 
@@ -22,15 +24,25 @@ import * as assignmentAPI from '../../features/assignments/assignmentAPI.js'
 import * as userAPI from '../../features/users/userAPI.js'
 import * as roleAPI from '../../features/roles/roleAPI.js'
 import * as companyAPI from '../../features/companies/companyAPI.js'
+import * as tripAPI from '../../features/trips/tripAPI.js'
 
 export default function Vehicles() {
   const qc = useQueryClient()
   const [searchTerm, setSearchTerm] = useState('')
+  const [activeFilter, setActiveFilter] = useState(null)
+  const [filterOpen, setFilterOpen] = useState(false)
+  const filterRef = useRef(null)
   const [modal, setModal] = useState({ open: false, vehicle: null })
   const [driverModal, setDriverModal] = useState({ open: false, vehicle: null, assignment: null })
   const [helperModal, setHelperModal] = useState({ open: false, vehicle: null, assignment: null })
   const [view, setView] = useState({ open: false, record: null, driver: null, helper: null })
   const [confirm, setConfirm] = useState({ open: false, id: null })
+
+  useEffect(() => {
+    function handler(e) { if (filterRef.current && !filterRef.current.contains(e.target)) setFilterOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   // --- Queries ---
   const vehiclesQuery = useQuery({ queryKey: ['vehicles'], queryFn: vehicleAPI.listVehicles })
@@ -38,6 +50,7 @@ export default function Vehicles() {
   const companiesQuery = useQuery({ queryKey: ['companies'], queryFn: companyAPI.listCompanies })
   const rolesQuery = useQuery({ queryKey: ['roles'], queryFn: roleAPI.listRoles })
   const assignmentsQuery = useQuery({ queryKey: ['assignments'], queryFn: assignmentAPI.listAssignments })
+  const tripsQuery = useQuery({ queryKey: ['trips'], queryFn: tripAPI.listTrips })
 
   // --- Role Logic ---
   const driverRole = useMemo(() => {
@@ -131,14 +144,52 @@ export default function Vehicles() {
     return map
   }, [helpers])
 
+  // Vehicles currently on trip (IN_TRANSIT trips)
+  const inTransitVehicleIds = useMemo(() => {
+    const trips = tripsQuery.data?.items ?? []
+    const assignments = assignmentsQuery.data?.items ?? []
+    
+    const assignVehicleMap = new Map()
+    assignments.forEach((a) => {
+      if (a.vehicle_id) assignVehicleMap.set(String(a.id), String(a.vehicle_id))
+    })
+    
+    const ids = new Set()
+    trips.forEach((t) => {
+      if (t.status !== 'IN_TRANSIT') return
+      if (t.vehicle_id) ids.add(String(t.vehicle_id))
+      if (t.vehicle_assign_id) {
+        const vehicleId = assignVehicleMap.get(String(t.vehicle_assign_id))
+        if (vehicleId) ids.add(vehicleId)
+      }
+    })
+    return ids
+  }, [tripsQuery.data, assignmentsQuery.data])
+
   const filteredRows = useMemo(() => {
-    const rows = vehiclesQuery.data?.items ?? []
-    if (!searchTerm) return rows
-    return rows.filter(r => 
-      r.registration_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.vehicle_model?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  }, [vehiclesQuery.data, searchTerm])
+    let rows = vehiclesQuery.data?.items ?? []
+    
+    // Apply search filter
+    if (searchTerm) {
+      rows = rows.filter(r => 
+        r.registration_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        r.vehicle_model?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+    
+    // Apply status filter
+    if (activeFilter === 'active') {
+      rows = rows.filter(r => r.vehicle_status === 'ACTIVE')
+    } else if (activeFilter === 'inactive') {
+      rows = rows.filter(r => r.vehicle_status === 'INACTIVE')
+    } else if (activeFilter === 'maintenance') {
+      rows = rows.filter(r => r.vehicle_status === 'MAINTENANCE')
+    } else if (activeFilter === 'on_trip') {
+      rows = rows.filter(r => inTransitVehicleIds.has(String(r.id)))
+    }
+    
+    return rows
+  }, [vehiclesQuery.data, searchTerm, activeFilter, inTransitVehicleIds])
 
   // --- Table Configuration ---
   const columns = useMemo(() => [
@@ -283,21 +334,71 @@ export default function Vehicles() {
 
         {/* Stats Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatCard title="Total Fleet" value={vehiclesQuery.data?.items?.length ?? 0} icon={<FiTruck />} gradient="from-blue-600 to-indigo-600" />
-          <StatCard title="Active Duty" value={assignmentByVehicleId.size} icon={<FiCheckCircle />} gradient="from-emerald-600 to-teal-600" />
-          <StatCard title="Standby" value={(vehiclesQuery.data?.items?.length ?? 0) - assignmentByVehicleId.size} icon={<FiRefreshCw />} gradient="from-amber-500 to-orange-600" />
+          <PageStatCard title="Total Fleet" value={vehiclesQuery.data?.items?.length ?? 0} icon={<FiTruck size={20} />} gradient="from-blue-600 to-indigo-600" />
+          <PageStatCard title="Active Duty" value={assignmentByVehicleId.size} icon={<FiCheckCircle size={20} />} gradient="from-emerald-600 to-teal-600" />
+          <PageStatCard title="Standby" value={(vehiclesQuery.data?.items?.length ?? 0) - assignmentByVehicleId.size} icon={<FiRefreshCw size={20} />} gradient="from-amber-500 to-orange-600" />
         </div>
 
         {/* Controls */}
-        <div className="relative">
-          <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
-          <input
-            type="text"
-            placeholder="Search by registration number or model..."
-            className="w-full pl-14 pr-6 py-5 bg-white border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all font-medium text-zinc-700 placeholder:text-zinc-400"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
+            <input
+              type="text"
+              placeholder="Search by registration number or model..."
+              className="w-full pl-14 pr-6 py-5 bg-white border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all font-medium text-zinc-700 placeholder:text-zinc-400"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          {/* Filter dropdown */}
+          <div className="relative" ref={filterRef}>
+            <button
+              onClick={() => setFilterOpen((o) => !o)}
+              className={`flex items-center gap-2 px-5 py-5 rounded-2xl font-semibold text-sm transition-all shadow-sm border
+                ${activeFilter ? 'bg-zinc-900 text-white border-transparent' : 'bg-white text-zinc-600 border-zinc-100 hover:border-zinc-200'}`}
+            >
+              <FiFilter size={16} />
+              {activeFilter === 'active' ? 'Active' : activeFilter === 'inactive' ? 'Inactive' : activeFilter === 'maintenance' ? 'Maintenance' : activeFilter === 'on_trip' ? 'On Trip' : 'Filter'}
+            </button>
+
+            <AnimatePresence>
+              {filterOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 6, scale: 0.97 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 p-2 top-full mt-2 w-52 bg-white rounded-2xl shadow-xl border border-zinc-100 overflow-hidden z-20"
+                >
+                  {[
+                    { key: 'active',       label: 'Active Vehicles' },
+                    { key: 'inactive',     label: 'Inactive Vehicles' },
+                    { key: 'maintenance',  label: 'Under Maintenance' },
+                    { key: 'on_trip',      label: 'Vehicles on Trip' },
+                  ].map((opt) => (
+                    <button
+                      key={opt.key}
+                      onClick={() => { setActiveFilter(activeFilter === opt.key ? null : opt.key); setFilterOpen(false) }}
+                      className="w-full flex items-center justify-between p-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 transition-colors"
+                    >
+                      {opt.label}
+                      {activeFilter === opt.key && <FiCheck size={14} className="text-zinc-900" />}
+                    </button>
+                  ))}
+                  {activeFilter && (
+                    <button
+                      onClick={() => { setActiveFilter(null); setFilterOpen(false) }}
+                      className="w-full px-4 py-3 text-xs font-semibold text-red-500 hover:bg-red-50 transition-colors border-t border-zinc-100 text-left"
+                    >
+                      Clear filter
+                    </button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* Main Table */}
@@ -410,20 +511,6 @@ export default function Vehicles() {
 }
 
 // --- Internal Helper Components ---
-
-function StatCard({ title, value, icon, gradient }) {
-  return (
-    <div className="group bg-white p-7 rounded-[2rem] border border-zinc-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-      <div className="space-y-1">
-        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{title}</p>
-        <p className="text-3xl font-bold text-zinc-900">{value}</p>
-      </div>
-      <div className={`p-4 rounded-2xl bg-gradient-to-tr ${gradient} text-white shadow-lg`}>
-        {icon}
-      </div>
-    </div>
-  )
-}
 
 function ActionBtn({ icon, onClick, hover }) {
   return (

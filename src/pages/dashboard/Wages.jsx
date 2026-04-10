@@ -8,6 +8,7 @@ import Modal from '../../components/ui/Modal.jsx'
 import EmptyState from '../../components/common/EmptyState.jsx'
 import ConfirmDialog from '../../components/common/ConfirmDialog.jsx'
 import DetailModal from '../../components/common/DetailModal.jsx'
+import PageStatCard from '../../components/common/PageStatCard.jsx'
 import WagesForm from '../../components/forms/WagesForm.jsx'
 import * as wagesAPI from '../../features/wages/wagesAPI.js'
 import * as userAPI from '../../features/users/userAPI.js'
@@ -117,8 +118,8 @@ export default function Wages() {
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <StatCard title="Total Records" value={allRows.length} gradient="from-indigo-500 to-blue-500" icon={<FaRupeeSign />} />
-          <StatCard title="Avg Normal Wages" value={allRows.length ? `₹${Math.round(allRows.reduce((s,r) => s + Number(r.normal_wages||0), 0) / allRows.length).toLocaleString('en-IN')}` : '—'} gradient="from-emerald-500 to-teal-500" icon={<FaRupeeSign />} />
+          <PageStatCard title="Total Records" value={allRows.length} gradient="from-indigo-500 to-blue-500" icon={<FaRupeeSign size={20} />} />
+          <PageStatCard title="Avg Normal Wages" value={allRows.length ? `₹${Math.round(allRows.reduce((s,r) => s + Number(r.normal_wages||0), 0) / allRows.length).toLocaleString('en-IN')}` : '—'} gradient="from-emerald-500 to-teal-500" icon={<FaRupeeSign size={20} />} />
         </div>
 
         <div className="relative">
@@ -170,18 +171,6 @@ export default function Wages() {
             }} />
         )
       })()}
-    </div>
-  )
-}
-
-function StatCard({ title, value, icon, gradient }) {
-  return (
-    <div className="group bg-white p-7 rounded-[2rem] border border-zinc-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-      <div className="space-y-1">
-        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{title}</p>
-        <p className="text-3xl font-bold text-zinc-900">{value}</p>
-      </div>
-      <div className={`p-4 rounded-2xl bg-gradient-to-tr ${gradient} text-white shadow-lg`}>{icon}</div>
     </div>
   )
 }

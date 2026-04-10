@@ -12,15 +12,15 @@ export default function Table({ columns, rows, rowKey = 'id', className, headerC
             <tr>
               {columns.map((c) => (
                 <th 
-  key={c.key} 
-  className={cn(
-    "px-6 py-3.5 text-[12px] font-semibold uppercase tracking-tight text-zinc-500",
-    headerClassName, // <--- Add this! This injects "!text-white bg-zinc-900", etc.
-    c.className
-  )}
->
-  {c.header}
-</th>
+                  key={c.key} 
+                  className={cn(
+                    "px-6 py-3.5 text-[12px] font-semibold uppercase tracking-tight text-zinc-500",
+                    headerClassName, // <--- Add this! This injects "!text-white bg-zinc-900", etc.
+                    c.className
+                  )}
+                >
+                  {c.header}
+                </th>
               ))}
             </tr>
           </thead>

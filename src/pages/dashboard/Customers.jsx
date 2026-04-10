@@ -7,6 +7,7 @@ import Modal from '../../components/ui/Modal.jsx'
 import EmptyState from '../../components/common/EmptyState.jsx'
 import ConfirmDialog from '../../components/common/ConfirmDialog.jsx'
 import DetailModal from '../../components/common/DetailModal.jsx'
+import PageStatCard from '../../components/common/PageStatCard.jsx'
 import CustomerForm from '../../components/forms/CustomerForm.jsx'
 import * as customerAPI from '../../features/customers/customerAPI.js'
 
@@ -129,9 +130,9 @@ export default function Customers() {
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatCard title="Total Customers" value={allRows.length} icon={<FiUsers />} gradient="from-violet-500 to-purple-600" />
-          <StatCard title="With Phone" value={allRows.filter((c) => c.customer_phone).length} icon={<FiPhone />} gradient="from-blue-500 to-indigo-500" />
-          <StatCard title="With Email" value={allRows.filter((c) => c.customer_email).length} icon={<FiMail />} gradient="from-emerald-500 to-teal-500" />
+          <PageStatCard title="Total Customers" value={allRows.length} icon={<FiUsers size={20} />} gradient="from-violet-500 to-purple-600" />
+          <PageStatCard title="With Phone" value={allRows.filter((c) => c.customer_phone).length} icon={<FiPhone size={20} />} gradient="from-blue-500 to-indigo-500" />
+          <PageStatCard title="With Email" value={allRows.filter((c) => c.customer_email).length} icon={<FiMail size={20} />} gradient="from-emerald-500 to-teal-500" />
         </div>
 
         {/* Search */}
@@ -208,20 +209,6 @@ export default function Customers() {
       />
 
       <DetailModal open={view.open} onClose={() => setView({ open: false, record: null })} title="Customer Details" data={view.record} />
-    </div>
-  )
-}
-
-function StatCard({ title, value, icon, gradient }) {
-  return (
-    <div className="group bg-white p-7 rounded-[2rem] border border-zinc-100 shadow-sm hover:shadow-md transition-all flex items-center justify-between">
-      <div className="space-y-1">
-        <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{title}</p>
-        <p className="text-3xl font-bold text-zinc-900">{value}</p>
-      </div>
-      <div className={`p-4 rounded-2xl bg-gradient-to-tr ${gradient} text-white shadow-lg`}>
-        {icon}
-      </div>
     </div>
   )
 }
