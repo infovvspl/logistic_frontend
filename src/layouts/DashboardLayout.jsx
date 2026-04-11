@@ -134,7 +134,7 @@ export default function DashboardLayout() {
           display: flex;
           align-items: flex-start;
           padding: 24px;
-          gap: 24px;
+          gap: 16px;
         }
 
         /* ── Sidebar ── */
@@ -447,7 +447,7 @@ export default function DashboardLayout() {
           height: 32px;
           border-radius: 50%;
           background: white;
-          border: 1px solid rgba(0, 0, 0, 0.1);
+          border: 1px solid rgba(47, 141, 248, 0.37);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -461,7 +461,7 @@ export default function DashboardLayout() {
           background: #f8fafc;
           color: #3b82f6;
           transform: scale(1.1);
-          box-shadow: 0 6px 4px rgba(53, 141, 255, 0.4);
+          box-shadow: 0 2px 4px rgba(53, 141, 255, 0.4);
         }
 
         .db-sidebar.collapsed .db-sidebar-toggle {
