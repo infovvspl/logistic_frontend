@@ -1,8 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { FiCheckCircle, FiFile, FiUpload, FiX } from 'react-icons/fi'
 import Select from '../ui/Select.jsx'
 import Input from '../ui/Input.jsx'
 import Button from '../ui/Button.jsx'
+
+const UNIT_OPTIONS = [
+  { value: '', label: 'Select unit...' },
+  { value: 'kg', label: 'kg' },
+  { value: 'litre', label: 'Litre' },
+  { value: 'piece', label: 'Piece' },
+  { value: 'box', label: 'Box' },
+  { value: 'bag', label: 'Bag' },
+  { value: 'bundle', label: 'Bundle' },
+  { value: 'metre', label: 'Metre' },
+  { value: 'unit', label: 'Unit' },
+]
 
 function SectionDivider({ label }) {
   return (
@@ -72,6 +84,17 @@ function FileUpload({ label, value, onChange }) {
   )
 }
 
+function CalcField({ label, value }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-sm font-medium text-zinc-500">{label}</label>
+      <div className="px-3 py-2.5 rounded-xl border border-zinc-200 bg-zinc-50 text-sm font-bold text-zinc-700 tabular-nums">
+        ₹{Number(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      </div>
+    </div>
+  )
+}
+
 export default function PurchaseForm({
   defaultValues,
   onSubmit,
@@ -85,7 +108,11 @@ export default function PurchaseForm({
   const [form, setForm] = useState({
     product_id:         defaultValues?.product_id         ?? '',
     supplier_id:        defaultValues?.supplier_id        ?? '',
-    purchase_price:     defaultValues?.purchase_price     ?? '',
+    unit:               defaultValues?.unit               ?? '',
+    unit_price:         defaultValues?.unit_price         ?? '',
+    quantity:           defaultValues?.quantity           ?? '',
+    gst_percentage:     defaultValues?.gst_percentage     ?? '',
+    purchase_at:        defaultValues?.purchase_at        ? defaultValues.purchase_at.slice(0, 10) : '',
     purchase_bill_file: defaultValues?.purchase_bill_file ?? '',
   })
   const [errors, setErrors] = useState({})
@@ -95,6 +122,20 @@ export default function PurchaseForm({
     setErrors((e) => ({ ...e, [key]: '' }))
   }
 
+  // Auto-calculated fields
+  const purchasePrice = useMemo(() => {
+    const up = Number(form.unit_price) || 0
+    const qty = Number(form.quantity) || 0
+    return up * qty
+  }, [form.unit_price, form.quantity])
+
+  const gstAmount = useMemo(() => {
+    const gst = Number(form.gst_percentage) || 0
+    return (purchasePrice * gst) / 100
+  }, [purchasePrice, form.gst_percentage])
+
+  const totalPrice = useMemo(() => purchasePrice + gstAmount, [purchasePrice, gstAmount])
+
   const productOptions = [{ value: '', label: 'Select product...' }, ...products.map((p) => ({ value: p.id, label: p.product_name }))]
   const supplierOptions = [{ value: '', label: 'Select supplier...' }, ...suppliers.map((s) => ({ value: s.id, label: s.supplier_name }))]
 
@@ -102,7 +143,10 @@ export default function PurchaseForm({
     const e = {}
     if (!form.product_id) e.product_id = 'Product is required'
     if (!form.supplier_id) e.supplier_id = 'Supplier is required'
-    if (!form.purchase_price || Number(form.purchase_price) <= 0) e.purchase_price = 'Enter a valid price'
+    if (!form.unit) e.unit = 'Unit is required'
+    if (!form.unit_price || Number(form.unit_price) <= 0) e.unit_price = 'Enter a valid unit price'
+    if (!form.quantity || Number(form.quantity) <= 0) e.quantity = 'Enter a valid quantity'
+    if (!form.purchase_at) e.purchase_at = 'Purchase date is required'
     return e
   }
 
@@ -110,7 +154,12 @@ export default function PurchaseForm({
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
-    onSubmit(form)
+    onSubmit({
+      ...form,
+      purchase_price: purchasePrice,
+      gst_amount: gstAmount,
+      total_price: totalPrice,
+    })
   }
 
   return (
@@ -128,10 +177,40 @@ export default function PurchaseForm({
             value={form.supplier_id} onChange={(e) => set('supplier_id', e.target.value)} />
           {errors.supplier_id && <p className="text-xs text-rose-600 font-medium">{errors.supplier_id}</p>}
         </div>
-        <div className="sm:col-span-2 space-y-1">
-          <Input label="Purchase Price (₹)" type="number" placeholder="15000"
-            value={form.purchase_price} onChange={(e) => set('purchase_price', e.target.value)}
-            error={errors.purchase_price} />
+        <div className="space-y-1">
+          <Select label="Unit" options={UNIT_OPTIONS}
+            value={form.unit} onChange={(e) => set('unit', e.target.value)} />
+          {errors.unit && <p className="text-xs text-rose-600 font-medium">{errors.unit}</p>}
+        </div>
+        <div className="space-y-1">
+          <Input label="Unit Price (₹)" type="number" placeholder="500"
+            value={form.unit_price} onChange={(e) => set('unit_price', e.target.value)}
+            error={errors.unit_price} />
+        </div>
+        <div className="space-y-1">
+          <Input label="Quantity" type="number" placeholder="10"
+            value={form.quantity} onChange={(e) => set('quantity', e.target.value)}
+            error={errors.quantity} />
+        </div>
+        <CalcField label="Purchase Price (₹)" value={purchasePrice} />
+      </div>
+
+      <SectionDivider label="GST & Total" />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="space-y-1">
+          <Input label="GST %" type="number" placeholder="18"
+            value={form.gst_percentage} onChange={(e) => set('gst_percentage', e.target.value)} />
+        </div>
+        <CalcField label="GST Amount (₹)" value={gstAmount} />
+        <CalcField label="Total Price (₹)" value={totalPrice} />
+      </div>
+
+      <SectionDivider label="Purchase Info" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Input label="Purchase Date" type="date"
+            value={form.purchase_at} onChange={(e) => set('purchase_at', e.target.value)}
+            error={errors.purchase_at} />
         </div>
       </div>
 

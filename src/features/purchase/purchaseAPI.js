@@ -1,7 +1,12 @@
 import { api } from '../../services/axios.js'
 import { USE_MOCKS } from '../../utils/constants.js'
 
-const ALLOWED_FIELDS = ['product_id', 'supplier_id', 'purchase_price', 'purchase_bill_file']
+const ALLOWED_FIELDS = [
+  'product_id', 'supplier_id',
+  'unit', 'unit_price', 'quantity',
+  'purchase_price', 'gst_percentage', 'gst_amount', 'total_price',
+  'purchase_at', 'purchase_bill_file',
+]
 
 let mockPurchases = []
 

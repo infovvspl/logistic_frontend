@@ -38,7 +38,7 @@ export default function Admins() {
 
   const adminRole = useMemo(() => {
     const roles = rolesQuery.data?.items ?? []
-    return roles.find((r) => String(r.designation || '').toLowerCase().includes('admin')) ?? null
+    return roles.find((r) => String(r.designation || '').trim().toLowerCase() === 'admin') ?? null
   }, [rolesQuery.data])
 
   const usersQuery = useQuery({

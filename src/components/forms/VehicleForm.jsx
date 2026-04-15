@@ -87,7 +87,7 @@ function FileUpload({ label, fieldName, setValue, watch }) {
           <a href={previewSrc} target="_blank" rel="noreferrer"
             className="flex items-center justify-center gap-2 h-24 rounded-xl border border-blue-100 bg-blue-50 hover:bg-blue-100 transition-colors text-xs font-semibold text-blue-600">
             <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
             </div>
             Open PDF
           </a>
@@ -101,11 +101,10 @@ function FileUpload({ label, fieldName, setValue, watch }) {
         )
       )}
 
-      <label className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all ${
-        hasAny
+      <label className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all ${hasAny
           ? 'border-blue-200 bg-blue-50 hover:bg-blue-100'
           : 'border-dashed border-zinc-300 bg-zinc-50 hover:border-blue-300 hover:bg-blue-50'
-      }`}>
+        }`}>
         <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${hasAny ? 'bg-blue-600' : 'bg-zinc-200'}`}>
           {hasAny
             ? <FiFile size={13} className="text-white" />
@@ -212,7 +211,7 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
       vehicle_fitness_certificate_expiry_date: '',
       vehicle_permit_issue_date: '',
       vehicle_permit_expiry_date: '',
-      vehicle_permit_type: 'National',
+      // vehicle_permit_type: 'National',
       andhra_permit_status: '',
       andhra_permit_expiry_date: '',
       andhra_tax: '',

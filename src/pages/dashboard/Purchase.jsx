@@ -45,7 +45,7 @@ export default function Purchase() {
   const supplierById = useMemo(() => { const m = new Map(); suppliers.forEach((s) => m.set(String(s.id), s)); return m }, [suppliers])
 
   const allRows = purchasesQuery.data?.items ?? []
-  const totalSpend = allRows.reduce((s, r) => s + (Number(r.purchase_price) || 0), 0)
+  const totalSpend = allRows.reduce((s, r) => s + (Number(r.total_price) || Number(r.purchase_price) || 0), 0)
 
   const filteredRows = useMemo(() => {
     if (!searchTerm) return allRows
@@ -55,7 +55,8 @@ export default function Purchase() {
       const supplier = supplierById.get(String(r.supplier_id))
       return (
         (product?.product_name ?? '').toLowerCase().includes(q) ||
-        (supplier?.supplier_name ?? '').toLowerCase().includes(q)
+        (supplier?.supplier_name ?? '').toLowerCase().includes(q) ||
+        (r.unit ?? '').toLowerCase().includes(q)
       )
     })
   }, [allRows, searchTerm, productById, supplierById])
@@ -87,11 +88,48 @@ export default function Purchase() {
       },
     },
     {
-      key: 'price',
-      header: 'Purchase Price',
+      key: 'qty',
+      header: 'Qty / Unit',
+      render: (r) => (
+        <span className="text-xs font-semibold text-zinc-700 tabular-nums">
+          {r.quantity ?? '—'}{r.unit ? ` ${r.unit}` : ''}
+        </span>
+      ),
+    },
+    {
+      key: 'unit_price',
+      header: 'Unit Price',
+      render: (r) => (
+        <span className="text-xs font-semibold text-zinc-700 tabular-nums">
+          {r.unit_price ? `₹${Number(r.unit_price).toLocaleString('en-IN')}` : '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'gst',
+      header: 'GST',
+      render: (r) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs font-semibold text-zinc-700">{r.gst_percentage ? `${r.gst_percentage}%` : '—'}</span>
+          {r.gst_amount ? <span className="text-[11px] text-zinc-400">₹{Number(r.gst_amount).toLocaleString('en-IN')}</span> : null}
+        </div>
+      ),
+    },
+    {
+      key: 'total',
+      header: 'Total',
       render: (r) => (
         <span className="text-sm font-black text-zinc-900 tabular-nums">
-          ₹{Number(r.purchase_price || 0).toLocaleString('en-IN')}
+          ₹{Number(r.total_price || r.purchase_price || 0).toLocaleString('en-IN')}
+        </span>
+      ),
+    },
+    {
+      key: 'date',
+      header: 'Date',
+      render: (r) => (
+        <span className="text-xs text-zinc-500">
+          {r.purchase_at ? new Date(r.purchase_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
         </span>
       ),
     },
@@ -198,7 +236,14 @@ export default function Purchase() {
             data={{
               'Product': p?.product_name ?? r.product_id,
               'Supplier': s?.supplier_name ?? r.supplier_id,
+              'Unit': r.unit || '—',
+              'Unit Price': r.unit_price ? `₹${Number(r.unit_price).toLocaleString('en-IN')}` : '—',
+              'Quantity': r.quantity ?? '—',
               'Purchase Price': r.purchase_price ? `₹${Number(r.purchase_price).toLocaleString('en-IN')}` : '—',
+              'GST %': r.gst_percentage ? `${r.gst_percentage}%` : '—',
+              'GST Amount': r.gst_amount ? `₹${Number(r.gst_amount).toLocaleString('en-IN')}` : '—',
+              'Total Price': r.total_price ? `₹${Number(r.total_price).toLocaleString('en-IN')}` : '—',
+              'Purchase Date': r.purchase_at ? new Date(r.purchase_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' }) : '—',
               purchase_bill_file: r.purchase_bill_file || '',
             }}
           />
