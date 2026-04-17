@@ -32,6 +32,7 @@ import { APP_NAME } from "../utils/constants.js";
 import { useAuth } from "../hooks/useAuth.js";
 import { usePermissions } from "../hooks/usePermissions.js";
 import { FaUserTie, FaUsers, FaBalanceScale, FaRupeeSign, FaTruckLoading, FaShoppingCart, FaClock, FaClipboardList, FaClipboard } from "react-icons/fa";
+import { MdBalance } from "react-icons/md";
 import { FaUserGroup, FaTruckFront, FaLocationDot, FaShield } from "react-icons/fa6";
 import { GrUserWorker } from "react-icons/gr";
 import { GoHomeFill } from "react-icons/go";
@@ -66,7 +67,7 @@ const navItems = [
   { to: "/dashboard/rate-charts", label: "Rate Charts", icon: FaRupeeSign },
   { to: "/dashboard/challans", label: "Challans", icon: FaClipboard },
   { to: "/dashboard/bills", label: "Bills", icon: RiBillFill },
-  // { to: "/dashboard/ledger",     label: "Ledger",     icon: FiDollarSign },
+  { to: "/dashboard/ledger",     label: "Transaction",     icon: FiDollarSign },
   { to: "/dashboard/suppliers", label: "Suppliers", icon: FaTruckLoading },
   { to: "/dashboard/products", label: "Products", icon: BiSolidPackage },
   { to: "/dashboard/purchase", label: "Purchase", icon: FaShoppingCart },
@@ -75,6 +76,7 @@ const navItems = [
   { to: "/dashboard/salary", label: "Salary", icon: RiMoneyRupeeCircleFill },
   { to: "/dashboard/transaction-purposes", label: "Txn Purposes", icon: FaClipboardList },
   { to: "/dashboard/product-transfers", label: "Product Transfers", icon: MdSwapHorizontalCircle },
+  { to: "/dashboard/balance-sheet", label: "Balance Sheet", icon: MdBalance },
   // Reports is handled as an expandable group, not a plain nav item
 ];
 
@@ -91,7 +93,7 @@ const navGroups = [
     label: "Operations",
     items: [navItems[4], navItems[5], navItems[6], navItems[8], navItems[9],
     navItems[10], navItems[11], navItems[12], navItems[13], navItems[14],
-    navItems[15], navItems[16], navItems[17], navItems[18], navItems[19], navItems[20], navItems[21], navItems[22]],
+    navItems[15], navItems[16], navItems[17], navItems[18], navItems[19], navItems[20], navItems[21], navItems[22], navItems[23], navItems[24]],
   },
 ];
 
@@ -734,6 +736,27 @@ export default function DashboardLayout() {
           justify-content: center;
           cursor: pointer;
           color: #1e293b;
+        }
+
+        @media print {
+          .db-sidebar, .db-mobile-nav, .db-mobile-topbar-menu, .db-sidebar-toggle { 
+            display: none !important; 
+          }
+          .db-root { 
+            padding: 0 !important; 
+            background: white !important; 
+            display: block !important; 
+          }
+          .db-main-wrap { 
+            gap: 0 !important; 
+          }
+          .db-content { 
+            padding: 0 !important; 
+            border: none !important; 
+            box-shadow: none !important; 
+            border-radius: 0 !important;
+            background: transparent !important;
+          }
         }
         `}
     </style>

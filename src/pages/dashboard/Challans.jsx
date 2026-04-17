@@ -35,6 +35,9 @@ export default function Challans() {
   const [modal, setModal] = useState({ open: false, challan: null })
   const [view, setView] = useState({ open: false, record: null })
   const [confirm, setConfirm] = useState({ open: false, id: null })
+  const [filterFrom, setFilterFrom] = useState('')
+  const [filterTo, setFilterTo] = useState('')
+  const [filterCustomer, setFilterCustomer] = useState('')
 
   useEffect(() => {
     function handler(e) { 
@@ -107,6 +110,9 @@ export default function Challans() {
         tripAmount: t.amount ?? '',
         quantity: t.quantity ?? '',
         transport: company?.name ?? '',
+        sourceId: String(t.source),
+        destinationId: String(t.destination),
+        customerId: String(t.customer_id),
       }
     })
     return meta
@@ -116,8 +122,21 @@ export default function Challans() {
   const bankAccounts = useMemo(() => {
     const accounts = []
     ;(companiesQuery.data?.items ?? []).forEach((c) => {
-      if (c.account_no_1) accounts.push({ value: c.account_no_1, companyName: c.name, label: `${c.bank_name || 'Bank 1'} — ${c.account_no_1}${c.ifsc_code ? ` (${c.ifsc_code})` : ''}` })
-      if (c.account_no_2) accounts.push({ value: c.account_no_2, companyName: c.name, label: `${c.bank_name_2 || 'Bank 2'} — ${c.account_no_2}${c.ifsc_code_2 ? ` (${c.ifsc_code_2})` : ''}` })
+      // New API: nested bank_accounts array
+      if (Array.isArray(c.bank_accounts)) {
+        c.bank_accounts.forEach((ba) => {
+          if (ba.id) accounts.push({
+            value: ba.id,
+            companyName: c.name,
+            label: `${ba.bank_name || 'Bank'} — ${ba.account_no}${ba.ifsc_code ? ` (${ba.ifsc_code})` : ''}`,
+          })
+        })
+      }
+      // Fallback: old flat fields
+      if (!Array.isArray(c.bank_accounts) || c.bank_accounts.length === 0) {
+        if (c.account_no_1) accounts.push({ value: c.account_no_1, companyName: c.name, label: `${c.bank_name || 'Bank 1'} — ${c.account_no_1}${c.ifsc_code ? ` (${c.ifsc_code})` : ''}` })
+        if (c.account_no_2) accounts.push({ value: c.account_no_2, companyName: c.name, label: `${c.bank_name_2 || 'Bank 2'} — ${c.account_no_2}${c.ifsc_code_2 ? ` (${c.ifsc_code_2})` : ''}` })
+      }
     })
     return accounts
   }, [companiesQuery.data])
@@ -220,9 +239,29 @@ export default function Challans() {
       })
     }
 
+    // Apply source/destination/customer filters
+    if (filterFrom) {
+      rows = rows.filter(c => {
+        const m = tripMeta[String(c.trip_id)]
+        return m?.sourceId === filterFrom
+      })
+    }
+    if (filterTo) {
+      rows = rows.filter(c => {
+        const m = tripMeta[String(c.trip_id)]
+        return m?.destinationId === filterTo
+      })
+    }
+    if (filterCustomer) {
+      rows = rows.filter(c => {
+        const m = tripMeta[String(c.trip_id)]
+        return m?.customerId === filterCustomer
+      })
+    }
+
     console.log('Challans - Filtered rows count:', rows.length)
     return rows
-  }, [allRows, searchTerm, activeFilter, tripMeta, customFilter])
+  }, [allRows, searchTerm, activeFilter, tripMeta, customFilter, filterFrom, filterTo, filterCustomer])
 
   const totalAmount = allRows.reduce((s, c) => s + (Number(c.total_amount) || 0), 0)
   const totalBalance = allRows.reduce((s, c) => s + (Number(c.balance) || 0), 0)
@@ -332,6 +371,41 @@ export default function Challans() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+          </div>
+
+          <div className="flex gap-2">
+            <select
+              value={filterFrom}
+              onChange={(e) => setFilterFrom(e.target.value)}
+              className="px-4 py-2 bg-white border border-zinc-200 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20"
+            >
+              <option value="">All From</option>
+              {(placesQuery.data?.items ?? []).map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+
+            <select
+              value={filterTo}
+              onChange={(e) => setFilterTo(e.target.value)}
+              className="px-4 py-2 bg-white border border-zinc-200 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20"
+            >
+              <option value="">All To</option>
+              {(placesQuery.data?.items ?? []).map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+
+            <select
+              value={filterCustomer}
+              onChange={(e) => setFilterCustomer(e.target.value)}
+              className="px-4 py-2 bg-white border border-zinc-200 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20"
+            >
+              <option value="">All Customers</option>
+              {(customersQuery.data?.items ?? []).map(c => (
+                <option key={c.id} value={c.id}>{c.customer_name}</option>
+              ))}
+            </select>
           </div>
 
           {/* Date Filter dropdown */}
@@ -495,6 +569,7 @@ export default function Challans() {
           }
           tripMeta={tripMeta}
           bankAccounts={bankAccounts}
+          companies={companiesQuery.data?.items ?? []}
           loading={createMutation.isPending || updateMutation.isPending}
           serverError={createMutation.error?.message ?? updateMutation.error?.message ?? null}
           onSubmit={async (values) => {

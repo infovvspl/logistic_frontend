@@ -97,6 +97,7 @@ export default function LedgerForm({
   customers = [],
   users = [],
   companies = [],
+  vehicles = [],
   transactionPurposes = [],
 }) {
   const isEdit = !!defaultValues
@@ -104,6 +105,7 @@ export default function LedgerForm({
   const [form, setForm] = useState({
     trip_id:          defaultValues?.trip_id          ?? '',
     bill_no:          defaultValues?.bill_no          ?? '',
+    vehicle_id:       defaultValues?.vehicle_id       ?? '',
     company_id:       defaultValues?.company_id       ?? '',
     payer_type:       defaultValues?.payer_type       ?? '',
     payer_id:         defaultValues?.payer_id         ?? '',
@@ -181,6 +183,18 @@ export default function LedgerForm({
       String(b.id).toLowerCase().includes(q)
     )
   }, [bills, billSearch])
+
+  // vehicle picker
+  const selectedVehicle = vehicles.find((v) => String(v.id) === String(form.vehicle_id))
+  const [vehicleSearch, setVehicleSearch] = useState('')
+  const filteredVehicles = useMemo(() => {
+    const q = vehicleSearch.toLowerCase()
+    return vehicles.filter((v) =>
+      (v.registration_number ?? '').toLowerCase().includes(q) ||
+      (v.vehicle_model ?? '').toLowerCase().includes(q) ||
+      String(v.id).toLowerCase().includes(q)
+    )
+  }, [vehicles, vehicleSearch])
 
   // company for this ledger entry
   const selectedCompany = companies.find((c) => String(c.id) === String(form.company_id))
@@ -343,6 +357,39 @@ export default function LedgerForm({
                   <div className="font-medium text-zinc-900">{b.bill_no}</div>
                 </button>
               )) : <div className="p-3 text-center text-zinc-400 text-xs">No bills</div>}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Vehicle picker */}
+      <div className="space-y-1.5">
+        <span className="text-sm font-medium text-zinc-800">Vehicle</span>
+        {selectedVehicle ? (
+          <div className="flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50 px-3 py-2.5 text-sm text-blue-700">
+            <div className="min-w-0">
+              <div className="font-semibold">{selectedVehicle.registration_number}</div>
+              <div className="text-xs text-blue-400">{[selectedVehicle.vehicle_manufacture_company, selectedVehicle.vehicle_model].filter(Boolean).join(' ')}</div>
+            </div>
+            <button type="button" onClick={() => set('vehicle_id', '')} className="ml-2 p-1 rounded hover:bg-blue-100"><FiX size={13} /></button>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            <div className="relative">
+              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" size={13} />
+              <input type="text" placeholder="Search vehicles..."
+                className="w-full rounded-xl border border-zinc-300 bg-white pl-9 pr-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+                value={vehicleSearch} onChange={(e) => setVehicleSearch(e.target.value)} />
+            </div>
+            <div className="max-h-32 overflow-y-auto rounded-xl border border-zinc-200 bg-white text-sm divide-y divide-zinc-50">
+              {filteredVehicles.length > 0 ? filteredVehicles.map((v) => (
+                <button key={v.id} type="button"
+                  className="w-full px-3 py-2 text-left hover:bg-zinc-50 transition-colors"
+                  onClick={() => { set('vehicle_id', v.id); setVehicleSearch('') }}>
+                  <div className="font-medium text-zinc-900">{v.registration_number}</div>
+                  <div className="text-xs text-zinc-400">{[v.vehicle_manufacture_company, v.vehicle_model].filter(Boolean).join(' ')}</div>
+                </button>
+              )) : <div className="p-3 text-center text-zinc-400 text-xs">No vehicles</div>}
             </div>
           </div>
         )}

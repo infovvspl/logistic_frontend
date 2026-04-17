@@ -29,6 +29,7 @@ import Salary from '../pages/dashboard/Salary.jsx'
 import TransactionPurposes from '../pages/dashboard/TransactionPurposes.jsx'
 import ProductTransfers from '../pages/dashboard/ProductTransfers.jsx'
 import Reports from '../pages/dashboard/Reports.jsx'
+import BalanceSheet from '../pages/dashboard/BalanceSheet.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { usePermissions } from '../hooks/usePermissions.js'
 
@@ -120,6 +121,7 @@ export const router = createBrowserRouter([
       { path: 'salary', element: <Salary /> },
       { path: 'transaction-purposes', element: <TransactionPurposes /> },
       { path: 'product-transfers', element: <ProductTransfers /> },
+      { path: 'balance-sheet', element: <BalanceSheet /> },
       { path: 'reports/attendance',         element: <Reports reportType="attendance" /> },
       { path: 'reports/salary',             element: <Reports reportType="salary" /> },
       { path: 'reports/ledger',             element: <Reports reportType="ledger" /> },

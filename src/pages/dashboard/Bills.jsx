@@ -29,6 +29,9 @@ export default function Bills() {
   const [modal, setModal] = useState({ open: false, bill: null })
   const [view, setView] = useState({ open: false, record: null })
   const [confirm, setConfirm] = useState({ open: false, id: null })
+  const [filterFrom, setFilterFrom] = useState('')
+  const [filterTo, setFilterTo] = useState('')
+  const [filterCustomer, setFilterCustomer] = useState('')
 
   useEffect(() => {
     function handler(e) { 
@@ -44,6 +47,9 @@ export default function Bills() {
   const tripsQuery    = useQuery({ queryKey: ['trips'],    queryFn: tripAPI.listTrips })
   const customersQuery = useQuery({ queryKey: ['customers'], queryFn: customerAPI.listCustomers })
   const placesQuery   = useQuery({ queryKey: ['places'],   queryFn: placeAPI.listPlaces })
+
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState(null)
 
   const createMutation = useMutation({
     mutationFn: billAPI.createBill,
@@ -90,6 +96,9 @@ export default function Bills() {
         fromPlace: from,
         toPlace: to,
         tripId: trip ? String(trip.id) : '',
+        sourceId: trip ? String(trip.source) : '',
+        destinationId: trip ? String(trip.destination) : '',
+        customerId: trip ? String(trip.customer_id) : '',
       }
     })
     return meta
@@ -205,9 +214,29 @@ export default function Bills() {
       })
     }
 
+    // Apply source/destination/customer filters
+    if (filterFrom) {
+      rows = rows.filter(b => {
+        const m = challanMeta[String(b.challan_id)]
+        return m?.sourceId === filterFrom
+      })
+    }
+    if (filterTo) {
+      rows = rows.filter(b => {
+        const m = challanMeta[String(b.challan_id)]
+        return m?.destinationId === filterTo
+      })
+    }
+    if (filterCustomer) {
+      rows = rows.filter(b => {
+        const m = challanMeta[String(b.challan_id)]
+        return m?.customerId === filterCustomer
+      })
+    }
+
     console.log('Bills - Filtered rows count:', rows.length)
     return rows
-  }, [allRows, searchTerm, challans, challanMeta, activeFilter, customFilter])
+  }, [allRows, searchTerm, challans, challanMeta, activeFilter, customFilter, filterFrom, filterTo, filterCustomer])
 
   const columns = useMemo(() => [
     {
@@ -299,6 +328,41 @@ export default function Bills() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+          </div>
+
+          <div className="flex gap-2">
+            <select
+              value={filterFrom}
+              onChange={(e) => setFilterFrom(e.target.value)}
+              className="px-4 py-2 bg-white border border-zinc-200 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20"
+            >
+              <option value="">All From</option>
+              {(placesQuery.data?.items ?? []).map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+
+            <select
+              value={filterTo}
+              onChange={(e) => setFilterTo(e.target.value)}
+              className="px-4 py-2 bg-white border border-zinc-200 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20"
+            >
+              <option value="">All To</option>
+              {(placesQuery.data?.items ?? []).map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+
+            <select
+              value={filterCustomer}
+              onChange={(e) => setFilterCustomer(e.target.value)}
+              className="px-4 py-2 bg-white border border-zinc-200 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20"
+            >
+              <option value="">All Customers</option>
+              {(customersQuery.data?.items ?? []).map(c => (
+                <option key={c.id} value={c.id}>{c.customer_name}</option>
+              ))}
+            </select>
           </div>
 
           {/* Date Filter dropdown */}
@@ -458,19 +522,34 @@ export default function Bills() {
           defaultValues={modal.bill}
           challans={modal.bill ? challans : availableChallans}
           challanMeta={challanMeta}
-          loading={createMutation.isPending || updateMutation.isPending}
-          serverError={createMutation.error?.message ?? updateMutation.error?.message ?? null}
+          loading={creating || updateMutation.isPending}
+          serverError={createError ?? updateMutation.error?.message ?? null}
           onSubmit={async (values) => {
             if (modal.bill) {
               await updateMutation.mutateAsync({ id: modal.bill.id, values })
             } else {
-              // create one bill per selected challan
+              // create one bill per selected challan using direct API calls
+              // (avoids single mutation's onSuccess closing the modal after the first bill)
               const { bill_no, challan_ids } = values
-              await Promise.all(
-                challan_ids.map((challan_id) =>
-                  createMutation.mutateAsync({ bill_no, challan_id })
+              setCreating(true)
+              setCreateError(null)
+              try {
+                await Promise.all(
+                  challan_ids.map((challan_id, index) => {
+                    // Each bill needs a unique bill_no — append suffix when multiple selected
+                    const uniqueBillNo = challan_ids.length > 1
+                      ? `${bill_no}-${index + 1}`
+                      : bill_no
+                    return billAPI.createBill({ bill_no: uniqueBillNo, challan_id })
+                  })
                 )
-              )
+                qc.invalidateQueries({ queryKey: ['bills'] })
+                setModal({ open: false, bill: null })
+              } catch (err) {
+                setCreateError(err?.message ?? 'Failed to create bills')
+              } finally {
+                setCreating(false)
+              }
             }
           }}
         />

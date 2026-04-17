@@ -90,6 +90,9 @@ export default function Trips() {
   const [modal, setModal] = useState({ open: false, trip: null })
   const [view, setView] = useState({ open: false, record: null })
   const [confirm, setConfirm] = useState({ open: false, id: null })
+  const [filterFrom, setFilterFrom] = useState('')
+  const [filterTo, setFilterTo] = useState('')
+  const [filterCustomer, setFilterCustomer] = useState('')
 
   useEffect(() => {
     function handler(e) { 
@@ -178,8 +181,19 @@ export default function Trips() {
       })
     }
 
+    // Apply source/destination/customer filters
+    if (filterFrom) {
+      rows = rows.filter(t => String(t.source) === filterFrom)
+    }
+    if (filterTo) {
+      rows = rows.filter(t => String(t.destination) === filterTo)
+    }
+    if (filterCustomer) {
+      rows = rows.filter(t => String(t.customer_id) === filterCustomer)
+    }
+
     return rows
-  }, [allRows, searchTerm, activeFilter, placeById, consignmentById, customerById, dateRange])
+  }, [allRows, searchTerm, activeFilter, placeById, consignmentById, customerById, dateRange, filterFrom, filterTo, filterCustomer])
 
   const ongoingCount = allRows.filter((t) => t.status === 'IN_TRANSIT').length
   const completedCount = allRows.filter((t) => t.status === 'COMPLETED').length
@@ -313,6 +327,41 @@ export default function Trips() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+          </div>
+
+          <div className="flex gap-2">
+            <select
+              value={filterFrom}
+              onChange={(e) => setFilterFrom(e.target.value)}
+              className="px-4 py-2 bg-white border border-zinc-200 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20"
+            >
+              <option value="">All From</option>
+              {(placesQuery.data?.items ?? []).map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+
+            <select
+              value={filterTo}
+              onChange={(e) => setFilterTo(e.target.value)}
+              className="px-4 py-2 bg-white border border-zinc-200 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20"
+            >
+              <option value="">All To</option>
+              {(placesQuery.data?.items ?? []).map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+
+            <select
+              value={filterCustomer}
+              onChange={(e) => setFilterCustomer(e.target.value)}
+              className="px-4 py-2 bg-white border border-zinc-200 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20"
+            >
+              <option value="">All Customers</option>
+              {(customersQuery.data?.items ?? []).map(c => (
+                <option key={c.id} value={c.id}>{c.customer_name}</option>
+              ))}
+            </select>
           </div>
 
           {/* Status Filter dropdown */}

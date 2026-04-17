@@ -21,6 +21,9 @@ export default function BillForm({
   const [selectedIds, setSelectedIds] = useState([])
   const [errors, setErrors] = useState({})
   const [search, setSearch] = useState('')
+  const [filterFrom, setFilterFrom] = useState('')
+  const [filterTo, setFilterTo] = useState('')
+  const [filterCustomer, setFilterCustomer] = useState('')
 
   const set = (key, val) => {
     setForm((prev) => ({ ...prev, [key]: val }))
@@ -34,17 +37,24 @@ export default function BillForm({
     setErrors((e) => ({ ...e, challan_id: '' }))
   }
 
+  const uniqueFromPlaces = useMemo(() => Array.from(new Set(challans.map(t => challanMeta[String(t.id)]?.fromPlace).filter(Boolean))).sort(), [challans, challanMeta])
+  const uniqueToPlaces = useMemo(() => Array.from(new Set(challans.map(t => challanMeta[String(t.id)]?.toPlace).filter(Boolean))).sort(), [challans, challanMeta])
+  const uniqueCustomers = useMemo(() => Array.from(new Set(challans.map(t => challanMeta[String(t.id)]?.customerName).filter(Boolean))).sort(), [challans, challanMeta])
+
   const filteredChallans = useMemo(() => {
     const q = search.toLowerCase()
     return challans.filter((c) => {
       const m = challanMeta[String(c.id)] ?? {}
+      if (filterFrom && m.fromPlace !== filterFrom) return false
+      if (filterTo && m.toPlace !== filterTo) return false
+      if (filterCustomer && m.customerName !== filterCustomer) return false
       return (
         (c.challan_no ?? '').toLowerCase().includes(q) ||
         (m.customerName ?? '').toLowerCase().includes(q) ||
         (m.route ?? '').toLowerCase().includes(q)
       )
     })
-  }, [challans, search, challanMeta])
+  }, [challans, search, challanMeta, filterFrom, filterTo, filterCustomer])
 
   const selectedChallan = isEdit
     ? challans.find((c) => String(c.id) === String(form.challan_id))
@@ -83,6 +93,12 @@ export default function BillForm({
         onChange={(e) => set('bill_no', e.target.value)}
         error={errors.bill_no}
       />
+      {!isEdit && selectedIds.length > 1 && form.bill_no && (
+        <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 -mt-2">
+          Multiple challans selected — bills will be created as&nbsp;
+          <strong>{selectedIds.map((_, i) => `${form.bill_no}-${i + 1}`).join(', ')}</strong>
+        </p>
+      )}
 
       {/* Edit mode: single challan (read-only picker) */}
       {isEdit ? (
@@ -108,6 +124,10 @@ export default function BillForm({
               search={search}
               onSearch={setSearch}
               onSelect={(id) => set('challan_id', id)}
+              filterFrom={filterFrom} setFilterFrom={setFilterFrom}
+              filterTo={filterTo} setFilterTo={setFilterTo}
+              filterCustomer={filterCustomer} setFilterCustomer={setFilterCustomer}
+              uniqueFromPlaces={uniqueFromPlaces} uniqueToPlaces={uniqueToPlaces} uniqueCustomers={uniqueCustomers}
             />
           )}
           {errors.challan_id && <p className="text-xs text-rose-600 font-medium">{errors.challan_id}</p>}
@@ -152,6 +172,24 @@ export default function BillForm({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <select value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)}
+              className="w-full rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-[13px] outline-none focus:border-blue-500 text-zinc-700">
+              <option value="">All From</option>
+              {uniqueFromPlaces.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <select value={filterTo} onChange={(e) => setFilterTo(e.target.value)}
+              className="w-full rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-[13px] outline-none focus:border-blue-500 text-zinc-700">
+              <option value="">All To</option>
+              {uniqueToPlaces.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <select value={filterCustomer} onChange={(e) => setFilterCustomer(e.target.value)}
+              className="w-full rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-[13px] outline-none focus:border-blue-500 text-zinc-700">
+              <option value="">All Customers</option>
+              {uniqueCustomers.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
           </div>
 
           <div className="max-h-52 overflow-y-auto rounded-lg border border-zinc-200 bg-white text-sm divide-y divide-zinc-50">
@@ -199,7 +237,7 @@ export default function BillForm({
   )
 }
 
-function ChallanPicker({ challans, challanMeta, search, onSearch, onSelect }) {
+function ChallanPicker({ challans, challanMeta, search, onSearch, onSelect, filterFrom, setFilterFrom, filterTo, setFilterTo, filterCustomer, setFilterCustomer, uniqueFromPlaces, uniqueToPlaces, uniqueCustomers }) {
   return (
     <div className="space-y-1.5">
       <div className="relative">
@@ -211,6 +249,23 @@ function ChallanPicker({ challans, challanMeta, search, onSearch, onSelect }) {
           value={search}
           onChange={(e) => onSearch(e.target.value)}
         />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <select value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)}
+          className="w-full rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-[13px] outline-none focus:border-blue-500 text-zinc-700">
+          <option value="">All From</option>
+          {uniqueFromPlaces.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select value={filterTo} onChange={(e) => setFilterTo(e.target.value)}
+          className="w-full rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-[13px] outline-none focus:border-blue-500 text-zinc-700">
+          <option value="">All To</option>
+          {uniqueToPlaces.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+        <select value={filterCustomer} onChange={(e) => setFilterCustomer(e.target.value)}
+          className="w-full rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-[13px] outline-none focus:border-blue-500 text-zinc-700">
+          <option value="">All Customers</option>
+          {uniqueCustomers.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
       </div>
       <div className="max-h-48 overflow-y-auto rounded-lg border border-zinc-200 bg-white text-sm divide-y divide-zinc-50">
         {challans.length > 0 ? challans.map((c) => {

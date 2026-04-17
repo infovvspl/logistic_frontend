@@ -2,7 +2,7 @@ import { api } from '../../services/axios.js'
 import { USE_MOCKS } from '../../utils/constants.js'
 
 const ALLOWED_FIELDS = [
-  'trip_id', 'bill_no', 'company_id',
+  'trip_id', 'bill_no', 'vehicle_id', 'company_id',
   'payer_type', 'payer_id',
   'payee_type', 'payee_id',
   'amount', 'transaction_type', 'transaction_purpose',

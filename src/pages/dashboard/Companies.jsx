@@ -15,10 +15,12 @@ import ConfirmDialog from '../../components/common/ConfirmDialog.jsx'
 import PageStatCard from '../../components/common/PageStatCard.jsx'
 import CompanyForm from '../../components/forms/CompanyForm.jsx'
 import BranchForm from '../../components/forms/BranchForm.jsx'
+import BankAccountForm from '../../components/forms/BankAccountForm.jsx'
 
 // APIs
 import * as companyAPI from '../../features/companies/companyAPI.js'
 import * as branchAPI from '../../features/branches/branchAPI.js'
+import * as bankAccountAPI from '../../features/bankAccounts/bankAccountAPI.js'
 
 export default function Companies() {
   const qc = useQueryClient()
@@ -31,11 +33,16 @@ export default function Companies() {
   const [branchEdit, setBranchEdit] = useState({ open: false, branch: null })
   const [branchDetails, setBranchDetails] = useState({ open: false, branch: null })
   const [branchConfirm, setBranchConfirm] = useState({ open: false, id: null })
+  const [baCreate, setBaCreate] = useState({ open: false, company: null })
+  const [baEdit, setBaEdit] = useState({ open: false, ba: null })
+  const [baDetails, setBaDetails] = useState({ open: false, ba: null })
+  const [baConfirm, setBaConfirm] = useState({ open: false, id: null })
   const [expandedCompanyId, setExpandedCompanyId] = useState(null)
 
   // --- Queries & Mutations ---
   const companiesQuery = useQuery({ queryKey: ['companies'], queryFn: companyAPI.listCompanies })
   const branchesQuery = useQuery({ queryKey: ['branches'], queryFn: branchAPI.listBranches })
+  const bankAccountsQuery = useQuery({ queryKey: ['bankAccounts'], queryFn: bankAccountAPI.listBankAccounts })
 
   const createMutation = useMutation({
     mutationFn: companyAPI.createCompany,
@@ -78,8 +85,35 @@ export default function Companies() {
     },
   })
 
+  const createBaMutation = useMutation({
+    mutationFn: bankAccountAPI.createBankAccount,
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['bankAccounts'] });
+      await qc.invalidateQueries({ queryKey: ['companies'] });
+      setBaCreate({ open: false, company: null });
+    },
+  })
+
+  const updateBaMutation = useMutation({
+    mutationFn: ({ id, payload }) => bankAccountAPI.updateBankAccount(id, payload),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['bankAccounts'] });
+      await qc.invalidateQueries({ queryKey: ['companies'] });
+      setBaEdit({ open: false, ba: null });
+    },
+  })
+
+  const deleteBaMutation = useMutation({
+    mutationFn: bankAccountAPI.deleteBankAccount,
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['bankAccounts'] });
+      await qc.invalidateQueries({ queryKey: ['companies'] });
+    },
+  })
+
   const allRows = companiesQuery.data?.items ?? []
   const branches = branchesQuery.data?.items ?? []
+  const bankAccounts = bankAccountsQuery.data?.items ?? []
 
   const filteredRows = useMemo(() => {
     if (!searchTerm) return allRows
@@ -101,6 +135,17 @@ export default function Companies() {
     })
     return map
   }, [branches])
+
+  const bankAccountsByCompanyId = useMemo(() => {
+    const map = new Map()
+    bankAccounts.forEach(b => {
+      if (!b?.company_id) return
+      const list = map.get(b.company_id) ?? []
+      list.push(b)
+      map.set(b.company_id, list)
+    })
+    return map
+  }, [bankAccounts])
 
   // --- Premium Column Definitions ---
   const companyColumns = useMemo(() => [
@@ -220,6 +265,7 @@ export default function Companies() {
                   {filteredRows.map((row) => {
                     const isExpanded = expandedCompanyId === row.id
                     const companyBranches = branchesByCompanyId.get(row.id) ?? []
+                    const companyBankAccounts = bankAccountsByCompanyId.get(row.id) ?? []
                     return (
                       <Fragment key={row.id}>
                         <tr className="group hover:bg-indigo-50/40 transition-colors">
@@ -232,48 +278,98 @@ export default function Companies() {
                         {isExpanded && (
                           <tr>
                             <td colSpan={companyColumns.length} className="p-8 bg-zinc-50/80">
-                              <div className="bg-white rounded-[2rem] border border-zinc-200 shadow-sm overflow-hidden">
-                                <div className="px-8 py-5 flex items-center justify-between border-b border-zinc-50 bg-zinc-50/30">
-                                  <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-zinc-900 rounded-xl text-white"><FiGitBranch size={16} /></div>
-                                    <h3 className="text-xs font-black uppercase tracking-widest text-zinc-900">Branch</h3>
-                                  </div>
-                                  <Button 
-                                    size="sm" 
-                                    className=" text-[10px] font-black uppercase px-4 py-2 rounded-xl transition-all"
-                                    onClick={() => setBranchCreate({ open: true, company: row })}
-                                  >
-                                    Add Branch
-                                  </Button>
-                                </div>
-                                <div className="p-4">
-                                  {companyBranches.length ? (
-                                    <Table 
-                                      columns={[
-                                        { key: 'branch_name', header: 'Branch' },
-                                        { key: 'branch_phone', header: 'Contact' },
-                                        { 
-                                          key: 'actions', 
-                                          header: 'Actions', 
-                                          render: (b) => (
-                                            <div className="flex justify-end gap-1">
-                                              <ActionBtn icon={<FiEye size={14}/>} onClick={() => setBranchDetails({ open: true, branch: b })} hover="hover:text-indigo-600 hover:bg-indigo-50" />
-                                              <ActionBtn icon={<FiEdit2 size={14}/>} onClick={() => setBranchEdit({ open: true, branch: b })} hover="hover:text-amber-600 hover:bg-amber-50" />
-                                              <ActionBtn icon={<FiTrash2 size={14}/>} onClick={() => setBranchConfirm({ open: true, id: b.id })} hover="hover:text-red-600 hover:bg-red-50" />
-                                            </div>
-                                          )
-                                        }
-                                      ]} 
-                                      rows={companyBranches} 
-                                      rowKey={(b) => b.id}
-                                      headerClassName="bg-zinc-900 !text-white text-[9px] tracking-[0.2em] font-black border-none"
-                                      rowClassName="group hover:bg-zinc-50/50 transition-colors border-b border-zinc-50"
-                                    />
-                                  ) : (
-                                    <div className="py-10 text-center opacity-30">
-                                      <p className="text-xs font-bold uppercase tracking-widest">No branch data available</p>
+                              <div className="p-4 grid grid-cols-1 xl:grid-cols-2 gap-6 bg-zinc-50/80">
+                                <div className="bg-white rounded-[2rem] border border-zinc-200 shadow-sm overflow-hidden h-fit">
+                                  <div className="px-6 py-4 flex items-center justify-between border-b border-zinc-50 bg-zinc-50/30">
+                                    <div className="flex items-center gap-3">
+                                      <div className="p-2 bg-zinc-900 rounded-xl text-white"><FiGitBranch size={16} /></div>
+                                      <h3 className="text-xs font-black uppercase tracking-widest text-zinc-900">Branch</h3>
                                     </div>
-                                  )}
+                                    <Button 
+                                      size="sm" 
+                                      className=" text-[10px] font-black uppercase px-4 py-2 rounded-xl transition-all"
+                                      onClick={() => setBranchCreate({ open: true, company: row })}
+                                    >
+                                      Add Branch
+                                    </Button>
+                                  </div>
+                                  <div className="p-4">
+                                    {companyBranches.length ? (
+                                      <Table 
+                                        columns={[
+                                          { key: 'branch_name', header: 'Branch' },
+                                          { key: 'branch_phone', header: 'Contact' },
+                                          { 
+                                            key: 'actions', 
+                                            header: 'Actions', 
+                                            render: (b) => (
+                                              <div className="flex justify-end gap-1">
+                                                <ActionBtn icon={<FiEye size={14}/>} onClick={() => setBranchDetails({ open: true, branch: b })} hover="hover:text-indigo-600 hover:bg-indigo-50" />
+                                                <ActionBtn icon={<FiEdit2 size={14}/>} onClick={() => setBranchEdit({ open: true, branch: b })} hover="hover:text-amber-600 hover:bg-amber-50" />
+                                                <ActionBtn icon={<FiTrash2 size={14}/>} onClick={() => setBranchConfirm({ open: true, id: b.id })} hover="hover:text-red-600 hover:bg-red-50" />
+                                              </div>
+                                            )
+                                          }
+                                        ]} 
+                                        rows={companyBranches} 
+                                        rowKey={(b) => b.id}
+                                        headerClassName="bg-zinc-900 !text-white text-[9px] tracking-[0.2em] font-black border-none"
+                                        rowClassName="group hover:bg-zinc-50/50 transition-colors border-b border-zinc-50"
+                                      />
+                                    ) : (
+                                      <div className="py-10 text-center opacity-30">
+                                        <p className="text-xs font-bold uppercase tracking-widest">No branch data available</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Bank Accounts Column */}
+                                <div className="bg-white rounded-[2rem] border border-zinc-200 shadow-sm overflow-hidden h-fit">
+                                  <div className="px-6 py-4 flex items-center justify-between border-b border-zinc-50 bg-slate-50/30">
+                                    <div className="flex items-center gap-3">
+                                      <div className="p-2 bg-indigo-600 rounded-xl text-white">
+                                        <span className="font-sans font-black text-xs leading-none flex items-center justify-center w-4 h-4">₹</span>
+                                      </div>
+                                      <h3 className="text-xs font-black uppercase tracking-widest text-zinc-900">Bank Accounts</h3>
+                                    </div>
+                                    <Button 
+                                      size="sm" 
+                                      className="bg-indigo-50 text-indigo-600 hover:bg-indigo-100 text-[10px] font-black uppercase px-4 py-2 rounded-xl transition-all"
+                                      onClick={() => setBaCreate({ open: true, company: row })}
+                                    >
+                                      Add Bank
+                                    </Button>
+                                  </div>
+                                  <div className="p-4">
+                                    {companyBankAccounts.length ? (
+                                      <Table 
+                                        columns={[
+                                          { key: 'bank_name', header: 'Bank' },
+                                          { key: 'account_no', header: 'A/C No' },
+                                          { 
+                                            key: 'actions', 
+                                            header: 'Actions', 
+                                            render: (b) => (
+                                              <div className="flex justify-end gap-1">
+                                                <ActionBtn icon={<FiEye size={14}/>} onClick={() => setBaDetails({ open: true, ba: b })} hover="hover:text-indigo-600 hover:bg-indigo-50" />
+                                                <ActionBtn icon={<FiEdit2 size={14}/>} onClick={() => setBaEdit({ open: true, ba: b })} hover="hover:text-amber-600 hover:bg-amber-50" />
+                                                <ActionBtn icon={<FiTrash2 size={14}/>} onClick={() => setBaConfirm({ open: true, id: b.id })} hover="hover:text-red-600 hover:bg-red-50" />
+                                              </div>
+                                            )
+                                          }
+                                        ]} 
+                                        rows={companyBankAccounts} 
+                                        rowKey={(b) => b.id}
+                                        headerClassName="bg-indigo-600 !text-white text-[9px] tracking-[0.2em] font-black border-none"
+                                        rowClassName="group hover:bg-indigo-50/20 transition-colors border-b border-indigo-50"
+                                      />
+                                    ) : (
+                                      <div className="py-10 text-center opacity-30">
+                                        <p className="text-xs font-bold uppercase tracking-widest">No bank accounts</p>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </td>
@@ -367,50 +463,6 @@ export default function Companies() {
               </div>
             </div>
 
-            {/* Bank Account 1 */}
-            <div className="rounded-2xl border border-zinc-100 bg-white overflow-hidden">
-              <div className="px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-400 flex items-center gap-2">
-                <div className="w-1.5 h-4 rounded-full bg-white/60" />
-                <span className="text-[11px] font-black uppercase tracking-widest text-white">Bank Account 1</span>
-              </div>
-              <div className="px-4">
-                {[
-                  ['Account No', details.company.account_no_1],
-                  ['Bank Name', details.company.bank_name],
-                  ['IFSC Code', details.company.ifsc_code],
-                  ['SWIFT Code', details.company.swift_code],
-                  ['Branch', details.company.branch],
-                ].map(([l, v]) => (
-                  <div key={l} className="flex items-start justify-between gap-4 py-3 border-b border-zinc-100 last:border-0">
-                    <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider shrink-0 w-36 pt-0.5">{l}</span>
-                    <span className="text-sm font-semibold text-zinc-700 text-right break-words">{v ?? '—'}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Bank Account 2 */}
-            <div className="rounded-2xl border border-zinc-100 bg-white overflow-hidden">
-              <div className="px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-400 flex items-center gap-2">
-                <div className="w-1.5 h-4 rounded-full bg-white/60" />
-                <span className="text-[11px] font-black uppercase tracking-widest text-white">Bank Account 2</span>
-              </div>
-              <div className="px-4">
-                {[
-                  ['Account No', details.company.account_no_2],
-                  ['Bank Name', details.company.bank_name_2],
-                  ['IFSC Code', details.company.ifsc_code_2],
-                  ['SWIFT Code', details.company.swift_code_2],
-                  ['Branch', details.company.branch_2],
-                ].map(([l, v]) => (
-                  <div key={l} className="flex items-start justify-between gap-4 py-3 border-b border-zinc-100 last:border-0">
-                    <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider shrink-0 w-36 pt-0.5">{l}</span>
-                    <span className="text-sm font-semibold text-zinc-700 text-right break-words">{v ?? '—'}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
           </div>
         )}
       </Modal>
@@ -448,6 +500,40 @@ export default function Companies() {
         )}
       </Modal>
 
+      {/* Bank Account Modals */}
+      <Modal open={baCreate.open} title="New Bank Account" onClose={() => setBaCreate({ open: false, company: null })}>
+        <BankAccountForm companyId={baCreate.company?.id} companies={allRows} loading={createBaMutation.isPending} onSubmit={async (v) => await createBaMutation.mutateAsync(v)} />
+      </Modal>
+
+      <Modal open={baEdit.open} title="Modify Bank Account" onClose={() => setBaEdit({ open: false, ba: null })}>
+        <BankAccountForm defaultValues={baEdit.ba} companyId={baEdit.ba?.company_id} companies={allRows} loading={updateBaMutation.isPending} onSubmit={async (v) => await updateBaMutation.mutateAsync({ id: baEdit.ba?.id, payload: v })} />
+      </Modal>
+
+      <Modal open={baDetails.open} title="Bank Account Details" onClose={() => setBaDetails({ open: false, ba: null })}>
+        {baDetails.ba && (
+          <div className="rounded-2xl border border-zinc-100 bg-white overflow-hidden">
+            <div className="px-4 py-3 bg-gradient-to-r from-indigo-600 to-indigo-400 flex items-center gap-2">
+              <div className="w-1.5 h-4 rounded-full bg-white/60" />
+              <span className="text-[11px] font-black uppercase tracking-widest text-white">Bank Account Info</span>
+            </div>
+            <div className="px-4">
+              {[
+                ['Bank Name', baDetails.ba.bank_name],
+                ['Account No', baDetails.ba.account_no],
+                ['IFSC Code', baDetails.ba.ifsc_code],
+                ['SWIFT Code', baDetails.ba.swift_code],
+                ['Branch', baDetails.ba.branch],
+              ].map(([l, v]) => (
+                <div key={l} className="flex items-start justify-between gap-4 py-3 border-b border-zinc-100 last:border-0">
+                  <span className="text-xs font-semibold text-zinc-400 uppercase tracking-wider shrink-0 w-36 pt-0.5">{l}</span>
+                  <span className="text-sm font-semibold text-zinc-700 text-right break-words">{v ?? '—'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Modal>
+
       <ConfirmDialog
         open={confirm.open} title="Delete Entity?" description="This action will remove the company and all associated branch records." danger confirmText="Confirm Deletion"
         loading={deleteMutation.isPending} onClose={() => setConfirm({ open: false, id: null })}
@@ -458,6 +544,12 @@ export default function Companies() {
         open={branchConfirm.open} title="Remove Branch?" description="Are you sure you want to delete this branch office?" danger confirmText="Confirm"
         loading={deleteBranchMutation.isPending} onClose={() => setBranchConfirm({ open: false, id: null })}
         onConfirm={async () => { await deleteBranchMutation.mutateAsync(branchConfirm.id); setBranchConfirm({ open: false, id: null }); }}
+      />
+
+      <ConfirmDialog
+        open={baConfirm.open} title="Remove Bank Account?" description="Are you sure you want to delete this bank account?" danger confirmText="Confirm"
+        loading={deleteBaMutation.isPending} onClose={() => setBaConfirm({ open: false, id: null })}
+        onConfirm={async () => { await deleteBaMutation.mutateAsync(baConfirm.id); setBaConfirm({ open: false, id: null }); }}
       />
     </div>
   )

@@ -21,8 +21,6 @@ export default function CompanyForm({ defaultValues, onSubmit, loading, submitLa
       name: '', email: '', mobile: '',
       gst_no: '', cin_no: '', tin_no: '', pan_no: '', service_tax_no: '',
       pf: '', esis: '', esi: '', senior_allowance: '',
-      account_no_1: '', bank_name: '', ifsc_code: '', swift_code: '', branch: '',
-      account_no_2: '', bank_name_2: '', ifsc_code_2: '', swift_code_2: '', branch_2: '',
     },
   })
 
@@ -56,28 +54,6 @@ export default function CompanyForm({ defaultValues, onSubmit, loading, submitLa
         <Input label="PF" placeholder="PF33579" {...register('pf')} />
         <Input label="ESIS" placeholder="ESI13539" {...register('esis')} />
         <Input label="ESI" placeholder="ESI-DETAIL-123" {...register('esi')} />
-      </div>
-
-      <SectionDivider label="Bank Account 1" />
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Input label="Account No" placeholder="1234567890" inputMode="numeric" {...register('account_no_1')} />
-        <Input label="Bank Name" placeholder="State Bank of India" {...register('bank_name')} />
-        <Input label="IFSC Code" placeholder="SBIN0001234" {...register('ifsc_code')} />
-        <Input label="SWIFT Code" placeholder="SBININBB" {...register('swift_code')} />
-        <div className="md:col-span-2">
-          <Input label="Branch" placeholder="Mumbai Main Branch" {...register('branch')} />
-        </div>
-      </div>
-
-      <SectionDivider label="Bank Account 2" />
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Input label="Account No" placeholder="9876543210" inputMode="numeric" {...register('account_no_2')} />
-        <Input label="Bank Name" placeholder="HDFC Bank" {...register('bank_name_2')} />
-        <Input label="IFSC Code" placeholder="HDFC0001234" {...register('ifsc_code_2')} />
-        <Input label="SWIFT Code" placeholder="HDFCINBB" {...register('swift_code_2')} />
-        <div className="md:col-span-2">
-          <Input label="Branch" placeholder="Delhi Branch" {...register('branch_2')} />
-        </div>
       </div>
 
       <div className="flex justify-end pt-2">

@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [tailwindcss(),react()],
   server: {
     allowedHosts: [
-      'automatically-tactics-homes-quantitative.trycloudflare.com'
+      'hunting-anybody-benjamin-fri.trycloudflare.com'
     ]
   }
 })

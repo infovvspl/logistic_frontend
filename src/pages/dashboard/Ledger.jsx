@@ -17,6 +17,7 @@ import * as userAPI from '../../features/users/userAPI.js'
 import * as companyAPI from '../../features/companies/companyAPI.js'
 import * as placeAPI from '../../features/places/placeAPI.js'
 import * as txnPurposeAPI from '../../features/transactionPurposes/transactionPurposeAPI.js'
+import * as vehicleAPI from '../../features/vehicles/vehicleAPI.js'
 
 export default function Ledger() {
   const qc = useQueryClient()
@@ -34,6 +35,7 @@ export default function Ledger() {
   const companiesQuery = useQuery({ queryKey: ['companies'], queryFn: companyAPI.listCompanies })
   const placesQuery   = useQuery({ queryKey: ['places'],                queryFn: placeAPI.listPlaces })
   const txnPurposesQuery = useQuery({ queryKey: ['transaction-purposes'], queryFn: txnPurposeAPI.listTransactionPurposes })
+  const vehiclesQuery   = useQuery({ queryKey: ['vehicles'],   queryFn: vehicleAPI.listVehicles })
 
   const createMutation = useMutation({
     mutationFn: ledgerAPI.createLedger,
@@ -53,12 +55,19 @@ export default function Ledger() {
   const companies = companiesQuery.data?.items ?? []
   const trips     = tripsQuery.data?.items ?? []
   const bills     = billsQuery.data?.items ?? []
+  const vehicles  = vehiclesQuery.data?.items ?? []
 
   const billById = useMemo(() => {
     const m = new Map()
     bills.forEach((b) => m.set(String(b.id), b))
     return m
   }, [bills])
+
+  const vehicleById = useMemo(() => {
+    const m = new Map()
+    vehicles.forEach((v) => m.set(String(v.id), v))
+    return m
+  }, [vehicles])
 
   const placeById = useMemo(() => {
     const m = new Map()
@@ -260,6 +269,7 @@ export default function Ledger() {
           customers={customers}
           users={users}
           companies={companies}
+          vehicles={vehicles}
           transactionPurposes={txnPurposesQuery.data?.items ?? []}
           loading={createMutation.isPending || updateMutation.isPending}
           serverError={createMutation.error?.message ?? updateMutation.error?.message ?? null}
@@ -295,6 +305,12 @@ export default function Ledger() {
             'Payee Type': view.record.payee_type || '—',
             'Company': view.record.company_id ? getEntityName('company', view.record.company_id) : '—',
             'Trip': view.record.trip_id ? (tripMeta[String(view.record.trip_id)]?.label || view.record.trip_id) : '—',
+            'Vehicle': (() => {
+              if (!view.record.vehicle_id) return '—'
+              const v = vehicleById.get(String(view.record.vehicle_id))
+              if (!v) return view.record.vehicle_id
+              return [v.registration_number, v.vehicle_manufacture_company, v.vehicle_model].filter(Boolean).join(' · ')
+            })(),
             'Bill No': (() => {
               // First try: bill_no/bill_id directly on the record
               const ref = view.record.bill_no ?? view.record.bill_id ?? view.record.bill_ref ?? ''

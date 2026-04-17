@@ -95,6 +95,7 @@ export default function ChallanForm({
   trips = [],
   tripMeta = {},
   bankAccounts = [],
+  companies = [],
 }) {
   const isEdit = !!defaultValues
   const today = new Date().toISOString().slice(0, 10)
@@ -141,11 +142,14 @@ export default function ChallanForm({
     advance_type:        defaultValues?.advance_type        ?? '',
     advance_amount:      defaultValues?.advance_amount      ?? '',
     advance_date:        nd(defaultValues?.advance_date)    || '',
-    advance_account_number: defaultValues?.advance_account_number ?? '',
+    advance_bank_account_id: defaultValues?.advance_bank_account_id ?? '',
   }))
 
   const [errors, setErrors] = useState({})
   const [tripSearch, setTripSearch] = useState('')
+  const [filterFrom, setFilterFrom] = useState('')
+  const [filterTo, setFilterTo] = useState('')
+  const [filterCustomer, setFilterCustomer] = useState('')
   const dieselFocusRef = useRef(null)
 
   const set = (key, val) => {
@@ -158,7 +162,7 @@ export default function ChallanForm({
         if (rate > 0 && unloadTon > 0) next.total_amount = String((unloadTon * rate).toFixed(2))
       }
       // clear account when switching away from bank transfer
-      if (key === 'advance_type' && val !== 'BANK_TRANSFER') next.advance_account_number = ''
+      if (key === 'advance_type' && val !== 'BANK_TRANSFER') next.advance_bank_account_id = ''
       return recalc(next, dieselFocusRef.current)
     })
     setErrors((e) => ({ ...e, [key]: '' }))
@@ -193,18 +197,29 @@ export default function ChallanForm({
   const selectedTrip = trips.find((t) => String(t.id) === String(form.trip_id))
   const meta = form.trip_id ? (tripMeta[String(form.trip_id)] ?? {}) : {}
 
+  const uniqueFromPlaces = useMemo(() => Array.from(new Set(trips.map(t => tripMeta[String(t.id)]?.fromPlace).filter(Boolean))).sort(), [trips, tripMeta])
+  const uniqueToPlaces = useMemo(() => Array.from(new Set(trips.map(t => tripMeta[String(t.id)]?.toPlace).filter(Boolean))).sort(), [trips, tripMeta])
+  const uniqueCustomers = useMemo(() => Array.from(new Set(trips.map(t => tripMeta[String(t.id)]?.customerName).filter(Boolean))).sort(), [trips, tripMeta])
+
   const filteredTrips = useMemo(() => {
     const q = tripSearch.toLowerCase()
     return trips.filter((t) => {
       const m = tripMeta[String(t.id)] ?? {}
-      return (
-        (m.fromPlace    ?? '').toLowerCase().includes(q) ||
-        (m.toPlace      ?? '').toLowerCase().includes(q) ||
-        (m.customerName ?? '').toLowerCase().includes(q) ||
-        String(t.id).toLowerCase().includes(q)
-      )
+      if (filterFrom && m.fromPlace !== filterFrom) return false
+      if (filterTo && m.toPlace !== filterTo) return false
+      if (filterCustomer && m.customerName !== filterCustomer) return false
+
+      if (q) {
+        return (
+          (m.fromPlace    ?? '').toLowerCase().includes(q) ||
+          (m.toPlace      ?? '').toLowerCase().includes(q) ||
+          (m.customerName ?? '').toLowerCase().includes(q) ||
+          String(t.id).toLowerCase().includes(q)
+        )
+      }
+      return true
     })
-  }, [trips, tripSearch, tripMeta])
+  }, [trips, tripSearch, tripMeta, filterFrom, filterTo, filterCustomer])
 
   const shortageKg       = Number(form.shortage) || 0
   const showShortageRate = shortageKg > 150
@@ -270,6 +285,23 @@ export default function ChallanForm({
                 className="w-full rounded-lg border border-zinc-300 bg-white pl-9 pr-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
                 value={tripSearch} onChange={(e) => setTripSearch(e.target.value)} />
             </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <select value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)}
+                className="w-full rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-[13px] outline-none focus:border-blue-500 text-zinc-700">
+                <option value="">All From</option>
+                {uniqueFromPlaces.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+              <select value={filterTo} onChange={(e) => setFilterTo(e.target.value)}
+                className="w-full rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-[13px] outline-none focus:border-blue-500 text-zinc-700">
+                <option value="">All To</option>
+                {uniqueToPlaces.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+              <select value={filterCustomer} onChange={(e) => setFilterCustomer(e.target.value)}
+                className="w-full rounded-lg border border-zinc-300 bg-white px-2.5 py-1.5 text-[13px] outline-none focus:border-blue-500 text-zinc-700">
+                <option value="">All Customers</option>
+                {uniqueCustomers.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
             <div className="max-h-36 overflow-y-auto rounded-lg border border-zinc-200 bg-white text-sm divide-y divide-zinc-50">
               {filteredTrips.length > 0 ? filteredTrips.map((t) => {
                 const m = tripMeta[String(t.id)] ?? {}
@@ -310,8 +342,22 @@ export default function ChallanForm({
 
       <SectionDivider label="Transport" />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Input label="Transport" placeholder="Self / Contractor" leftIcon={<FiTruck />}
-          value={form.transport} onChange={(e) => set('transport', e.target.value)} />
+        <div className="space-y-1">
+          <label className="block text-sm font-medium text-zinc-700">Transport</label>
+          <div className="relative">
+            <FiTruck className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" size={14} />
+            <select
+              value={form.transport}
+              onChange={(e) => set('transport', e.target.value)}
+              className="w-full h-10 pl-9 pr-3 rounded-lg border border-zinc-300 bg-white text-sm text-zinc-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15 appearance-none"
+            >
+              <option value="">Self / Contractor</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.name}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
         <Input label="Vehicle Number" placeholder="WB-01-AB-1234" leftIcon={<FiTruck />}
           value={form.vehicle_number} onChange={(e) => set('vehicle_number', e.target.value)} />
         {/* <Input label="Permit Number" placeholder="PRM-12345"
@@ -440,9 +486,9 @@ export default function ChallanForm({
                     <button
                       key={acc.value}
                       type="button"
-                      onClick={() => set('advance_account_number', form.advance_account_number === acc.value ? '' : acc.value)}
+                      onClick={() => set('advance_bank_account_id', form.advance_bank_account_id === acc.value ? '' : acc.value)}
                       className={`flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm text-left transition-all ${
-                        form.advance_account_number === acc.value
+                        form.advance_bank_account_id === acc.value
                           ? 'border-blue-500 bg-blue-50 text-blue-700 font-semibold'
                           : 'border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50'
                       }`}

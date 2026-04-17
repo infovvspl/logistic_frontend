@@ -8,7 +8,7 @@ const ALLOWED_CHALLAN_FIELDS = [
   'total_amount', 'tds_percentage', 'tds_amount', 'remark', 'advance',
   'diesel_advance', 'diesel_price_per_litre', 'diesel_quantity', 'cgst_percentage', 'cgst_amount', 'sgst_percentage', 'sgst_amount',
   'tc_date', 'balance',
-  'advance_type', 'advance_amount', 'advance_date', 'advance_account_number', 'other_expense',
+  'advance_type', 'advance_amount', 'advance_date', 'advance_bank_account_id', 'other_expense',
 ]
 
 let mockChallans = []
