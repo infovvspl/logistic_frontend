@@ -93,12 +93,6 @@ export default function BillForm({
         onChange={(e) => set('bill_no', e.target.value)}
         error={errors.bill_no}
       />
-      {!isEdit && selectedIds.length > 1 && form.bill_no && (
-        <p className="text-[11px] text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2 -mt-2">
-          Multiple challans selected — bills will be created as&nbsp;
-          <strong>{selectedIds.map((_, i) => `${form.bill_no}-${i + 1}`).join(', ')}</strong>
-        </p>
-      )}
 
       {/* Edit mode: single challan (read-only picker) */}
       {isEdit ? (
