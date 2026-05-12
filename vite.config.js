@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [tailwindcss(),react()],
   server: {
     allowedHosts: [
-      'hunting-anybody-benjamin-fri.trycloudflare.com'
+      'prefer-travelling-revealed-elvis.trycloudflare.com'
     ]
   }
 })

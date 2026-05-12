@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts'
 import {
   FiUsers, FiTruck, FiUser, FiFileText, FiBriefcase,
   FiSearch, FiArrowUpRight, FiArrowDownLeft, FiTrendingUp,
@@ -38,11 +39,6 @@ export default function BalanceSheet() {
   const [showFilters, setShowFilters] = useState(false)
   const [txnTypeFilter, setTxnTypeFilter] = useState('')
   const [filterPurpose, setFilterPurpose] = useState('')
-  const [filterCustomer, setFilterCustomer] = useState('')
-  const [filterVehicle, setFilterVehicle] = useState('')
-  const [filterUser, setFilterUser] = useState('')
-  const [filterCompany, setFilterCompany] = useState('')
-  const [filterBill, setFilterBill] = useState('')
 
   const ledgerQuery     = useQuery({ queryKey: ['ledger'],     queryFn: ledgerAPI.listLedger })
   const tripsQuery      = useQuery({ queryKey: ['trips'],      queryFn: tripAPI.listTrips })
@@ -119,59 +115,8 @@ export default function BalanceSheet() {
     if (dateTo)   rows = rows.filter(r => r.created_at && new Date(r.created_at) <= new Date(dateTo + 'T23:59:59'))
     if (txnTypeFilter) rows = rows.filter(r => r.transaction_type === txnTypeFilter)
     if (filterPurpose) rows = rows.filter(r => String(r.transaction_purpose) === filterPurpose)
-
-    if (filterCustomer) {
-      rows = rows.filter(r => {
-        if (r.payer_type === 'customer' && String(r.payer_id) === filterCustomer) return true;
-        if (r.payee_type === 'customer' && String(r.payee_id) === filterCustomer) return true;
-        if (r.trip_id) {
-          const tm = tripMeta[String(r.trip_id)]
-          if (tm?.customer && String(tm.customer.id) === filterCustomer) return true;
-        }
-        return false;
-      })
-    }
-    if (filterVehicle) {
-      rows = rows.filter(r => {
-        if (String(r.vehicle_id) === filterVehicle) return true;
-        if (r.trip_id) {
-          const tm = tripMeta[String(r.trip_id)]
-          if (tm?.vehicleId && String(tm.vehicleId) === filterVehicle) return true;
-        }
-        return false;
-      })
-    }
-    if (filterUser) {
-      rows = rows.filter(r => {
-        if (r.payer_type === 'user' && String(r.payer_id) === filterUser) return true;
-        if (r.payee_type === 'user' && String(r.payee_id) === filterUser) return true;
-        return false;
-      })
-    }
-    if (filterCompany) {
-      rows = rows.filter(r => {
-        if (String(r.company_id) === filterCompany) return true;
-        if (r.payer_type === 'company' && String(r.payer_id) === filterCompany) return true;
-        if (r.payee_type === 'company' && String(r.payee_id) === filterCompany) return true;
-        return false;
-      })
-    }
-    if (filterBill) {
-      rows = rows.filter(r => {
-        let bId = r.bill_id ?? r.bill_no ?? null;
-        if (!bId && r.trip_id) {
-          const challan = challans.find(c => String(c.trip_id) === String(r.trip_id))
-          if (challan) {
-            const b = bills.find(b => String(b.challan_id) === String(challan.id))
-            if (b) bId = b.id;
-          }
-        }
-        return String(bId) === filterBill;
-      })
-    }
-
     return rows
-  }, [ledgerQuery.data, dateFrom, dateTo, txnTypeFilter, filterPurpose, filterCustomer, filterVehicle, filterUser, filterCompany, filterBill, tripMeta, challans, bills])
+  }, [ledgerQuery.data, dateFrom, dateTo, txnTypeFilter, filterPurpose])
 
   const setRange = (days) => {
     const end = new Date()
@@ -367,6 +312,24 @@ export default function BalanceSheet() {
   const currentView = VIEWS.find(v => v.id === activeView)
   const txnTypes = useMemo(() => [...new Set((ledgerQuery.data?.items ?? []).map(r => r.transaction_type).filter(Boolean))], [ledgerQuery.data])
 
+  // Data for charts
+  const chartData = useMemo(() => {
+    return filteredGroups
+      .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))
+      .slice(0, 8)
+      .map(g => ({
+        name: g.label.length > 15 ? g.label.slice(0, 12) + '...' : g.label,
+        Inflow: g.totalIn,
+        Outflow: g.totalOut,
+        Balance: g.balance,
+      }))
+  }, [filteredGroups])
+
+  const pieData = useMemo(() => [
+    { name: 'Inflow', value: totals.in, color: '#10b981' },
+    { name: 'Outflow', value: totals.out, color: '#f43f5e' },
+  ], [totals])
+
   const handleExport = () => {
     const headers = ['Name', 'Sub-label', 'Inflow', 'Outflow', 'Balance', 'Entries Count']
     const rows = filteredGroups.map(g => [
@@ -469,7 +432,7 @@ export default function BalanceSheet() {
               className="overflow-hidden"
             >
               <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Date From</label>
                     <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
@@ -497,46 +460,6 @@ export default function BalanceSheet() {
                       {purposes.map(p => <option key={p.id} value={p.id}>{p.transaction_purpose_name}</option>)}
                     </select>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">User</label>
-                    <select value={filterUser} onChange={e => setFilterUser(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-sm outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/15 bg-white">
-                      <option value="">All Users</option>
-                      {users.map(u => <option key={u.id} value={u.id}>{u.name || u.email || `User #${u.id}`}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Vehicle</label>
-                    <select value={filterVehicle} onChange={e => setFilterVehicle(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-sm outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/15 bg-white">
-                      <option value="">All Vehicles</option>
-                      {vehicles.map(v => <option key={v.id} value={v.id}>{v.registration_number}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Customer</label>
-                    <select value={filterCustomer} onChange={e => setFilterCustomer(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-sm outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/15 bg-white">
-                      <option value="">All Customers</option>
-                      {customers.map(c => <option key={c.id} value={c.id}>{c.customer_name}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Bill</label>
-                    <select value={filterBill} onChange={e => setFilterBill(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-sm outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/15 bg-white">
-                      <option value="">All Bills</option>
-                      {bills.map(b => <option key={b.id} value={b.id}>{b.bill_no}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Company</label>
-                    <select value={filterCompany} onChange={e => setFilterCompany(e.target.value)}
-                      className="w-full px-3 py-2.5 rounded-xl border border-zinc-200 text-sm outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/15 bg-white">
-                      <option value="">All Companies</option>
-                      {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </div>
                 </div>
                 
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -545,8 +468,8 @@ export default function BalanceSheet() {
                   <button onClick={() => setRange(30)}  className="px-3 py-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 rounded text-xs font-bold">Last 30 Days</button>
                   <button onClick={() => setRange(90)}  className="px-3 py-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 rounded text-xs font-bold">Last 90 Days</button>
                   <button onClick={setThisMonth}        className="px-3 py-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-600 rounded text-xs font-bold">This Month</button>
-                  {(dateFrom || dateTo || txnTypeFilter || filterPurpose || filterCustomer || filterVehicle || filterUser || filterCompany || filterBill) && (
-                    <button onClick={() => { setDateFrom(''); setDateTo(''); setTxnTypeFilter(''); setFilterPurpose(''); setFilterCustomer(''); setFilterVehicle(''); setFilterUser(''); setFilterCompany(''); setFilterBill('') }}
+                  {(dateFrom || dateTo || txnTypeFilter || filterPurpose) && (
+                    <button onClick={() => { setDateFrom(''); setDateTo(''); setTxnTypeFilter(''); setFilterPurpose('') }}
                       className="px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded text-xs font-bold">
                       Clear filters
                     </button>
@@ -580,7 +503,54 @@ export default function BalanceSheet() {
         </div>
 
         {/* Charts Section */}
-        {/* Charts Section Removed */}
+        {filteredGroups.length > 0 && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 no-print">
+            <div className="lg:col-span-8 bg-white p-6 rounded-[2rem] border border-zinc-100 shadow-sm">
+              <h3 className="text-sm font-black text-zinc-900 uppercase tracking-widest mb-6">Volume Analysis (Top 8)</h3>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} />
+                    <YAxis fontSize={10} axisLine={false} tickLine={false} tickFormatter={v => `₹${v/1000}k`} />
+                    <Tooltip 
+                      cursor={{fill: '#f8fafc'}}
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)' }}
+                    />
+                    <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '11px', fontWeight: 'bold' }} />
+                    <Bar dataKey="Inflow" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
+                    <Bar dataKey="Outflow" fill="#f43f5e" radius={[4, 4, 0, 0]} barSize={20} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <div className="lg:col-span-4 bg-white p-6 rounded-[2rem] border border-zinc-100 shadow-sm">
+              <h3 className="text-sm font-black text-zinc-900 uppercase tracking-widest mb-6">Flow Distribution</h3>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)' }}
+                      formatter={(v) => fmt(v)}
+                    />
+                    <Legend verticalAlign="bottom" align="center" iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 'bold' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

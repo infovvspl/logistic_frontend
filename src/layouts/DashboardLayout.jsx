@@ -737,27 +737,6 @@ export default function DashboardLayout() {
           cursor: pointer;
           color: #1e293b;
         }
-
-        @media print {
-          .db-sidebar, .db-mobile-nav, .db-mobile-topbar-menu, .db-sidebar-toggle { 
-            display: none !important; 
-          }
-          .db-root { 
-            padding: 0 !important; 
-            background: white !important; 
-            display: block !important; 
-          }
-          .db-main-wrap { 
-            gap: 0 !important; 
-          }
-          .db-content { 
-            padding: 0 !important; 
-            border: none !important; 
-            box-shadow: none !important; 
-            border-radius: 0 !important;
-            background: transparent !important;
-          }
-        }
         `}
     </style>
     <div className="db-root">
