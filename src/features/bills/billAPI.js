@@ -1,7 +1,7 @@
 import { api } from '../../services/axios.js'
 import { USE_MOCKS } from '../../utils/constants.js'
 
-const ALLOWED_BILL_FIELDS = ['bill_no', 'challan_id']
+const ALLOWED_BILL_FIELDS = ['bill_no', 'challan_id', 'challan_ids']
 
 let mockBills = []
 

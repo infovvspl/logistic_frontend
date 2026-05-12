@@ -48,9 +48,6 @@ export default function Bills() {
   const customersQuery = useQuery({ queryKey: ['customers'], queryFn: customerAPI.listCustomers })
   const placesQuery   = useQuery({ queryKey: ['places'],   queryFn: placeAPI.listPlaces })
 
-  const [creating, setCreating] = useState(false)
-  const [createError, setCreateError] = useState(null)
-
   const createMutation = useMutation({
     mutationFn: billAPI.createBill,
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['bills'] }); setModal({ open: false, bill: null }) },
@@ -108,7 +105,7 @@ export default function Bills() {
   const challans = challansQuery.data?.items ?? []
 
   // For new bill creation, only show challans that don't already have a bill
-  const billedChallanIds = useMemo(() => new Set(allRows.map((b) => String(b.challan_id))), [allRows])
+  const billedChallanIds = useMemo(() => new Set(allRows.flatMap((b) => (b.challans || []).map(c => String(c.id)))), [allRows])
   const availableChallans = useMemo(
     () => challans.filter((c) => !billedChallanIds.has(String(c.id))),
     [challans, billedChallanIds]
@@ -127,15 +124,17 @@ export default function Bills() {
     if (searchTerm) {
       const q = searchTerm.toLowerCase()
       rows = rows.filter((b) => {
-        const challan = challans.find((c) => String(c.id) === String(b.challan_id))
-        const m = challanMeta[String(b.challan_id)] ?? {}
-        return (
-          (b.bill_no ?? '').toLowerCase().includes(q) ||
-          (challan?.challan_no ?? '').toLowerCase().includes(q) ||
-          (m.customerName ?? '').toLowerCase().includes(q) ||
-          (m.fromPlace ?? '').toLowerCase().includes(q) ||
-          (m.toPlace ?? '').toLowerCase().includes(q)
-        )
+        const hasMatch = (b.challans || []).some((bc) => {
+          const challan = challans.find((c) => String(c.id) === String(bc.id))
+          const m = challanMeta[String(bc.id)] ?? {}
+          return (
+            (challan?.challan_no ?? '').toLowerCase().includes(q) ||
+            (m.customerName ?? '').toLowerCase().includes(q) ||
+            (m.fromPlace ?? '').toLowerCase().includes(q) ||
+            (m.toPlace ?? '').toLowerCase().includes(q)
+          )
+        })
+        return (b.bill_no ?? '').toLowerCase().includes(q) || hasMatch
       })
     }
 
@@ -148,14 +147,12 @@ export default function Bills() {
       
       console.log('Bills - Today filter:', { today, tomorrow })
       rows = rows.filter(b => {
-        const challan = challans.find((c) => String(c.id) === String(b.challan_id))
-        if (!challan?.challan_date) {
-          console.log('Bills - No challan_date for bill record:', b, 'challan:', challan)
-          return false
-        }
-        const challanDate = new Date(challan.challan_date)
-        console.log('Bills - Date for record:', challanDate, 'Original:', challan.challan_date)
-        return challanDate >= today && challanDate < tomorrow
+        return (b.challans || []).some(bc => {
+          const challan = challans.find((c) => String(c.id) === String(bc.id))
+          if (!challan?.challan_date) return false
+          const challanDate = new Date(challan.challan_date)
+          return challanDate >= today && challanDate < tomorrow
+        })
       })
     } else if (activeFilter === 'yesterday') {
       const yesterday = new Date()
@@ -166,14 +163,12 @@ export default function Bills() {
       
       console.log('Bills - Yesterday filter:', { yesterday, today })
       rows = rows.filter(b => {
-        const challan = challans.find((c) => String(c.id) === String(b.challan_id))
-        if (!challan?.challan_date) {
-          console.log('Bills - No challan_date for bill record:', b, 'challan:', challan)
-          return false
-        }
-        const challanDate = new Date(challan.challan_date)
-        console.log('Bills - Date for record:', challanDate, 'Original:', challan.challan_date)
-        return challanDate >= yesterday && challanDate < today
+        return (b.challans || []).some(bc => {
+          const challan = challans.find((c) => String(c.id) === String(bc.id))
+          if (!challan?.challan_date) return false
+          const challanDate = new Date(challan.challan_date)
+          return challanDate >= yesterday && challanDate < today
+        })
       })
     } else if (activeFilter === '7days') {
       const sevenDaysAgo = new Date()
@@ -182,56 +177,41 @@ export default function Bills() {
       
       console.log('Bills - 7 days filter:', { sevenDaysAgo })
       rows = rows.filter(b => {
-        const challan = challans.find((c) => String(c.id) === String(b.challan_id))
-        if (!challan?.challan_date) {
-          console.log('Bills - No challan_date for bill record:', b, 'challan:', challan)
-          return false
-        }
-        const challanDate = new Date(challan.challan_date)
-        console.log('Bills - Date for record:', challanDate, 'Original:', challan.challan_date)
-        return challanDate >= sevenDaysAgo
+        return (b.challans || []).some(bc => {
+          const challan = challans.find((c) => String(c.id) === String(bc.id))
+          if (!challan?.challan_date) return false
+          const challanDate = new Date(challan.challan_date)
+          return challanDate >= sevenDaysAgo
+        })
       })
     } else if (activeFilter === 'custom') {
       console.log('Bills - Custom date range filter:', customFilter)
       rows = rows.filter(b => {
-        const challan = challans.find((c) => String(c.id) === String(b.challan_id))
-        if (!challan?.challan_date) {
-          console.log('Bills - No challan_date for bill record:', b, 'challan:', challan)
-          return false
-        }
-        const challanDate = new Date(challan.challan_date)
-        console.log('Bills - Date for record:', challanDate, 'Original:', challan.challan_date)
-        
-        if (customFilter.startDate && customFilter.endDate) {
-          const start = new Date(customFilter.startDate)
-          start.setHours(0, 0, 0, 0) // Start of start date
-          const end = new Date(customFilter.endDate)
-          end.setHours(23, 59, 59, 999) // End of end date
-          console.log('Bills - Date range filter:', { start, end })
-          return challanDate >= start && challanDate <= end
-        }
-        return true
+        return (b.challans || []).some(bc => {
+          const challan = challans.find((c) => String(c.id) === String(bc.id))
+          if (!challan?.challan_date) return false
+          const challanDate = new Date(challan.challan_date)
+          if (customFilter.startDate && customFilter.endDate) {
+            const start = new Date(customFilter.startDate)
+            start.setHours(0, 0, 0, 0)
+            const end = new Date(customFilter.endDate)
+            end.setHours(23, 59, 59, 999)
+            return challanDate >= start && challanDate <= end
+          }
+          return true
+        })
       })
     }
 
     // Apply source/destination/customer filters
     if (filterFrom) {
-      rows = rows.filter(b => {
-        const m = challanMeta[String(b.challan_id)]
-        return m?.sourceId === filterFrom
-      })
+      rows = rows.filter(b => (b.challans || []).some(bc => challanMeta[String(bc.id)]?.sourceId === filterFrom))
     }
     if (filterTo) {
-      rows = rows.filter(b => {
-        const m = challanMeta[String(b.challan_id)]
-        return m?.destinationId === filterTo
-      })
+      rows = rows.filter(b => (b.challans || []).some(bc => challanMeta[String(bc.id)]?.destinationId === filterTo))
     }
     if (filterCustomer) {
-      rows = rows.filter(b => {
-        const m = challanMeta[String(b.challan_id)]
-        return m?.customerId === filterCustomer
-      })
+      rows = rows.filter(b => (b.challans || []).some(bc => challanMeta[String(bc.id)]?.customerId === filterCustomer))
     }
 
     console.log('Bills - Filtered rows count:', rows.length)
@@ -253,12 +233,19 @@ export default function Bills() {
       key: 'challan',
       header: 'Challan',
       render: (r) => {
-        const challan = challans.find((c) => String(c.id) === String(r.challan_id))
-        const m = challanMeta[String(r.challan_id)] ?? {}
+        const cList = (r.challans || []).map(bc => challans.find(c => String(c.id) === String(bc.id)))
         return (
           <div className="flex flex-col gap-0.5">
-            <span className="text-xs font-bold text-zinc-800">{challan?.challan_no ?? '—'}</span>
-            <span className="text-[11px] text-zinc-400">{m.customerName ?? ''} <br /> {m.route ? `  ${m.route}` : ''}</span>
+            {cList.map(c => {
+              if (!c) return null
+              const m = challanMeta[String(c.id)] ?? {}
+              return (
+                <div key={c.id}>
+                  <span className="text-xs font-bold text-zinc-800">{c.challan_no ?? '—'}</span>
+                  <span className="text-[11px] text-zinc-400 ml-1">({m.customerName ?? ''})</span>
+                </div>
+              )
+            })}
           </div>
         )
       },
@@ -267,10 +254,11 @@ export default function Bills() {
       key: 'amount',
       header: 'Amount',
       render: (r) => {
-        const challan = challans.find((c) => String(c.id) === String(r.challan_id))
-        return challan?.total_amount
-          ? <span className="text-xs font-bold text-zinc-900">₹{Number(challan.total_amount).toLocaleString('en-IN')}</span>
-          : <span className="text-xs text-zinc-400">—</span>
+        const total = (r.challans || []).reduce((acc, bc) => {
+          const c = challans.find(x => String(x.id) === String(bc.id))
+          return acc + (Number(c?.total_amount) || 0)
+        }, 0)
+        return <span className="text-xs font-bold text-zinc-900">₹{total.toLocaleString('en-IN')}</span>
       },
     },
     {
@@ -310,7 +298,7 @@ export default function Bills() {
           <PageStatCard
             title="Total Amount"
             value={`₹${challans
-              .filter((c) => allRows.some((b) => String(b.challan_id) === String(c.id)))
+              .filter((c) => allRows.some((b) => (b.challans || []).some(bc => String(bc.id) === String(c.id))))
               .reduce((s, c) => s + (Number(c.total_amount) || 0), 0)
               .toLocaleString('en-IN')}`}
             icon={<FaRupeeSign size={20} />}
@@ -522,34 +510,13 @@ export default function Bills() {
           defaultValues={modal.bill}
           challans={modal.bill ? challans : availableChallans}
           challanMeta={challanMeta}
-          loading={creating || updateMutation.isPending}
-          serverError={createError ?? updateMutation.error?.message ?? null}
+          loading={createMutation.isPending || updateMutation.isPending}
+          serverError={createMutation.error?.message ?? updateMutation.error?.message ?? null}
           onSubmit={async (values) => {
             if (modal.bill) {
               await updateMutation.mutateAsync({ id: modal.bill.id, values })
             } else {
-              // create one bill per selected challan using direct API calls
-              // (avoids single mutation's onSuccess closing the modal after the first bill)
-              const { bill_no, challan_ids } = values
-              setCreating(true)
-              setCreateError(null)
-              try {
-                await Promise.all(
-                  challan_ids.map((challan_id, index) => {
-                    // Each bill needs a unique bill_no — append suffix when multiple selected
-                    const uniqueBillNo = challan_ids.length > 1
-                      ? `${bill_no}-${index + 1}`
-                      : bill_no
-                    return billAPI.createBill({ bill_no: uniqueBillNo, challan_id })
-                  })
-                )
-                qc.invalidateQueries({ queryKey: ['bills'] })
-                setModal({ open: false, bill: null })
-              } catch (err) {
-                setCreateError(err?.message ?? 'Failed to create bills')
-              } finally {
-                setCreating(false)
-              }
+              await createMutation.mutateAsync(values)
             }
           }}
         />
@@ -564,8 +531,8 @@ export default function Bills() {
 
       {view.record && (() => {
         const r = view.record
-        const challan = challans.find((c) => String(c.id) === String(r.challan_id))
-        const m = challanMeta[String(r.challan_id)] ?? {}
+        const cList = (r.challans || []).map(bc => challans.find(c => String(c.id) === String(bc.id))).filter(Boolean)
+        const total = cList.reduce((acc, c) => acc + (Number(c.total_amount) || 0), 0)
         return (
           <DetailModal
             open={view.open}
@@ -573,11 +540,8 @@ export default function Bills() {
             title="Bill Details"
             data={{
               'Bill No': r.bill_no,
-              'Challan No': challan?.challan_no ?? '—',
-              'Customer': m.customerName || '—',
-              'Route': m.route || '—',
-              'Total Amount': challan?.total_amount ? `₹${Number(challan.total_amount).toLocaleString('en-IN')}` : '—',
-              'Balance': challan?.balance ? `₹${Number(challan.balance).toLocaleString('en-IN')}` : '—',
+              'Challans': cList.map(c => c.challan_no).join(', ') || '—',
+              'Total Amount': total ? `₹${total.toLocaleString('en-IN')}` : '—',
             }}
           />
         )
