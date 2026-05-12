@@ -30,6 +30,7 @@ import TransactionPurposes from '../pages/dashboard/TransactionPurposes.jsx'
 import ProductTransfers from '../pages/dashboard/ProductTransfers.jsx'
 import Reports from '../pages/dashboard/Reports.jsx'
 import BalanceSheet from '../pages/dashboard/BalanceSheet.jsx'
+import Expense from '../pages/dashboard/Expense.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { usePermissions } from '../hooks/usePermissions.js'
 
@@ -113,6 +114,7 @@ export const router = createBrowserRouter([
       { path: 'challans', element: <Challans /> },
       { path: 'bills', element: <Bills /> },
       { path: 'ledger', element: <Ledger /> },
+      { path: 'expense', element: <Expense /> },
       { path: 'suppliers', element: <Suppliers /> },
       { path: 'products', element: <Products /> },
       { path: 'purchase', element: <Purchase /> },
@@ -122,13 +124,16 @@ export const router = createBrowserRouter([
       { path: 'transaction-purposes', element: <TransactionPurposes /> },
       { path: 'product-transfers', element: <ProductTransfers /> },
       { path: 'balance-sheet', element: <BalanceSheet /> },
-      { path: 'reports/attendance',         element: <Reports reportType="attendance" /> },
-      { path: 'reports/salary',             element: <Reports reportType="salary" /> },
-      { path: 'reports/ledger',             element: <Reports reportType="ledger" /> },
-      { path: 'reports/products',           element: <Reports reportType="products" /> },
-      { path: 'reports/purchase',           element: <Reports reportType="purchase" /> },
-      { path: 'reports/product-transfers',  element: <Reports reportType="product-transfers" /> },
-      { path: 'reports/trips',              element: <Reports reportType="trips" /> },
+      { path: 'reports/attendance', element: <Reports reportType="attendance" /> },
+      { path: 'reports/salary', element: <Reports reportType="salary" /> },
+      { path: 'reports/ledger', element: <Reports reportType="ledger" /> },
+      { path: 'reports/products', element: <Reports reportType="products" /> },
+      { path: 'reports/purchase', element: <Reports reportType="purchase" /> },
+      { path: 'reports/product-transfers', element: <Reports reportType="product-transfers" /> },
+      { path: 'reports/trips', element: <Reports reportType="trips" /> },
+      { path: 'reports/bills', element: <Reports reportType="bills" /> },
+      { path: 'reports/vehicle-income', element: <Reports reportType="vehicle-income" /> },
+      { path: 'reports/vehicle-expenditure', element: <Reports reportType="vehicle-expenditure" /> },
     ],
   },
   { path: '*', element: <NotFound /> },

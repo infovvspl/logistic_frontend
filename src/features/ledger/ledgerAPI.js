@@ -90,3 +90,45 @@ export async function deleteLedger(id) {
     return data
   } catch (err) { throw new Error(extractError(err, 'Failed to delete ledger entry')) }
 }
+
+// Expense-specific functions
+export async function listExpenses() {
+  try {
+    if (USE_MOCKS) return { items: mockLedger.filter(l => l.transaction_type === 'expense') }
+    const { data } = await api.get('/ledger?type=expense')
+    return normalizeList(data)
+  } catch (err) { throw new Error(extractError(err, 'Failed to load expenses')) }
+}
+
+export async function createExpense(payload) {
+  try {
+    const clean = cleanPayload({ ...payload, transaction_type: 'expense' })
+    if (USE_MOCKS) {
+      const next = { ...clean, id: `exp${Date.now()}`, transaction_type: 'expense' }
+      mockLedger = [next, ...mockLedger]
+      return next
+    }
+    const { data } = await api.post('/ledger', { ...clean, transaction_type: 'expense' })
+    return normalize(data?.data ?? data)
+  } catch (err) { throw new Error(extractError(err, 'Failed to create expense')) }
+}
+
+export async function updateExpense(id, payload) {
+  try {
+    const clean = cleanPayload({ ...payload, transaction_type: 'expense' })
+    if (USE_MOCKS) {
+      mockLedger = mockLedger.map((l) => l.id === id ? { ...l, ...clean, transaction_type: 'expense' } : l)
+      return mockLedger.find((l) => l.id === id)
+    }
+    const { data } = await api.patch(`/ledger/${id}`, { ...clean, transaction_type: 'expense' })
+    return normalize(data?.data ?? data)
+  } catch (err) { throw new Error(extractError(err, 'Failed to update expense')) }
+}
+
+export async function deleteExpense(id) {
+  try {
+    if (USE_MOCKS) { mockLedger = mockLedger.filter((l) => l.id !== id); return { ok: true } }
+    const { data } = await api.delete(`/ledger/${id}`)
+    return data
+  } catch (err) { throw new Error(extractError(err, 'Failed to delete expense')) }
+}

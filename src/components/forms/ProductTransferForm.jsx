@@ -14,16 +14,16 @@ const UNIT_OPTIONS = [
   { value: 'bag', label: 'Bag' },
 ]
 
-function UserPicker({ label, users, selectedId, onSelect, onClear }) {
+function VehiclePicker({ label, vehicles, selectedId, onSelect, onClear }) {
   const [search, setSearch] = useState('')
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
-    return users.filter((u) =>
-      (u.name ?? '').toLowerCase().includes(q) || (u.email ?? '').toLowerCase().includes(q)
+    return vehicles.filter((v) =>
+      (v.registration_number ?? '').toLowerCase().includes(q) || (v.vehicle_model ?? '').toLowerCase().includes(q)
     )
-  }, [users, search])
+  }, [vehicles, search])
 
-  const selected = users.find((u) => String(u.id) === String(selectedId))
+  const selected = vehicles.find((v) => String(v.id) === String(selectedId))
 
   return (
     <div className="space-y-1.5">
@@ -31,8 +31,8 @@ function UserPicker({ label, users, selectedId, onSelect, onClear }) {
       {selected ? (
         <div className="flex items-center justify-between rounded-xl border border-blue-100 bg-blue-50 px-3 py-2.5 text-sm text-blue-700">
           <div>
-            <div className="font-semibold">{selected.name || selected.email}</div>
-            <div className="text-xs text-blue-400">{selected.email || ''}</div>
+            <div className="font-semibold">{selected.registration_number}</div>
+            <div className="text-xs text-blue-400">{selected.vehicle_model || ''}</div>
           </div>
           <button type="button" onClick={onClear} className="ml-2 p-1 rounded hover:bg-blue-100"><FiX size={13} /></button>
         </div>
@@ -45,14 +45,14 @@ function UserPicker({ label, users, selectedId, onSelect, onClear }) {
               value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
           <div className="max-h-36 overflow-y-auto rounded-xl border border-zinc-200 bg-white text-sm divide-y divide-zinc-50">
-            {filtered.length > 0 ? filtered.map((u) => (
-              <button key={u.id} type="button"
+            {filtered.length > 0 ? filtered.map((v) => (
+              <button key={v.id} type="button"
                 className="w-full px-3 py-2.5 text-left hover:bg-zinc-50 transition-colors"
-                onClick={() => { onSelect(u.id); setSearch('') }}>
-                <div className="font-medium text-zinc-900">{u.name || u.email}</div>
-                <div className="text-xs text-zinc-400">{u.email || ''}</div>
+                onClick={() => { onSelect(v); setSearch('') }}>
+                <div className="font-medium text-zinc-900">{v.registration_number}</div>
+                <div className="text-xs text-zinc-400">{v.vehicle_model || ''}</div>
               </button>
-            )) : <div className="p-3 text-center text-zinc-400 text-xs">No users found</div>}
+            )) : <div className="p-3 text-center text-zinc-400 text-xs">No vehicles found</div>}
           </div>
         </div>
       )}
@@ -62,7 +62,7 @@ function UserPicker({ label, users, selectedId, onSelect, onClear }) {
 
 export default function ProductTransferForm({
   defaultValues, onSubmit, loading, serverError = null,
-  products = [], users = [],
+  products = [], vehicles = [],
 }) {
   const isEdit = !!defaultValues
 
@@ -70,8 +70,8 @@ export default function ProductTransferForm({
     product_id: defaultValues?.product_id ?? '',
     unit:       defaultValues?.unit       ?? '',
     quantity:   defaultValues?.quantity   ?? '',
-    given_from: defaultValues?.given_from ?? '',
-    given_to:   defaultValues?.given_to   ?? '',
+    given_to_vehicle:   defaultValues?.given_to_vehicle   ?? '',
+    given_to_vehicle_name: defaultValues?.given_to_vehicle_name ?? '',
   })
   const [errors, setErrors] = useState({})
 
@@ -86,9 +86,7 @@ export default function ProductTransferForm({
     const e = {}
     if (!form.product_id) e.product_id = 'Product is required'
     if (!form.quantity || Number(form.quantity) <= 0) e.quantity = 'Enter a valid quantity'
-    if (!form.given_from) e.given_from = 'Select who is giving'
-    if (!form.given_to) e.given_to = 'Select who is receiving'
-    if (form.given_from && form.given_to && form.given_from === form.given_to) e.given_to = 'Cannot transfer to the same person'
+    if (!form.given_to_vehicle) e.given_to_vehicle = 'Select a vehicle'
     return e
   }
 
@@ -98,9 +96,6 @@ export default function ProductTransferForm({
     if (Object.keys(errs).length) { setErrors(errs); return }
     onSubmit(form)
   }
-
-  const fromUser = users.find((u) => String(u.id) === String(form.given_from))
-  const toUser   = users.find((u) => String(u.id) === String(form.given_to))
 
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-4">
@@ -121,32 +116,25 @@ export default function ProductTransferForm({
         </div>
       </div>
 
-      {/* Transfer direction */}
-      <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] gap-3 items-start">
-        <div className="space-y-1">
-          <UserPicker label="Given From" users={users} selectedId={form.given_from}
-            onSelect={(id) => set('given_from', id)} onClear={() => set('given_from', '')} />
-          {errors.given_from && <p className="text-xs text-rose-600 font-medium">{errors.given_from}</p>}
-        </div>
-
-        <div className="flex items-center justify-center pt-7">
-          <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-blue-50 border border-blue-100 text-blue-600">
-            <FiArrowRight size={16} />
-          </div>
-        </div>
-
-        <div className="space-y-1">
-          <UserPicker label="Given To" users={users} selectedId={form.given_to}
-            onSelect={(id) => set('given_to', id)} onClear={() => set('given_to', '')} />
-          {errors.given_to && <p className="text-xs text-rose-600 font-medium">{errors.given_to}</p>}
-        </div>
+      {/* Transfer to vehicle */}
+      <div className="space-y-1">
+        <VehiclePicker label="Given To Vehicle" vehicles={vehicles} selectedId={form.given_to_vehicle}
+          onSelect={(v) => {
+            set('given_to_vehicle', v.id)
+            set('given_to_vehicle_name', v.registration_number)
+          }}
+          onClear={() => {
+            set('given_to_vehicle', '')
+            set('given_to_vehicle_name', '')
+          }} />
+        {errors.given_to_vehicle && <p className="text-xs text-rose-600 font-medium">{errors.given_to_vehicle}</p>}
       </div>
 
       {/* Transfer summary */}
-      {fromUser && toUser && form.quantity && (
+      {form.given_to_vehicle_name && form.quantity && (
         <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-100 text-xs font-semibold text-emerald-700">
           <FiArrowRight size={13} />
-          {form.quantity} {form.unit || 'units'} of product from {fromUser.name || fromUser.email} → {toUser.name || toUser.email}
+          {form.quantity} {form.unit || 'units'} of product → {form.given_to_vehicle_name}
         </div>
       )}
 

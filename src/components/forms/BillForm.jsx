@@ -77,7 +77,7 @@ export default function BillForm({
       onSubmit(form)
     } else {
       // one bill per selected challan
-      onSubmit({ bill_no: form.bill_no, challan_ids: selectedIds })
+      onSubmit({ bill_no: form.bill_no, challan_id: selectedIds })
     }
   }
 
