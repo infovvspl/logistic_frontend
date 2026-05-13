@@ -34,7 +34,7 @@ export default function Bills() {
   const [filterCustomer, setFilterCustomer] = useState('')
 
   useEffect(() => {
-    function handler(e) { 
+    function handler(e) {
       if (filterRef.current && !filterRef.current.contains(e.target)) setFilterOpen(false)
       if (customFilterRef.current && !customFilterRef.current.contains(e.target)) setCustomFilterOpen(false)
     }
@@ -42,11 +42,11 @@ export default function Bills() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const billsQuery    = useQuery({ queryKey: ['bills'],    queryFn: billAPI.listBills })
+  const billsQuery = useQuery({ queryKey: ['bills'], queryFn: billAPI.listBills })
   const challansQuery = useQuery({ queryKey: ['challans'], queryFn: challanAPI.listChallans })
-  const tripsQuery    = useQuery({ queryKey: ['trips'],    queryFn: tripAPI.listTrips })
+  const tripsQuery = useQuery({ queryKey: ['trips'], queryFn: tripAPI.listTrips })
   const customersQuery = useQuery({ queryKey: ['customers'], queryFn: customerAPI.listCustomers })
-  const placesQuery   = useQuery({ queryKey: ['places'],   queryFn: placeAPI.listPlaces })
+  const placesQuery = useQuery({ queryKey: ['places'], queryFn: placeAPI.listPlaces })
 
   const createMutation = useMutation({
     mutationFn: billAPI.createBill,
@@ -63,41 +63,41 @@ export default function Bills() {
 
   const customerById = useMemo(() => {
     const m = new Map()
-    ;(customersQuery.data?.items ?? []).forEach((c) => m.set(String(c.id), c))
+      ; (customersQuery.data?.items ?? []).forEach((c) => m.set(String(c.id), c))
     return m
   }, [customersQuery.data])
 
   const placeById = useMemo(() => {
     const m = new Map()
-    ;(placesQuery.data?.items ?? []).forEach((p) => m.set(String(p.id), p.name))
+      ; (placesQuery.data?.items ?? []).forEach((p) => m.set(String(p.id), p.name))
     return m
   }, [placesQuery.data])
 
   const tripById = useMemo(() => {
     const m = new Map()
-    ;(tripsQuery.data?.items ?? []).forEach((t) => m.set(String(t.id), t))
+      ; (tripsQuery.data?.items ?? []).forEach((t) => m.set(String(t.id), t))
     return m
   }, [tripsQuery.data])
 
   // Build challan metadata: customer name + route from trip
   const challanMeta = useMemo(() => {
     const meta = {}
-    ;(challansQuery.data?.items ?? []).forEach((c) => {
-      const trip = tripById.get(String(c.trip_id))
-      const customer = trip ? customerById.get(String(trip.customer_id)) : null
-      const from = trip ? (placeById.get(String(trip.source)) ?? '') : ''
-      const to   = trip ? (placeById.get(String(trip.destination)) ?? '') : ''
-      meta[String(c.id)] = {
-        customerName: customer?.customer_name ?? '',
-        route: from && to ? `${from} → ${to}` : '',
-        fromPlace: from,
-        toPlace: to,
-        tripId: trip ? String(trip.id) : '',
-        sourceId: trip ? String(trip.source) : '',
-        destinationId: trip ? String(trip.destination) : '',
-        customerId: trip ? String(trip.customer_id) : '',
-      }
-    })
+      ; (challansQuery.data?.items ?? []).forEach((c) => {
+        const trip = tripById.get(String(c.trip_id))
+        const customer = trip ? customerById.get(String(trip.customer_id)) : null
+        const from = trip ? (placeById.get(String(trip.source)) ?? '') : ''
+        const to = trip ? (placeById.get(String(trip.destination)) ?? '') : ''
+        meta[String(c.id)] = {
+          customerName: customer?.customer_name ?? '',
+          route: from && to ? `${from} → ${to}` : '',
+          fromPlace: from,
+          toPlace: to,
+          tripId: trip ? String(trip.id) : '',
+          sourceId: trip ? String(trip.source) : '',
+          destinationId: trip ? String(trip.destination) : '',
+          customerId: trip ? String(trip.customer_id) : '',
+        }
+      })
     return meta
   }, [challansQuery.data, tripById, customerById, placeById])
 
@@ -144,7 +144,7 @@ export default function Bills() {
       today.setHours(0, 0, 0, 0) // Start of today
       const tomorrow = new Date(today)
       tomorrow.setDate(tomorrow.getDate() + 1) // Start of tomorrow
-      
+
       console.log('Bills - Today filter:', { today, tomorrow })
       rows = rows.filter(b => {
         return (b.challans || []).some(bc => {
@@ -160,7 +160,7 @@ export default function Bills() {
       yesterday.setHours(0, 0, 0, 0) // Start of yesterday
       const today = new Date()
       today.setHours(0, 0, 0, 0) // Start of today
-      
+
       console.log('Bills - Yesterday filter:', { yesterday, today })
       rows = rows.filter(b => {
         return (b.challans || []).some(bc => {
@@ -174,7 +174,7 @@ export default function Bills() {
       const sevenDaysAgo = new Date()
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
       sevenDaysAgo.setHours(0, 0, 0, 0) // Start of 7 days ago
-      
+
       console.log('Bills - 7 days filter:', { sevenDaysAgo })
       rows = rows.filter(b => {
         return (b.challans || []).some(bc => {
@@ -374,20 +374,20 @@ export default function Bills() {
                   className="absolute right-0 p-2 top-full mt-2 w-52 bg-white rounded-2xl shadow-xl border border-zinc-100 overflow-hidden z-20"
                 >
                   {[
-                    { key: 'today',     label: 'Today' },
-                    { key: 'yesterday',  label: 'Yesterday' },
-                    { key: '7days',     label: 'Last 7 Days' },
-                    { key: 'custom',    label: 'Custom Filter' },
+                    { key: 'today', label: 'Today' },
+                    { key: 'yesterday', label: 'Yesterday' },
+                    { key: '7days', label: 'Last 7 Days' },
+                    { key: 'custom', label: 'Custom Filter' },
                   ].map((opt) => (
                     <button
                       key={opt.key}
-                      onClick={() => { 
+                      onClick={() => {
                         if (opt.key === 'custom') {
                           setCustomFilterOpen(true)
                         } else {
                           setActiveFilter(activeFilter === opt.key ? null : opt.key)
                         }
-                        setFilterOpen(false) 
+                        setFilterOpen(false)
                       }}
                       className="w-full flex items-center justify-between p-2 text-xs font-medium text-zinc-700 hover:bg-zinc-50 transition-colors"
                     >
@@ -429,7 +429,7 @@ export default function Bills() {
                         <FiX size={16} />
                       </button>
                     </div>
-                    
+
                     <div className="space-y-3">
                       <div className="space-y-2">
                         <label className="text-xs font-medium text-zinc-700">Start Date</label>
@@ -440,7 +440,7 @@ export default function Bills() {
                           className="w-full px-3 py-2 text-xs border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
                         />
                       </div>
-                      
+
                       <div className="space-y-2">
                         <label className="text-xs font-medium text-zinc-700">End Date</label>
                         <input

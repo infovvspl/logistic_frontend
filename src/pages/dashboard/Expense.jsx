@@ -8,19 +8,15 @@ import Modal from '../../components/ui/Modal.jsx'
 import EmptyState from '../../components/common/EmptyState.jsx'
 import ConfirmDialog from '../../components/common/ConfirmDialog.jsx'
 import DetailModal from '../../components/common/DetailModal.jsx'
-import LedgerForm from '../../components/forms/LedgerForm.jsx'
+import ExpenseForm from '../../components/forms/ExpenseForm.jsx'
 import * as ledgerAPI from '../../features/ledger/ledgerAPI.js'
-import * as tripAPI from '../../features/trips/tripAPI.js'
-import * as billAPI from '../../features/bills/billAPI.js'
-import * as challanAPI from '../../features/challans/challanAPI.js'
 import * as customerAPI from '../../features/customers/customerAPI.js'
 import * as userAPI from '../../features/users/userAPI.js'
 import * as companyAPI from '../../features/companies/companyAPI.js'
-import * as placeAPI from '../../features/places/placeAPI.js'
 import * as txnPurposeAPI from '../../features/transactionPurposes/transactionPurposeAPI.js'
 import * as vehicleAPI from '../../features/vehicles/vehicleAPI.js'
 
-export default function Ledger() {
+export default function Expense() {
   const qc = useQueryClient()
   const [searchTerm, setSearchTerm] = useState('')
   const [activeFilter, setActiveFilter] = useState(null)
@@ -29,9 +25,6 @@ export default function Ledger() {
   const filterRef = useRef(null)
   const customFilterRef = useRef(null)
   const [customFilter, setCustomFilter] = useState({ startDate: '', endDate: '' })
-  const [filterFrom, setFilterFrom] = useState('')
-  const [filterTo, setFilterTo] = useState('')
-  const [filterCustomer, setFilterCustomer] = useState('')
   const [modal, setModal] = useState({ open: false, entry: null })
   const [view, setView] = useState({ open: false, record: null })
   const [confirm, setConfirm] = useState({ open: false, id: null })
@@ -45,42 +38,30 @@ export default function Ledger() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const ledgerQuery   = useQuery({ queryKey: ['ledger'],    queryFn: ledgerAPI.listLedger })
-  const tripsQuery    = useQuery({ queryKey: ['trips'],     queryFn: tripAPI.listTrips })
-  const billsQuery    = useQuery({ queryKey: ['bills'],     queryFn: billAPI.listBills })
-  const challansQuery = useQuery({ queryKey: ['challans'],  queryFn: challanAPI.listChallans })
+  const expenseQuery = useQuery({ queryKey: ['expenses'], queryFn: ledgerAPI.listExpenses })
   const customersQuery = useQuery({ queryKey: ['customers'], queryFn: customerAPI.listCustomers })
-  const usersQuery    = useQuery({ queryKey: ['users'],     queryFn: userAPI.listUsers })
+  const usersQuery = useQuery({ queryKey: ['users'], queryFn: userAPI.listUsers })
   const companiesQuery = useQuery({ queryKey: ['companies'], queryFn: companyAPI.listCompanies })
-  const placesQuery   = useQuery({ queryKey: ['places'],                queryFn: placeAPI.listPlaces })
   const txnPurposesQuery = useQuery({ queryKey: ['transaction-purposes'], queryFn: txnPurposeAPI.listTransactionPurposes })
-  const vehiclesQuery   = useQuery({ queryKey: ['vehicles'],   queryFn: vehicleAPI.listVehicles })
+  const vehiclesQuery = useQuery({ queryKey: ['vehicles'], queryFn: vehicleAPI.listVehicles })
 
   const createMutation = useMutation({
-    mutationFn: ledgerAPI.createLedger,
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['ledger'] }); setModal({ open: false, entry: null }) },
+    mutationFn: ledgerAPI.createExpense,
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['expenses'] }); setModal({ open: false, entry: null }) },
   })
   const updateMutation = useMutation({
-    mutationFn: ({ id, values }) => ledgerAPI.updateLedger(id, values),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['ledger'] }); setModal({ open: false, entry: null }) },
+    mutationFn: ({ id, values }) => ledgerAPI.updateExpense(id, values),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['expenses'] }); setModal({ open: false, entry: null }) },
   })
   const deleteMutation = useMutation({
-    mutationFn: ledgerAPI.deleteLedger,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['ledger'] }),
+    mutationFn: ledgerAPI.deleteExpense,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['expenses'] }),
   })
 
   const customers = customersQuery.data?.items ?? []
-  const users     = usersQuery.data?.items ?? []
+  const users = usersQuery.data?.items ?? []
   const companies = companiesQuery.data?.items ?? []
-  const trips     = tripsQuery.data?.items ?? []
-  const bills     = billsQuery.data?.items ?? []
-  const vehicles  = vehiclesQuery.data?.items ?? []
-
-  const billById = useMemo(() => {
-    const m = new Map()
-    bills.forEach((b) => m.set(String(b.id), b))
-    return m
-  }, [bills])
+  const vehicles = vehiclesQuery.data?.items ?? []
 
   const vehicleById = useMemo(() => {
     const m = new Map()
@@ -88,54 +69,17 @@ export default function Ledger() {
     return m
   }, [vehicles])
 
-  const placeById = useMemo(() => {
-    const m = new Map()
-    ;(placesQuery.data?.items ?? []).forEach((p) => m.set(String(p.id), p.name))
-    return m
-  }, [placesQuery.data])
-
   const customerById = useMemo(() => {
     const m = new Map()
     customers.forEach((c) => m.set(String(c.id), c))
     return m
   }, [customers])
 
-  const tripById = useMemo(() => {
+  const userById = useMemo(() => {
     const m = new Map()
-    trips.forEach((t) => m.set(String(t.id), t))
+    users.forEach((u) => m.set(String(u.id), u))
     return m
-  }, [trips])
-
-  // trip display labels: "CustomerName · From → To"
-  const tripMeta = useMemo(() => {
-    const meta = {}
-    trips.forEach((t) => {
-      const customer = customerById.get(String(t.customer_id))
-      const from = placeById.get(String(t.source)) ?? ''
-      const to   = placeById.get(String(t.destination)) ?? ''
-      meta[String(t.id)] = {
-        label: [from && to ? `${from} → ${to}` : '', customer?.customer_name ?? ''].filter(Boolean).join(' · ') || t.id,
-        sub: customer?.customer_name ?? '',
-      }
-    })
-    return meta
-  }, [trips, customerById, placeById])
-
-  // map trip_id → bill (trip → challan → bill)
-  const billByTripId = useMemo(() => {
-    const challans = challansQuery.data?.items ?? []
-    // challan_id → trip_id
-    const challanTripMap = new Map()
-    challans.forEach((c) => { if (c.trip_id) challanTripMap.set(String(c.id), String(c.trip_id)) })
-    // trip_id → bill
-    const m = new Map()
-    bills.forEach((b) => {
-      if (!b.challan_id) return
-      const tripId = challanTripMap.get(String(b.challan_id))
-      if (tripId) m.set(tripId, b)
-    })
-    return m
-  }, [bills, challansQuery.data])
+  }, [users])
 
   // Build entity lookup for display
   const entityLabel = useMemo(() => {
@@ -148,7 +92,7 @@ export default function Ledger() {
 
   const getEntityName = (type, id) => entityLabel[`${type}:${id}`] || id || '—'
 
-  const allRows = ledgerQuery.data?.items ?? []
+  const allRows = expenseQuery.data?.items ?? []
 
   const totalAmount = allRows.reduce((s, r) => s + (Number(r.amount) || 0), 0)
 
@@ -159,10 +103,9 @@ export default function Ledger() {
       const q = searchTerm.toLowerCase()
       rows = rows.filter((r) =>
         (r.transaction_type ?? '').toLowerCase().includes(q) ||
-        (r.payer_type ?? '').toLowerCase().includes(q) ||
-        (r.payee_type ?? '').toLowerCase().includes(q) ||
-        getEntityName(r.payer_type, r.payer_id).toLowerCase().includes(q) ||
-        getEntityName(r.payee_type, r.payee_id).toLowerCase().includes(q)
+        (r.expense_head ?? '').toLowerCase().includes(q) ||
+        (r.bill_no ?? '').toLowerCase().includes(q) ||
+        getEntityName(r.payer_type, r.payer_id).toLowerCase().includes(q)
       )
     }
 
@@ -188,44 +131,18 @@ export default function Ledger() {
       rows = rows.filter((r) => { const d = getDate(r); return d && d >= start && d <= end })
     }
 
-    if (filterFrom) {
-      rows = rows.filter((r) => {
-        if (!r.trip_id) return false
-        const trip = tripById.get(String(r.trip_id))
-        return trip && String(trip.source) === filterFrom
-      })
-    }
-    if (filterTo) {
-      rows = rows.filter((r) => {
-        if (!r.trip_id) return false
-        const trip = tripById.get(String(r.trip_id))
-        return trip && String(trip.destination) === filterTo
-      })
-    }
-    if (filterCustomer) {
-      rows = rows.filter((r) => {
-        if (!r.trip_id) return false
-        const trip = tripById.get(String(r.trip_id))
-        return trip && String(trip.customer_id) === filterCustomer
-      })
-    }
-
     return rows
-  }, [allRows, searchTerm, entityLabel, activeFilter, customFilter, filterFrom, filterTo, filterCustomer, tripById])
+  }, [allRows, searchTerm, entityLabel, activeFilter, customFilter])
 
   const columns = useMemo(() => [
     {
-      key: 'purpose',
-      header: 'Purpose',
-      render: (r) => {
-        const p = (txnPurposesQuery.data?.items ?? []).find((x) => String(x.id) === String(r.transaction_purpose))
-        const label = p?.transaction_purpose_name ?? '—'
-        return (
-          <span className="px-3 py-1.5 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-semibold text-xs">
-            {label}
-          </span>
-        )
-      },
+      key: 'expense_head',
+      header: 'Expense Head',
+      render: (r) => (
+        <span className="px-3 py-1.5 rounded-xl bg-orange-50 border border-orange-100 text-orange-700 font-semibold text-xs">
+          {r.expense_head || '—'}
+        </span>
+      ),
     },
     {
       key: 'amount',
@@ -246,37 +163,71 @@ export default function Ledger() {
       ),
     },
     {
-      key: 'payer',
-      header: 'Payer',
+      key: 'purpose',
+      header: 'Purpose',
+      render: (r) => {
+        const p = (txnPurposesQuery.data?.items ?? []).find((x) => String(x.id) === String(r.transaction_purpose))
+        return (
+          <span className="text-xs font-medium text-zinc-700">
+            {p?.transaction_purpose_name || '—'}
+          </span>
+        )
+      },
+    },
+    {
+      key: 'bill_no',
+      header: 'Bill No',
       render: (r) => (
-        <div className="flex flex-col gap-0.5">
-          <span className="text-xs font-bold text-zinc-800">{getEntityName(r.payer_type, r.payer_id)}</span>
-          <span className="text-[10px] text-zinc-400 uppercase tracking-wider">{r.payer_type}</span>
-        </div>
+        <span className="text-xs font-mono text-zinc-600">
+          {r.bill_no || '—'}
+        </span>
       ),
     },
     {
-      key: 'payee',
-      header: 'Payee',
-      render: (r) => (
-        <div className="flex flex-col gap-0.5">
-          <span className="text-xs font-bold text-zinc-800">{getEntityName(r.payee_type, r.payee_id)}</span>
-          <span className="text-[10px] text-zinc-400 uppercase tracking-wider">{r.payee_type}</span>
-        </div>
-      ),
+      key: 'vehicle',
+      header: 'Vehicle',
+      render: (r) => {
+        if (!r.vehicle_id) return <span className="text-zinc-400 text-xs">—</span>
+        const v = vehicleById.get(String(r.vehicle_id))
+        return v ? (
+          <span className="text-xs font-medium text-zinc-700">{v.registration_number}</span>
+        ) : <span className="text-zinc-400 text-xs">{r.vehicle_id}</span>
+      },
+    },
+    {
+      key: 'customer',
+      header: 'Customer',
+      render: (r) => {
+        if (!r.customer_id) return <span className="text-zinc-400 text-xs">—</span>
+        const c = customerById.get(String(r.customer_id))
+        return c ? (
+          <span className="text-xs font-medium text-zinc-700">{c.customer_name || c.name}</span>
+        ) : <span className="text-zinc-400 text-xs">{r.customer_id}</span>
+      },
+    },
+    {
+      key: 'driver',
+      header: 'Driver',
+      render: (r) => {
+        if (!r.driver_id) return <span className="text-zinc-400 text-xs">—</span>
+        const d = userById.get(String(r.driver_id))
+        return d ? (
+          <span className="text-xs font-medium text-zinc-700">{d.name}</span>
+        ) : <span className="text-zinc-400 text-xs">{r.driver_id}</span>
+      },
     },
     {
       key: 'actions',
       header: 'Actions',
       render: (r) => (
         <div className="flex justify-end gap-1.5">
-          <ActionBtn icon={<FiEye />} onClick={() => setView({ open: true, record: r })} hover="hover:text-indigo-600 hover:bg-indigo-50" />
+          <ActionBtn icon={<FiEye />} onClick={() => setView({ open: true, record: r })} hover="hover:text-orange-600 hover:bg-orange-50" />
           <ActionBtn icon={<FiEdit2 />} onClick={() => setModal({ open: true, entry: r })} hover="hover:text-amber-600 hover:bg-amber-50" />
           <ActionBtn icon={<FiTrash2 />} onClick={() => setConfirm({ open: true, id: r.id })} hover="hover:text-red-600 hover:bg-red-50" />
         </div>
       ),
     },
-  ], [entityLabel, txnPurposesQuery.data])
+  ], [entityLabel, txnPurposesQuery.data, vehicleById, customerById, userById])
 
   return (
     <div className="min-h-screen p-6">
@@ -284,65 +235,30 @@ export default function Ledger() {
 
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
-            <h1 className="text-4xl font-black text-zinc-900 tracking-tight">Ledger</h1>
-            <p className="text-zinc-500 font-medium">Track all financial transactions and entries.</p>
+            <h1 className="text-4xl font-black text-zinc-900 tracking-tight">Expenses</h1>
+            <p className="text-zinc-500 font-medium">Track and manage all company expenses.</p>
           </div>
           <Button
             variant="primary"
-            className="bg-zinc-900 hover:bg-indigo-600 text-white p-4 rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.2)] transition-all active:scale-95"
+            className="bg-orange-600 hover:bg-orange-700 text-white p-4 rounded-2xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.2)] transition-all active:scale-95"
             leftIcon={<FiPlus className="stroke-[3px]" />}
             onClick={() => setModal({ open: true, entry: null })}
           >
-            New Entry
+            New Expense
           </Button>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <StatCard title="Total Entries" value={allRows.length} color="from-indigo-500 to-blue-500" />
-          <StatCard title="Total Amount" value={`₹${totalAmount.toLocaleString('en-IN')}`} color="from-emerald-500 to-teal-500" icon={<FiArrowDownLeft />} />
+          <StatCard title="Total Expenses" value={allRows.length} color="from-orange-500 to-red-500" />
+          <StatCard title="Total Amount" value={`₹${totalAmount.toLocaleString('en-IN')}`} color="from-orange-500 to-amber-500" icon={<FiArrowDownLeft />} />
         </div>
 
         <div className="flex gap-3">
           <div className="relative flex-1">
             <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-400 text-lg" />
-            <input type="text" placeholder="Search by type, payer or payee..."
-              className="w-full pl-14 pr-6 py-5 bg-white border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all font-medium text-zinc-700 placeholder:text-zinc-400"
+            <input type="text" placeholder="Search by expense head, bill no, or payer..."
+              className="w-full pl-14 pr-6 py-5 bg-white border-none rounded-2xl shadow-sm focus:ring-2 focus:ring-orange-500/20 outline-none transition-all font-medium text-zinc-700 placeholder:text-zinc-400"
               value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-          </div>
-
-          <div className="flex gap-2">
-            <select
-              value={filterFrom}
-              onChange={(e) => setFilterFrom(e.target.value)}
-              className="px-4 py-2 bg-white border border-zinc-200 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20"
-            >
-              <option value="">All From</option>
-              {(placesQuery.data?.items ?? []).map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-
-            <select
-              value={filterTo}
-              onChange={(e) => setFilterTo(e.target.value)}
-              className="px-4 py-2 bg-white border border-zinc-200 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20"
-            >
-              <option value="">All To</option>
-              {(placesQuery.data?.items ?? []).map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-
-            <select
-              value={filterCustomer}
-              onChange={(e) => setFilterCustomer(e.target.value)}
-              className="px-4 py-2 bg-white border border-zinc-200 rounded-2xl text-sm font-medium outline-none focus:ring-2 focus:ring-indigo-500/20"
-            >
-              <option value="">All Customers</option>
-              {customers.map(c => (
-                <option key={c.id} value={c.id}>{c.customer_name}</option>
-              ))}
-            </select>
           </div>
 
           {/* Date Filter dropdown */}
@@ -350,7 +266,7 @@ export default function Ledger() {
             <button
               onClick={() => setFilterOpen((o) => !o)}
               className={`flex items-center gap-2 px-5 py-5 rounded-2xl font-semibold text-sm transition-all shadow-sm border
-                ${activeFilter && activeFilter !== 'custom' ? 'bg-zinc-900 text-white border-transparent' : 'bg-white text-zinc-600 border-zinc-100 hover:border-zinc-200'}`}
+                ${activeFilter && activeFilter !== 'custom' ? 'bg-orange-600 text-white border-transparent' : 'bg-white text-zinc-600 border-zinc-100 hover:border-zinc-200'}`}
             >
               <FiFilter size={16} />
               {activeFilter === 'today' ? 'Today' : activeFilter === 'yesterday' ? 'Yesterday' : activeFilter === '7days' ? '7 Days' : activeFilter === 'custom' ? 'Custom' : 'Filter'}
@@ -425,7 +341,7 @@ export default function Ledger() {
                           type="date"
                           value={customFilter.startDate}
                           onChange={(e) => setCustomFilter(prev => ({ ...prev, startDate: e.target.value }))}
-                          className="w-full px-3 py-2 text-xs border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
+                          className="w-full px-3 py-2 text-xs border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600/20"
                         />
                       </div>
                       <div className="space-y-2">
@@ -435,7 +351,7 @@ export default function Ledger() {
                           value={customFilter.endDate}
                           onChange={(e) => setCustomFilter(prev => ({ ...prev, endDate: e.target.value }))}
                           min={customFilter.startDate}
-                          className="w-full px-3 py-2 text-xs border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900/20"
+                          className="w-full px-3 py-2 text-xs border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-600/20"
                         />
                       </div>
                     </div>
@@ -443,7 +359,7 @@ export default function Ledger() {
                       <button
                         onClick={() => { setActiveFilter('custom'); setCustomFilterOpen(false) }}
                         disabled={!customFilter.startDate || !customFilter.endDate}
-                        className="flex-1 px-4 py-2 text-xs font-semibold text-white bg-zinc-900 rounded-lg hover:bg-zinc-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex-1 px-4 py-2 text-xs font-semibold text-white bg-orange-600 rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                       >
                         Apply Filter
                       </button>
@@ -463,21 +379,21 @@ export default function Ledger() {
 
         <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-xl overflow-hidden">
           <div className="overflow-x-auto">
-            {ledgerQuery.isLoading ? (
-              <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-indigo-500 border-t-transparent rounded-full" /></div>
+            {expenseQuery.isLoading ? (
+              <div className="p-20 flex justify-center"><div className="animate-spin h-8 w-8 border-4 border-orange-500 border-t-transparent rounded-full" /></div>
             ) : filteredRows.length ? (
               <Table
                 columns={columns}
                 rows={filteredRows}
                 rowKey={(r) => r.id}
                 headerClassName="bg-zinc-900 !text-white uppercase text-[10px] tracking-[0.2em] font-black py-5 px-6"
-                rowClassName="group hover:bg-indigo-50/30 transition-colors border-b border-zinc-50 last:border-none"
+                rowClassName="group hover:bg-orange-50/30 transition-colors border-b border-zinc-50 last:border-none"
               />
             ) : (
               <EmptyState
-                title={searchTerm ? 'No results found' : 'No ledger entries yet'}
-                description={searchTerm ? `No entry matches "${searchTerm}"` : 'Create your first ledger entry.'}
-                actionLabel={!searchTerm ? 'New Entry' : undefined}
+                title={searchTerm ? 'No results found' : 'No expenses yet'}
+                description={searchTerm ? `No expense matches "${searchTerm}"` : 'Create your first expense entry.'}
+                actionLabel={!searchTerm ? 'New Expense' : undefined}
                 onAction={() => setModal({ open: true, entry: null })}
               />
             )}
@@ -485,17 +401,13 @@ export default function Ledger() {
         </div>
       </div>
 
-      <Modal open={modal.open} size="lg" title={modal.entry ? 'Edit Entry' : 'New Ledger Entry'} onClose={() => setModal({ open: false, entry: null })}>
-        <LedgerForm
+      <Modal open={modal.open} size="lg" title={modal.entry ? 'Edit Expense' : 'New Expense'} onClose={() => setModal({ open: false, entry: null })}>
+        <ExpenseForm
           defaultValues={modal.entry}
-          trips={trips}
-          tripMeta={tripMeta}
-          bills={bills}
-          billByTripId={billByTripId}
           customers={customers}
-          users={users}
-          companies={companies}
+          drivers={users}
           vehicles={vehicles}
+          companies={companies}
           transactionPurposes={txnPurposesQuery.data?.items ?? []}
           loading={createMutation.isPending || updateMutation.isPending}
           serverError={createMutation.error?.message ?? updateMutation.error?.message ?? null}
@@ -507,7 +419,7 @@ export default function Ledger() {
       </Modal>
 
       <ConfirmDialog
-        open={confirm.open} title="Delete entry?" description="This ledger entry will be permanently deleted."
+        open={confirm.open} title="Delete expense?" description="This expense will be permanently deleted."
         danger confirmText="Delete" loading={deleteMutation.isPending}
         onClose={() => setConfirm({ open: false, id: null })}
         onConfirm={async () => { await deleteMutation.mutateAsync(confirm.id); setConfirm({ open: false, id: null }) }}
@@ -517,42 +429,33 @@ export default function Ledger() {
         <DetailModal
           open={view.open}
           onClose={() => setView({ open: false, record: null })}
-          title="Ledger Details"
+          title="Expense Details"
           data={{
+            'Expense Head': view.record.expense_head || '—',
             'Amount': view.record.amount ? `₹${Number(view.record.amount).toLocaleString('en-IN')}` : '—',
             'Method': view.record.transaction_type ? view.record.transaction_type.replace(/_/g, ' ') : '—',
             'Transaction Purpose': (() => {
               const p = (txnPurposesQuery.data?.items ?? []).find((x) => String(x.id) === String(view.record.transaction_purpose))
               return p?.transaction_purpose_name || '—'
             })(),
+            'Bill No': view.record.bill_no || '—',
             'Payer': getEntityName(view.record.payer_type, view.record.payer_id),
-            'Payer Type': view.record.payer_type || '—',
-            'Payee': getEntityName(view.record.payee_type, view.record.payee_id),
-            'Payee Type': view.record.payee_type || '—',
-            'Company': view.record.company_id ? getEntityName('company', view.record.company_id) : '—',
-            'Trip': view.record.trip_id ? (tripMeta[String(view.record.trip_id)]?.label || view.record.trip_id) : '—',
+            'Customer': (() => {
+              if (!view.record.customer_id) return '—'
+              const c = customerById.get(String(view.record.customer_id))
+              return c?.customer_name || c?.name || view.record.customer_id
+            })(),
             'Vehicle': (() => {
               if (!view.record.vehicle_id) return '—'
               const v = vehicleById.get(String(view.record.vehicle_id))
-              if (!v) return view.record.vehicle_id
-              return [v.registration_number, v.vehicle_manufacture_company, v.vehicle_model].filter(Boolean).join(' · ')
+              return v?.registration_number || view.record.vehicle_id
             })(),
-            'Bill No': (() => {
-              // First try: bill_no/bill_id directly on the record
-              const ref = view.record.bill_no ?? view.record.bill_id ?? view.record.bill_ref ?? ''
-              if (ref) {
-                const b = billById.get(String(ref))
-                if (b?.bill_no) return b.bill_no
-                // ref might already be the bill_no string
-                if (bills.find((x) => String(x.bill_no) === String(ref))) return String(ref)
-              }
-              // Fallback: derive from trip_id via billByTripId
-              if (view.record.trip_id) {
-                const b = billByTripId.get(String(view.record.trip_id))
-                if (b?.bill_no) return b.bill_no
-              }
-              return '—'
+            'Driver': (() => {
+              if (!view.record.driver_id) return '—'
+              const d = userById.get(String(view.record.driver_id))
+              return d?.name || view.record.driver_id
             })(),
+            'Credit To': view.record.credit_to || '—',
           }}
         />
       )}

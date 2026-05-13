@@ -11,6 +11,7 @@ import ProductTransferForm from '../../components/forms/ProductTransferForm.jsx'
 import * as transferAPI from '../../features/productTransfers/productTransferAPI.js'
 import * as productAPI from '../../features/products/productAPI.js'
 import * as userAPI from '../../features/users/userAPI.js'
+import * as vehicleAPI from '../../features/vehicles/vehicleAPI.js'
 
 export default function ProductTransfers() {
   const qc = useQueryClient()
@@ -21,6 +22,7 @@ export default function ProductTransfers() {
 
   const transfersQuery = useQuery({ queryKey: ['product-transfers'], queryFn: transferAPI.listProductTransfers })
   const productsQuery  = useQuery({ queryKey: ['products'],          queryFn: productAPI.listProducts })
+  const vehiclesQuery  = useQuery({ queryKey: ['vehicles'],          queryFn: vehicleAPI.listVehicles })
   const usersQuery     = useQuery({ queryKey: ['users'],             queryFn: userAPI.listUsers })
 
   const createMutation = useMutation({
@@ -37,9 +39,11 @@ export default function ProductTransfers() {
   })
 
   const products = productsQuery.data?.items ?? []
+  const vehicles = vehiclesQuery.data?.items ?? []
   const users    = usersQuery.data?.items ?? []
 
   const productById = useMemo(() => { const m = new Map(); products.forEach((p) => m.set(String(p.id), p)); return m }, [products])
+  const vehicleById = useMemo(() => { const m = new Map(); vehicles.forEach((v) => m.set(String(v.id), v)); return m }, [vehicles])
   const userById    = useMemo(() => { const m = new Map(); users.forEach((u) => m.set(String(u.id), u)); return m }, [users])
 
   const userName = (id) => { const u = userById.get(String(id)); return u?.name || u?.email || id || '—' }
@@ -53,11 +57,10 @@ export default function ProductTransfers() {
       const p = productById.get(String(r.product_id))
       return (
         (p?.product_name ?? '').toLowerCase().includes(q) ||
-        userName(r.given_from).toLowerCase().includes(q) ||
-        userName(r.given_to).toLowerCase().includes(q)
+        (r.given_to_vehicle_name ?? '').toLowerCase().includes(q)
       )
     })
-  }, [allRows, searchTerm, productById, userById])
+  }, [allRows, searchTerm, productById])
 
   const columns = useMemo(() => [
     {
@@ -74,13 +77,12 @@ export default function ProductTransfers() {
       },
     },
     {
-      key: 'transfer',
-      header: 'Transfer',
+      key: 'vehicle',
+      header: 'Vehicle',
       render: (r) => (
         <div className="flex items-center gap-2 text-xs font-semibold text-zinc-700">
-          <span className="bg-zinc-100 px-2 py-1 rounded-lg">{userName(r.given_from)}</span>
           <FiArrowRight size={12} className="text-blue-500 shrink-0" />
-          <span className="bg-blue-50 border border-blue-100 px-2 py-1 rounded-lg text-blue-700">{userName(r.given_to)}</span>
+          <span className="bg-blue-50 border border-blue-100 px-2 py-1 rounded-lg text-blue-700">{r.given_to_vehicle_name || '—'}</span>
         </div>
       ),
     },
@@ -143,7 +145,7 @@ export default function ProductTransfers() {
       </div>
 
       <Modal open={modal.open} title={modal.record ? 'Edit Transfer' : 'New Transfer'} onClose={() => setModal({ open: false, record: null })}>
-        <ProductTransferForm defaultValues={modal.record} products={products} users={users}
+        <ProductTransferForm defaultValues={modal.record} products={products} vehicles={vehicles}
           loading={createMutation.isPending || updateMutation.isPending}
           serverError={createMutation.error?.message ?? updateMutation.error?.message ?? null}
           onSubmit={async (v) => {
@@ -165,8 +167,7 @@ export default function ProductTransfers() {
             data={{
               'Product': p?.product_name ?? r.product_id,
               'Quantity': `${r.quantity} ${r.unit || ''}`.trim(),
-              'Given From': userName(r.given_from),
-              'Given To': userName(r.given_to),
+              'Vehicle': r.given_to_vehicle_name || '—',
             }} />
         )
       })()}

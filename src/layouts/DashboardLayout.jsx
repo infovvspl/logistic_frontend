@@ -23,7 +23,7 @@ import {
   FiShoppingCart,
   FiClock,
   FiArrowRight,
-  FiChevronDown,
+  FiChevronDown, FiTool
 } from "react-icons/fi";
 import { MdOutlineAccountBalance, MdAddBusiness, MdSwapHorizontalCircle } from "react-icons/md";
 import { PiCoinsFill } from "react-icons/pi";
@@ -49,6 +49,9 @@ const reportSubItems = [
   { to: "/dashboard/reports/purchase", label: "Purchase", icon: FiShoppingCart },
   { to: "/dashboard/reports/product-transfers", label: "Product Transfers", icon: FiArrowRight },
   { to: "/dashboard/reports/trips", label: "Trips", icon: FiMap },
+  { to: "/dashboard/reports/bills", label: "Bills", icon: FiClipboard },
+  { to: "/dashboard/reports/vehicle-income", label: "Vehicle Income", icon: FaTruckFront },
+  { to: "/dashboard/reports/vehicle-expenditure", label: "Vehicle Expenditure", icon: FiTool },
 ];
 
 const navItems = [
@@ -57,7 +60,7 @@ const navItems = [
   { to: "/dashboard/drivers", label: "Drivers", icon: FaUserTie },
   { to: "/dashboard/helpers", label: "Helpers", icon: GrUserWorker },
   { to: "/dashboard/vehicles", label: "Vehicles", icon: FaTruckFront },
-  { to: "/dashboard/companies", label: "Companies", icon: MdAddBusiness  },
+  { to: "/dashboard/companies", label: "Companies", icon: MdAddBusiness },
   { to: "/dashboard/customers", label: "Customers", icon: FaUsers },
   { to: "/dashboard/roles", label: "Roles", icon: FaUserGroup },
   { to: "/dashboard/trips", label: "Trips", icon: IoMapSharp },
@@ -67,7 +70,8 @@ const navItems = [
   { to: "/dashboard/rate-charts", label: "Rate Charts", icon: FaRupeeSign },
   { to: "/dashboard/challans", label: "Challans", icon: FaClipboard },
   { to: "/dashboard/bills", label: "Bills", icon: RiBillFill },
-  { to: "/dashboard/ledger",     label: "Transaction",     icon: FiDollarSign },
+  { to: "/dashboard/ledger", label: "Ledger", icon: MdOutlineAccountBalance },
+  { to: "/dashboard/expense", label: "Expense", icon: MdOutlineAccountBalance },
   { to: "/dashboard/suppliers", label: "Suppliers", icon: FaTruckLoading },
   { to: "/dashboard/products", label: "Products", icon: BiSolidPackage },
   { to: "/dashboard/purchase", label: "Purchase", icon: FaShoppingCart },
@@ -743,7 +747,7 @@ export default function DashboardLayout() {
       {/* ── Sidebar ── */}
       <aside className={`db-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
         {/* Toggle Button */}
-        <button 
+        <button
           className="db-sidebar-toggle"
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
@@ -755,7 +759,7 @@ export default function DashboardLayout() {
           {/* Brand */}
           <div className="db-brand">
             <div className="db-brand-icon">
-               <img src="/favicon.png" alt="Brand Icon" />
+              <img src="/favicon.png" alt="Brand Icon" />
             </div>
             <div className="db-brand-text">
               <div className="db-brand-name">{APP_NAME}</div>
