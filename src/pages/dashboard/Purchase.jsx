@@ -54,8 +54,9 @@ export default function Purchase() {
       const product  = productById.get(String(r.product_id))
       const supplier = supplierById.get(String(r.supplier_id))
       return (
-        (product?.product_name ?? '').toLowerCase().includes(q) ||
-        (supplier?.supplier_name ?? '').toLowerCase().includes(q) ||
+        (r.product_name ?? '').toLowerCase().includes(q) ||
+        (r.supplier_name ?? '').toLowerCase().includes(q) ||
+        (r.invoice_number ?? '').toLowerCase().includes(q) ||
         (r.unit ?? '').toLowerCase().includes(q)
       )
     })
@@ -63,29 +64,32 @@ export default function Purchase() {
 
   const columns = useMemo(() => [
     {
+      key: 'invoice',
+      header: 'Invoice No.',
+      render: (r) => (
+        <span className="text-xs font-bold text-indigo-600">
+          {r.invoice_number || '—'}
+        </span>
+      ),
+    },
+    {
       key: 'product',
       header: 'Product',
-      render: (r) => {
-        const p = productById.get(String(r.product_id))
-        return (
-          <div className="flex flex-col gap-0.5 py-1">
-            <span className="font-bold text-zinc-900">{p?.product_name ?? '—'}</span>
-          </div>
-        )
-      },
+      render: (r) => (
+        <div className="flex flex-col gap-0.5 py-1">
+          <span className="font-bold text-zinc-900">{r.product_name ?? '—'}</span>
+        </div>
+      ),
     },
     {
       key: 'supplier',
       header: 'Supplier',
-      render: (r) => {
-        const s = supplierById.get(String(r.supplier_id))
-        return (
-          <div className="flex flex-col gap-0.5">
-            <span className="text-xs font-semibold text-zinc-800">{s?.supplier_name ?? '—'}</span>
-            <span className="text-[11px] text-zinc-400">{s?.supplier_phone ?? ''}</span>
-          </div>
-        )
-      },
+      render: (r) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs font-semibold text-zinc-800">{r.supplier_name ?? '—'}</span>
+          <span className="text-[11px] text-zinc-400">{r.supplier_phone ?? ''}</span>
+        </div>
+      ),
     },
     {
       key: 'qty',
@@ -234,8 +238,9 @@ export default function Purchase() {
           <DetailModal open={view.open} onClose={() => setView({ open: false, record: null })}
             title="Purchase Details"
             data={{
-              'Product': p?.product_name ?? r.product_id,
-              'Supplier': s?.supplier_name ?? r.supplier_id,
+              'Invoice No.': r.invoice_number || '—',
+              'Product': r.product_name || r.product_id,
+              'Supplier': r.supplier_name || r.supplier_id,
               'Unit': r.unit || '—',
               'Unit Price': r.unit_price ? `₹${Number(r.unit_price).toLocaleString('en-IN')}` : '—',
               'Quantity': r.quantity ?? '—',

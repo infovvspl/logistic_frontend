@@ -6,7 +6,7 @@ import Button from '../ui/Button.jsx'
 export default function ProductForm({ defaultValues, onSubmit, loading, serverError = null }) {
   const isEdit = !!defaultValues
   const { register, handleSubmit, formState: { errors } } = useForm({
-    defaultValues: defaultValues ?? { product_name: '', stock: '', low_stock: '' },
+    defaultValues: defaultValues ?? { product_name: '', stock: '', low_stock: '', hsn_code: '', part_number: '' },
   })
 
   return (
@@ -14,6 +14,14 @@ export default function ProductForm({ defaultValues, onSubmit, loading, serverEr
       <Input label="Product Name" required placeholder="Cement Bag" leftIcon={<FiPackage />}
         error={errors.product_name?.message}
         {...register('product_name', { required: 'Product name is required' })} />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input label="HSN Code" placeholder="2523"
+          error={errors.hsn_code?.message}
+          {...register('hsn_code')} />
+        <Input label="Part Number" placeholder="PN-001"
+          error={errors.part_number?.message}
+          {...register('part_number')} />
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input label="Stock" type="number" placeholder="500"
           error={errors.stock?.message}

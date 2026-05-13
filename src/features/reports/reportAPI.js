@@ -1,4 +1,5 @@
 import { api } from '../../services/axios.js'
+import * as productAPI from '../products/productAPI.js'
 
 function extractError(err, fallback) {
   return err?.response?.data?.message ?? err?.response?.data?.error ?? err?.message ?? fallback
@@ -92,7 +93,13 @@ async function buildEntityMaps() {
 
 export const fetchAttendanceReport      = (filters) => fetchReport('attendance', filters)
 export const fetchSalaryReport          = (filters) => fetchReport('salary', filters)
-export const fetchProductsReport        = (filters) => fetchReport('product/stock', filters)
+export const fetchProductsReport        = async (filters) => {
+  try {
+    return await productAPI.listProducts()
+  } catch (err) {
+    throw new Error(err.message || 'Failed to load products report')
+  }
+}
 export const fetchPurchaseReport        = (filters) => fetchReport('purchase', filters)
 export const fetchProductTransferReport = (filters) => fetchReport('product/transfers', filters)
 export const fetchTripsReport           = async (filters) => {
@@ -300,35 +307,171 @@ export async function fetchVehicleIncomeReport(filters) {
 }
 export async function fetchVehicleExpenditureReport(filters) {
   try {
-    const vehicleId = String(filters.vehicle_id)
-    if (!vehicleId || vehicleId === 'undefined') {
-      return { data: [], summary: { total_expenditure: 0, spare_parts_cost: 0, general_expenses: 0, vehicle: '—' } }
-    }
+    const vehicleId = filters.vehicle_id && filters.vehicle_id !== 'undefined' ? String(filters.vehicle_id) : null
 
-    // Fetch everything without filters to match how the main tables work
-    const [ledgerRes, transfersRes, productsRes, vehiclesRes] = await Promise.all([
+    const [ledgerRes, transfersRes, productsRes, vehiclesRes, purposesRes] = await Promise.all([
       api.get('/ledger'),
       api.get('/product-transfers'),
       api.get('/products'),
-      api.get('/vehicles')
+      api.get('/vehicles'),
+      api.get('/transaction-purposes')
     ])
 
     const allLedger = ledgerRes.data?.data ?? ledgerRes.data?.items ?? (Array.isArray(ledgerRes.data) ? ledgerRes.data : [])
     const allTransfers = transfersRes.data?.data ?? transfersRes.data?.items ?? (Array.isArray(transfersRes.data) ? transfersRes.data : [])
     const products = productsRes.data?.items ?? (Array.isArray(productsRes.data) ? productsRes.data : [])
     const vehicles = vehiclesRes.data?.items ?? (Array.isArray(vehiclesRes.data) ? vehiclesRes.data : [])
+    const purposes = purposesRes.data?.items ?? (Array.isArray(purposesRes.data) ? purposesRes.data : [])
 
-    const vehicle = vehicles.find(v => String(v.id) === vehicleId)
+    const vehicleMap = new Map(vehicles.map(v => [String(v.id), v]))
+    const purposeMap = new Map(purposes.map(p => [String(p.id), p.transaction_purpose_name]))
+    const productMap = new Map(products.map(p => [String(p.id), p]))
 
-    // Helper for date matching (matches the logic in Ledger.jsx/Trips.jsx)
     const matchDate = (rawDate) => {
       if (!rawDate) return true
       const d = new Date(rawDate)
       if (isNaN(d.getTime())) return true
 
-      if (filters.start_date && filters.end_date) {
-        const start = new Date(filters.start_date); start.setHours(0,0,0,0)
-        const end = new Date(filters.end_date); end.setHours(23,59,59,999)
+      if (filters.from && filters.to) {
+        const start = new Date(filters.from); start.setHours(0,0,0,0)
+        const end = new Date(filters.to); end.setHours(23,59,59,999)
+        return d >= start && d <= end
+      }
+      if (filters.date) {
+        const target = new Date(filters.date); target.setHours(0,0,0,0)
+        const day = new Date(d); day.setHours(0,0,0,0)
+        return target.getTime() === day.getTime()
+      }
+      if (filters.month) {
+        const [yr, mo] = filters.month.split('-').map(Number)
+        return d.getFullYear() === yr && (d.getMonth() + 1) === mo
+      }
+      if (filters.year) return d.getFullYear() === Number(filters.year)
+      return true
+    }
+
+    const categorize = (purposeName) => {
+      const p = (purposeName || '').toLowerCase()
+      if (p.includes('fuel') || p.includes('diesel') || p.includes('petrol')) return 'Fuel'
+      if (p.includes('maintenance') || p.includes('service') || p.includes('repair') || p.includes('labour')) return 'Maintenance'
+      if (p.includes('driver') || p.includes('helper') || p.includes('salary') || p.includes('wages') || p.includes('bhatta')) return 'Staff'
+      if (p.includes('toll') || p.includes('parking') || p.includes('rto') || p.includes('challan')) return 'Toll/Parking'
+      return 'Other'
+    }
+
+    // 1. Process Ledger Expenses
+    const ledgerExpenses = allLedger
+      .filter(l => {
+        const vehicleMatch = !vehicleId || String(l.vehicle_id) === vehicleId
+        return vehicleMatch && matchDate(l.date || l.createdAt)
+      })
+      .map(l => {
+        const purpose = purposeMap.get(String(l.transaction_purpose)) || l.purpose_name || ''
+        const reason = l.remarks || purpose || 'General Expense'
+        return {
+          id: l.id,
+          date: l.date || l.createdAt,
+          vehicle_number: vehicleMap.get(String(l.vehicle_id))?.registration_number || '—',
+          type: 'Expense',
+          category: categorize(purpose || reason),
+          description: reason,
+          part_name: '—',
+          quantity: '—',
+          amount: Number(l.amount || 0),
+          source: 'Ledger'
+        }
+      })
+
+    // 2. Process Product Transfers (Parts)
+    const partsExpenses = allTransfers
+      .filter(t => {
+        const vehicleMatch = !vehicleId || String(t.given_to_vehicle) === vehicleId
+        return vehicleMatch && matchDate(t.date || t.createdAt)
+      })
+      .map(t => {
+        const product = productMap.get(String(t.product_id))
+        const pName = product?.product_name || t.product_name || 'Part'
+        const desc = t.remarks || product?.description || `Consumption of ${pName}`
+        const price = Number(product?.price || t.price || 0)
+        const qty = Number(t.quantity || 0)
+        const v = vehicleMap.get(String(t.given_to_vehicle))
+        return {
+          id: t.id,
+          date: t.date || t.createdAt,
+          vehicle_number: v?.registration_number || t.given_to_vehicle_name || '—',
+          type: 'Inventory',
+          category: 'Spare Parts',
+          description: desc,
+          part_name: pName,
+          quantity: `${qty} ${t.unit || product?.unit || 'units'}`,
+          amount: price * qty,
+          source: 'Product Transfer'
+        }
+      })
+
+    const timeline = [...ledgerExpenses, ...partsExpenses].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+
+    const totals = {
+      total_parts_cost: partsExpenses.reduce((a, b) => a + b.amount, 0),
+      total_fuel_cost: ledgerExpenses.filter(e => e.category === 'Fuel').reduce((a, b) => a + b.amount, 0),
+      total_maintenance_cost: ledgerExpenses.filter(e => e.category === 'Maintenance').reduce((a, b) => a + b.amount, 0),
+      total_staff_cost: ledgerExpenses.filter(e => e.category === 'Staff').reduce((a, b) => a + b.amount, 0),
+      total_toll_cost: ledgerExpenses.filter(e => e.category === 'Toll/Parking').reduce((a, b) => a + b.amount, 0),
+      total_other_cost: ledgerExpenses.filter(e => e.category === 'Other').reduce((a, b) => a + b.amount, 0),
+    }
+
+    const total_expenditure = Object.values(totals).reduce((a, b) => a + b, 0)
+    const categorized_totals = [
+      { label: 'Spare Parts', value: totals.total_parts_cost },
+      { label: 'Fuel', value: totals.total_fuel_cost },
+      { label: 'Maintenance', value: totals.total_maintenance_cost },
+      { label: 'Staff Expenses', value: totals.total_staff_cost },
+      { label: 'Toll/Parking', value: totals.total_toll_cost },
+      { label: 'Other', value: totals.total_other_cost },
+    ].filter(t => t.value > 0)
+
+    const targetVehicle = vehicleId ? vehicleMap.get(vehicleId) : null
+
+    return {
+      summary: { total_expenditure, ...totals },
+      parts_expenses: partsExpenses,
+      ledger_expenses: ledgerExpenses,
+      categorized_totals,
+      timeline,
+      vehicle: targetVehicle?.registration_number || 'All Vehicles'
+    }
+  } catch (err) {
+    throw new Error(extractError(err, 'Failed to load vehicle expenditure report'))
+  }
+}
+export async function fetchGstReport(filters) {
+  try {
+    const params = new URLSearchParams()
+    Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v) })
+
+    const [purchaseRes, suppliersRes] = await Promise.all([
+      api.get(`/purchase-details?${params.toString()}`),
+      api.get('/suppliers')
+    ])
+
+    const purchases = purchaseRes.data?.items ?? purchaseRes.data?.data ?? (Array.isArray(purchaseRes.data) ? purchaseRes.data : [])
+    const suppliers = suppliersRes.data?.items ?? suppliersRes.data?.data ?? (Array.isArray(suppliersRes.data) ? suppliersRes.data : [])
+
+    const supplierMap = new Map()
+    suppliers.forEach(s => {
+      const id = s.id || s._id || s.supplier_id
+      if (id) supplierMap.set(String(id), s)
+    })
+
+    // Helper for date matching if backend didn't filter correctly
+    const matchDate = (rawDate) => {
+      if (!rawDate) return true
+      const d = new Date(rawDate)
+      if (isNaN(d.getTime())) return true
+
+      if (filters.from && filters.to) {
+        const start = new Date(filters.from); start.setHours(0,0,0,0)
+        const end = new Date(filters.to); end.setHours(23,59,59,999)
         return d >= start && d <= end
       }
       if (filters.date) {
@@ -345,53 +488,34 @@ export async function fetchVehicleExpenditureReport(filters) {
       return true
     }
 
-    // 1. Filter Ledger Expenses (General)
-    const generalExpenses = allLedger
-      .filter(l => String(l.vehicle_id) === vehicleId && matchDate(l.date || l.createdAt || l.transaction_date))
-      .map(l => ({
-        id: l.id,
-        date: l.date || l.createdAt || l.transaction_date,
-        category: 'General / Maintenance',
-        description: l.purpose_name || l.remarks || 'General Expense',
-        amount: Number(l.amount || 0),
-        vehicle_number: vehicle?.registration_number || '—'
-      }))
+    const filtered = purchases.filter(p => matchDate(p.purchase_at || p.created_at))
 
-    // 2. Filter Product Transfers (Parts)
-    const productMap = new Map()
-    products.forEach(p => productMap.set(String(p.id), p))
+    const enriched = filtered.map(p => {
+      const supplier = supplierMap.get(String(p.supplier_id))
+      return {
+        ...p,
+        supplier_name: supplier?.name || supplier?.supplier_name || p.supplier_name || '—',
+        supplier_gst: supplier?.supplier_gst_number || '—',
+        taxable_amount: Number(p.purchase_price || 0),
+        gst_amount: Number(p.gst_amount || 0),
+        total_amount: Number(p.total_price || 0)
+      }
+    })
 
-    const partExpenses = allTransfers
-      .filter(t => String(t.given_to_vehicle) === vehicleId && matchDate(t.date || t.createdAt))
-      .map(t => {
-        const product = productMap.get(String(t.product_id))
-        const price = Number(product?.price || t.price || 0)
-        const qty = Number(t.quantity || 0)
-        return {
-          id: t.id,
-          date: t.date || t.createdAt,
-          category: 'Spare Parts',
-          description: `${product?.product_name || 'Part'} (${qty} ${t.unit || 'units'})`,
-          amount: price * qty,
-          vehicle_number: t.given_to_vehicle_name || vehicle?.registration_number || '—'
-        }
-      })
-
-    const combined = [...generalExpenses, ...partExpenses].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
-
-    const total_parts = partExpenses.reduce((a, b) => a + b.amount, 0)
-    const total_general = generalExpenses.reduce((a, b) => a + b.amount, 0)
+    const total_taxable = enriched.reduce((a, b) => a + b.taxable_amount, 0)
+    const total_gst = enriched.reduce((a, b) => a + b.gst_amount, 0)
+    const total_net = enriched.reduce((a, b) => a + b.total_amount, 0)
 
     return {
-      data: combined,
+      data: enriched,
       summary: {
-        total_expenditure: total_parts + total_general,
-        spare_parts_cost: total_parts,
-        general_expenses: total_general,
-        vehicle: vehicle?.registration_number || '—'
+        total_invoices: enriched.length,
+        total_taxable,
+        total_gst,
+        total_net
       }
     }
   } catch (err) {
-    throw new Error(extractError(err, 'Failed to load vehicle expenditure report'))
+    throw new Error(extractError(err, 'Failed to load GST report'))
   }
 }

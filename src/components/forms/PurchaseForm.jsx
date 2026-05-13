@@ -106,6 +106,7 @@ export default function PurchaseForm({
   const isEdit = !!defaultValues
 
   const [form, setForm] = useState({
+    invoice_number:     defaultValues?.invoice_number     ?? '',
     product_id:         defaultValues?.product_id         ?? '',
     supplier_id:        defaultValues?.supplier_id        ?? '',
     unit:               defaultValues?.unit               ?? '',
@@ -166,6 +167,13 @@ export default function PurchaseForm({
     <form onSubmit={handleSubmit} className="w-full space-y-4">
 
       <SectionDivider label="Purchase Details" />
+      <div className="grid grid-cols-1 gap-3">
+        <div className="space-y-1">
+          <Input label="Invoice Number" placeholder="INV-001"
+            value={form.invoice_number} onChange={(e) => set('invoice_number', e.target.value)} />
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="space-y-1">
           <Select label="Product" options={productOptions}

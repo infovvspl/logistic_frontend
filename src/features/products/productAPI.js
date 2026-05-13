@@ -1,7 +1,7 @@
 import { api } from '../../services/axios.js'
 import { USE_MOCKS } from '../../utils/constants.js'
 
-const ALLOWED_FIELDS = ['product_name', 'stock', 'low_stock']
+const ALLOWED_FIELDS = ['product_name', 'stock', 'low_stock', 'hsn_code', 'part_number']
 
 let mockProducts = []
 

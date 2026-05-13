@@ -23,12 +23,13 @@ const REPORT_CONFIG = {
   bills: { label: 'Bills', icon: FiFileText, gradient: 'from-orange-500 to-red-600', fetcher: reportAPI.fetchBillsReport },
   salary: { label: 'Salary', icon: FaRupeeSign, gradient: 'from-emerald-500 to-teal-600', fetcher: reportAPI.fetchSalaryReport },
   ledger: { label: 'Ledger', icon: MdOutlineAccountBalance, gradient: 'from-violet-500 to-purple-600', fetcher: reportAPI.fetchLedgerReport },
-  products: { label: 'Products', icon: FiPackage, gradient: 'from-amber-500 to-orange-600', fetcher: reportAPI.fetchProductsReport },
+  products: { label: 'Inventory', icon: FiPackage, gradient: 'from-amber-500 to-orange-600', fetcher: reportAPI.fetchProductsReport },
   purchase: { label: 'Purchase', icon: FiShoppingCart, gradient: 'from-pink-500 to-rose-600', fetcher: reportAPI.fetchPurchaseReport },
   'product-transfers': { label: 'Product Transfers', icon: FiArrowRight, gradient: 'from-cyan-500 to-sky-600', fetcher: reportAPI.fetchProductTransferReport },
   trips: { label: 'Trips', icon: FiMap, gradient: 'from-lime-500 to-green-600', fetcher: reportAPI.fetchTripsReport },
   'vehicle-income': { label: 'Vehicle Income', icon: FiTruck, gradient: 'from-blue-500 to-indigo-600', fetcher: reportAPI.fetchVehicleIncomeReport },
   'vehicle-expenditure': { label: 'Vehicle Expenditure', icon: FiTool, gradient: 'from-rose-600 to-pink-700', fetcher: reportAPI.fetchVehicleExpenditureReport },
+  gst: { label: 'GST', icon: FiFileText, gradient: 'from-emerald-600 to-teal-700', fetcher: reportAPI.fetchGstReport },
 }
 
 const DATE_MODES = [
@@ -68,14 +69,22 @@ function SummaryCards({ summary, gradient }) {
     'from-pink-500 to-rose-600', 'from-cyan-500 to-sky-600',
   ]
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-      {Object.entries(summary).map(([k, v], i) => (
-        <div key={k} className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5 flex flex-col gap-2">
-          <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{k.replace(/_/g, ' ')}</p>
-          <p className="text-2xl font-bold text-zinc-900 tabular-nums">{fmt(v)}</p>
-          <div className={`h-1 rounded-full bg-gradient-to-r ${gradients[i % gradients.length]} opacity-60`} />
-        </div>
-      ))}
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+      {Object.entries(summary).map(([k, v], i) => {
+        if (k === 'vehicle') return null
+        const isMonetary = k.includes('cost') || k.includes('expenditure') || k.includes('amount') || k.includes('total')
+        return (
+          <div key={k} className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5 flex flex-col gap-2">
+            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-tight h-5 overflow-hidden">
+              {k.replace(/total_/g, '').replace(/_/g, ' ')}
+            </p>
+            <p className="text-xl font-bold text-zinc-900 tabular-nums truncate">
+              {isMonetary ? `₹${Number(v || 0).toLocaleString('en-IN')}` : fmt(v)}
+            </p>
+            <div className={`h-1 rounded-full bg-gradient-to-r ${gradients[i % gradients.length]} opacity-60`} />
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -824,12 +833,14 @@ function VehicleIncomeTable({ rows, customers, places, vehicles }) {
   )
 }
 
-function VehicleExpenditureTable({ rows, summary }) {
-  if (!rows?.length) return <EmptyReport />
-  const headers = ['Date', 'Vehicle', 'Type', 'Description', 'Amount']
+function VehicleExpenditureTable({ rows, summary, categorized_totals, timeline }) {
+  const data = timeline || rows || []
+  if (!data.length) return <EmptyReport />
+
+  const headers = ['Sl No', 'Date', 'Vehicle', 'Type', 'Category', 'Description', 'Part Name', 'Qty', 'Amount', 'Source']
 
   const exportPDF = (shouldDownload = false) => {
-    const doc = new jsPDF('p', 'mm', 'a4')
+    const doc = new jsPDF('l', 'mm', 'a4')
     const pageWidth = doc.internal.pageSize.width
     const margin = 14
 
@@ -844,29 +855,174 @@ function VehicleExpenditureTable({ rows, summary }) {
     doc.line(margin, margin + 20, pageWidth - margin, margin + 20)
 
     doc.setFontSize(9)
-    doc.text(`Vehicle: ${summary?.vehicle || '—'}`, margin, margin + 25)
+    doc.text(`Target: ${summary?.vehicle || 'All Vehicles'}`, margin, margin + 25)
     doc.text(`Report Date: ${new Date().toLocaleDateString('en-IN')}`, pageWidth - margin - 40, margin + 25)
 
-    const tableBody = rows.map(r => [
+    // Summary Section
+    let currentY = margin + 32
+    doc.setFontSize(10).setFont('helvetica', 'bold').text('SUMMARY', margin, currentY)
+
+    const summaryData = [
+      ['Total Expenditure', `₹${Number(summary?.total_expenditure || 0).toLocaleString('en-IN')}`],
+      ['Spare Parts', `₹${Number(summary?.total_parts_cost || 0).toLocaleString('en-IN')}`],
+      ['Fuel', `₹${Number(summary?.total_fuel_cost || 0).toLocaleString('en-IN')}`],
+      ['Maintenance', `₹${Number(summary?.total_maintenance_cost || 0).toLocaleString('en-IN')}`],
+      ['Others', `₹${Number((summary?.total_staff_cost || 0) + (summary?.total_toll_cost || 0) + (summary?.total_other_cost || 0)).toLocaleString('en-IN')}`]
+    ]
+
+    autoTable(doc, {
+      startY: currentY + 5,
+      head: [['Category', 'Amount']],
+      body: summaryData,
+      theme: 'grid',
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [40, 40, 40] },
+      columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } },
+      margin: { right: pageWidth / 2 + 20 }
+    })
+
+    const tableBody = data.map((r, i) => [
+      i + 1,
       r.date ? new Date(r.date).toLocaleDateString('en-IN') : '—',
       r.vehicle_number || '—',
+      r.type || '—',
       r.category || '—',
       r.description || '—',
-      `₹${Number(r.amount || 0).toLocaleString('en-IN')}`
-    ])
-
-    tableBody.push([
-      'TOTAL', '', '', '', `₹${Number(summary?.total_expenditure || 0).toLocaleString('en-IN')}`
+      r.part_name || '—',
+      r.quantity || '—',
+      `₹${Number(r.amount || 0).toLocaleString('en-IN')}`,
+      r.source || '—'
     ])
 
     autoTable(doc, {
-      startY: margin + 28,
+      startY: doc.lastAutoTable.finalY + 10,
       head: [headers],
+      body: tableBody,
+      theme: 'striped',
+      styles: { fontSize: 7, cellPadding: 2 },
+      headStyles: { fillColor: [0, 0, 0] },
+      columnStyles: { 8: { halign: 'right', fontStyle: 'bold' } }
+    })
+
+    if (shouldDownload) doc.save(`expenditure-report.pdf`)
+    else window.open(doc.output('bloburl'), '_blank')
+  }
+
+  return (
+    <div className="space-y-6 p-2">
+      <div className="flex justify-end gap-2 px-6">
+        <button onClick={() => exportPDF(false)} className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-700 rounded-xl hover:bg-zinc-200 font-semibold text-xs transition-all">
+          <FiEye size={14} /> Show PDF
+        </button>
+        <button onClick={() => exportPDF(true)} className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 font-semibold text-xs transition-all shadow-md">
+          <FiDownload size={14} /> Download PDF
+        </button>
+      </div>
+
+      <div className="overflow-x-auto rounded-2xl border border-zinc-100 shadow-sm">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-zinc-900 text-white">
+              {headers.map(h => (
+                <th key={h} className="text-left px-4 py-3 font-black uppercase tracking-wider whitespace-nowrap">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-50">
+            {data.map((r, i) => (
+              <tr key={i} className="hover:bg-zinc-50 transition-colors">
+                <td className="px-4 py-3 text-zinc-400 font-bold">{i + 1}</td>
+                <td className="px-4 py-3 whitespace-nowrap">{r.date ? new Date(r.date).toLocaleDateString('en-IN') : '—'}</td>
+                <td className="px-4 py-3 font-bold text-indigo-600">{r.vehicle_number}</td>
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase ${r.type === 'Inventory' ? 'bg-amber-100 text-amber-700' : 'bg-indigo-100 text-indigo-700'}`}>
+                    {r.type}
+                  </span>
+                </td>
+                <td className="px-4 py-3 font-bold text-zinc-800">{r.category}</td>
+                <td className="px-4 py-3 text-zinc-600 max-w-xs truncate" title={r.description}>{r.description}</td>
+                <td className="px-4 py-3 font-medium text-zinc-700">{r.part_name}</td>
+                <td className="px-4 py-3 text-zinc-500 italic">{r.quantity}</td>
+                <td className="px-4 py-3 text-right font-black text-rose-600">₹{Number(r.amount || 0).toLocaleString('en-IN')}</td>
+                <td className="px-4 py-3 text-[10px] font-bold text-zinc-400 uppercase tracking-tighter">{r.source}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot className="bg-zinc-50 font-black border-t-2 border-zinc-200">
+            <tr>
+              <td colSpan={8} className="px-4 py-4 text-right text-zinc-500 uppercase text-[10px] tracking-widest">Total Vehicle Expenditure</td>
+              <td className="px-4 py-4 text-right text-rose-700 text-lg">₹{Number(summary?.total_expenditure || 0).toLocaleString('en-IN')}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function GstReportTable({ rows }) {
+  if (!rows?.length) return <EmptyReport />
+
+  const headers = [
+    'Invoice No', 'Date', 'Supplier Name', 'Supplier GST', 'Amount', 'GST', 'Total GST', 'Net'
+  ]
+
+  const getRowData = (r) => [
+    <span key="inv" className="font-bold text-indigo-600">{r.invoice_number || '—'}</span>,
+    r.purchase_at ? new Date(r.purchase_at).toLocaleDateString('en-IN') : '—',
+    r.supplier_name || '—',
+    <span key="gst" className="px-2 py-0.5 rounded bg-zinc-100 text-zinc-600 font-bold">{r.supplier_gst || '—'}</span>,
+    `₹${Number(r.taxable_amount || 0).toLocaleString('en-IN')}`,
+    <span key="gst_amt" className="text-emerald-600 font-semibold">₹{Number(r.gst_amount || 0).toLocaleString('en-IN')}</span>,
+    <span key="total_gst" className="text-emerald-700 font-black">₹{Number(r.gst_amount || 0).toLocaleString('en-IN')}</span>,
+    <span key="net" className="font-black text-zinc-900">₹{Number(r.total_amount || 0).toLocaleString('en-IN')}</span>,
+  ]
+
+  const exportPDF = (shouldDownload = false) => {
+    const doc = new jsPDF('landscape')
+    const pageWidth = doc.internal.pageSize.width
+    const margin = 14
+
+    // Header
+    doc.setFontSize(14); doc.setFont('helvetica', 'bold')
+    doc.text('R.S.TRANSPORT', pageWidth / 2, margin, { align: 'center' })
+    doc.setFontSize(10); doc.setFont('helvetica', 'normal')
+    doc.text('GST REPORT (PURCHASES)', pageWidth / 2, margin + 7, { align: 'center' })
+    doc.line(margin, margin + 12, pageWidth - margin, margin + 12)
+
+    const tableBody = rows.map(r => [
+      r.invoice_number || '—',
+      r.purchase_at ? new Date(r.purchase_at).toLocaleDateString('en-IN') : '—',
+      r.supplier_name || '—',
+      r.supplier_gst || '—',
+      Number(r.taxable_amount || 0).toFixed(2),
+      Number(r.gst_amount || 0).toFixed(2),
+      Number(r.gst_amount || 0).toFixed(2),
+      Number(r.total_amount || 0).toFixed(2)
+    ])
+
+    const totals = {
+      taxable: rows.reduce((a, b) => a + Number(b.taxable_amount || 0), 0),
+      gst: rows.reduce((a, b) => a + Number(b.gst_amount || 0), 0),
+      net: rows.reduce((a, b) => a + Number(b.total_amount || 0), 0)
+    }
+
+    tableBody.push([
+      'TOTAL', '', '', '',
+      totals.taxable.toFixed(2),
+      totals.gst.toFixed(2),
+      totals.gst.toFixed(2),
+      totals.net.toFixed(2)
+    ])
+
+    autoTable(doc, {
+      startY: margin + 18,
+      head: [['Invoice No', 'Date', 'Supplier', 'GST No', 'Amount', 'GST', 'Total GST', 'Net']],
       body: tableBody,
       theme: 'plain',
       styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fontStyle: 'bold', borderBottom: { width: 0.5 } },
-      columnStyles: { 4: { halign: 'right', fontStyle: 'bold' } },
       didDrawCell: (data) => {
         if (data.row.index === tableBody.length - 1) {
           doc.line(data.cell.x, data.cell.y, data.cell.x + data.cell.width, data.cell.y)
@@ -874,73 +1030,123 @@ function VehicleExpenditureTable({ rows, summary }) {
       }
     })
 
-    const finalY = doc.lastAutoTable.finalY + 10
-    doc.setFontSize(9).setFont('helvetica', 'bold')
-    doc.text(`Spare Parts Total: ₹${Number(summary?.spare_parts_cost || 0).toLocaleString('en-IN')}`, margin, finalY)
-    doc.text(`General Expenses: ₹${Number(summary?.general_expenses || 0).toLocaleString('en-IN')}`, margin, finalY + 5)
-
-    if (shouldDownload) doc.save(`expenditure-${summary?.vehicle || 'report'}.pdf`)
+    if (shouldDownload) doc.save(`gst-report-${Date.now()}.pdf`)
     else window.open(doc.output('bloburl'), '_blank')
   }
 
   return (
-    <div className="space-y-6">
-      {/* Summary Section / Cost Center Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-6">
-        <div className="bg-rose-50 border border-rose-100 p-5 rounded-2xl">
-          <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">Total Expenditure</p>
-          <p className="text-2xl font-bold text-rose-700">₹{Number(summary?.total_expenditure || 0).toLocaleString('en-IN')}</p>
-        </div>
-        <div className="bg-amber-50 border border-amber-100 p-5 rounded-2xl">
-          <p className="text-[10px] font-black text-amber-400 uppercase tracking-widest mb-1">Inventory / Parts</p>
-          <p className="text-2xl font-bold text-amber-700">₹{Number(summary?.spare_parts_cost || 0).toLocaleString('en-IN')}</p>
-        </div>
-        <div className="bg-blue-50 border border-blue-100 p-5 rounded-2xl">
-          <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Expenses / General</p>
-          <p className="text-2xl font-bold text-blue-700">₹{Number(summary?.general_expenses || 0).toLocaleString('en-IN')}</p>
-        </div>
-      </div>
-
-      <div className="flex justify-end gap-2 px-6">
-        <button onClick={() => exportPDF(false)} className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-700 rounded-xl hover:bg-zinc-200 font-semibold text-xs transition-all">
-          <FiEye size={14} /> Show PDF
-        </button>
-        <button onClick={() => exportPDF(true)} className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 font-semibold text-xs transition-all">
-          <FiDownload size={14} /> Download PDF
-        </button>
+    <div className="space-y-4 p-3">
+      <div className="flex justify-end gap-2 px-3">
+        <button onClick={() => exportPDF(false)} className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-700 rounded-xl hover:bg-zinc-200 font-semibold text-xs transition-all shadow-sm"><FiEye size={14} /> Show PDF</button>
+        <button onClick={() => exportPDF(true)} className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 font-semibold text-xs transition-all shadow-md active:scale-95"><FiDownload size={14} /> Download PDF</button>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-xs">
           <thead>
             <tr className="bg-zinc-900 text-white">
-              <th className="text-left px-6 py-4 text-[10px] font-black uppercase tracking-widest">Date</th>
-              <th className="text-left px-6 py-4 text-[10px] font-black uppercase tracking-widest">Vehicle</th>
-              <th className="text-left px-6 py-4 text-[10px] font-black uppercase tracking-widest">Category</th>
-              <th className="text-left px-6 py-4 text-[10px] font-black uppercase tracking-widest">Description</th>
-              <th className="text-right px-6 py-4 text-[10px] font-black uppercase tracking-widest">Amount</th>
+              {headers.map(h => <th key={h} className="text-left px-6 py-4 text-[10px] font-black uppercase tracking-widest">{h}</th>)}
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-50">
             {rows.map((r, i) => (
               <tr key={i} className="hover:bg-zinc-50 transition-colors">
-                <td className="px-6 py-4">{r.date ? new Date(r.date).toLocaleDateString() : '—'}</td>
-                <td className="px-6 py-4 font-bold text-zinc-600">{r.vehicle_number || '—'}</td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${r.category === 'Spare Parts' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}`}>
-                    {r.category}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-zinc-600">{r.description}</td>
-                <td className="px-6 py-4 text-right font-black text-rose-600">₹{Number(r.amount || 0).toLocaleString('en-IN')}</td>
+                {getRowData(r).map((val, j) => <td key={j} className="px-6 py-4 font-medium text-zinc-700 whitespace-nowrap">{val}</td>)}
               </tr>
             ))}
           </tbody>
           <tfoot className="bg-zinc-50 font-black border-t-2 border-zinc-200">
             <tr>
-              <td colSpan={4} className="px-6 py-4 text-right text-zinc-500 uppercase text-[10px]">Total Expenditure</td>
-              <td className="px-6 py-4 text-right text-rose-700 text-lg">₹{Number(summary?.total_expenditure || 0).toLocaleString('en-IN')}</td>
+              <td colSpan={4} className="px-6 py-4 text-right text-zinc-500 uppercase text-[10px]">Grand Total</td>
+              <td className="px-6 py-4 font-bold text-zinc-900">₹{rows.reduce((a, b) => a + Number(b.taxable_amount || 0), 0).toLocaleString('en-IN')}</td>
+              <td className="px-6 py-4 font-bold text-emerald-600">₹{rows.reduce((a, b) => a + Number(b.gst_amount || 0), 0).toLocaleString('en-IN')}</td>
+              <td className="px-6 py-4 font-black text-emerald-700">₹{rows.reduce((a, b) => a + Number(b.gst_amount || 0), 0).toLocaleString('en-IN')}</td>
+              <td className="px-6 py-4 text-right text-zinc-900 text-lg">₹{rows.reduce((a, b) => a + Number(b.total_amount || 0), 0).toLocaleString('en-IN')}</td>
             </tr>
           </tfoot>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function InventoryReportTable({ rows }) {
+  if (!rows?.length) return <EmptyReport />
+
+  const headers = ['Product Name', 'HSN Code', 'Part Number', 'Current Stock', 'Low Stock?']
+
+  const exportPDF = (shouldDownload = false) => {
+    const doc = new jsPDF('p', 'mm', 'a4')
+    const pageWidth = doc.internal.pageSize.width
+    const margin = 14
+
+    // Header
+    doc.setFontSize(14).setFont('helvetica', 'bold')
+    doc.text('R.S.TRANSPORT', pageWidth / 2, margin, { align: 'center' })
+    doc.setFontSize(10).setFont('helvetica', 'normal')
+    doc.text('INVENTORY STOCK REPORT', pageWidth / 2, margin + 7, { align: 'center' })
+    doc.line(margin, margin + 12, pageWidth - margin, margin + 12)
+
+    const tableBody = rows.map(r => {
+      const isLow = Number(r.stock ?? 0) <= Number(r.low_stock || 0)
+      return [
+        r.product_name || r.name || '—',
+        r.hsn_code || r.hsn || '—',
+        r.part_number || r.part_no || '—',
+        `${Number(r.stock ?? r.quantity ?? 0).toLocaleString('en-IN')} ${r.unit || 'units'}`,
+        isLow ? 'YES' : 'NO'
+      ]
+    })
+
+    autoTable(doc, {
+      startY: margin + 18,
+      head: [headers],
+      body: tableBody,
+      theme: 'plain',
+      styles: { fontSize: 8, cellPadding: 3 },
+      headStyles: { fontStyle: 'bold', borderBottom: { width: 0.5 } },
+      columnStyles: { 4: { halign: 'center' } }
+    })
+
+    if (shouldDownload) doc.save(`inventory-report-${Date.now()}.pdf`)
+    else window.open(doc.output('bloburl'), '_blank')
+  }
+
+  return (
+    <div className="space-y-4 p-3">
+      <div className="flex justify-end gap-2 px-3">
+        <button onClick={() => exportPDF(false)} className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-700 rounded-xl hover:bg-zinc-200 font-semibold text-xs transition-all shadow-sm"><FiEye size={14} /> Show PDF</button>
+        <button onClick={() => exportPDF(true)} className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 font-semibold text-xs transition-all shadow-md active:scale-95"><FiDownload size={14} /> Download PDF</button>
+      </div>
+      <div className="overflow-x-auto rounded-2xl border border-zinc-100 shadow-sm">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-zinc-900 text-white">
+              {headers.map(h => <th key={h} className="text-left px-6 py-4 text-[10px] font-black uppercase tracking-widest">{h}</th>)}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-50">
+            {rows.map((r, i) => {
+              const isLow = Number(r.stock ?? 0) <= Number(r.low_stock || 0)
+              return (
+                <tr key={i} className="hover:bg-zinc-50 transition-colors">
+                  <td className="px-6 py-4 font-bold text-zinc-900">{r.product_name || r.name || '—'}</td>
+                  <td className="px-6 py-4 text-zinc-600 font-mono">{r.hsn_code || r.hsn || '—'}</td>
+                  <td className="px-6 py-4 text-zinc-600">{r.part_number || r.part_no || '—'}</td>
+                  <td className="px-6 py-4">
+                    <span className={`font-black ${isLow ? 'text-rose-600' : 'text-emerald-600'}`}>
+                      {Number(r.stock ?? r.quantity ?? 0).toLocaleString('en-IN')}
+                    </span>
+                    <span className="ml-1 text-[10px] text-zinc-400 font-medium uppercase tracking-tighter">{r.unit || 'units'}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase ${isLow ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
+                      {isLow ? 'Yes' : 'No'}
+                    </span>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
         </table>
       </div>
     </div>
@@ -988,7 +1194,7 @@ export default function Reports({ reportType }) {
   const vehiclesQuery = useQuery({
     queryKey: ['vehicles'],
     queryFn: vehicleAPI.listVehicles,
-    enabled: reportType === 'bills' || reportType === 'vehicle-income'
+    enabled: reportType === 'bills' || reportType === 'vehicle-income' || reportType === 'vehicle-expenditure'
   })
 
   const companiesQuery = useQuery({
@@ -1107,8 +1313,8 @@ export default function Reports({ reportType }) {
               </div>
             </>)}
 
-            {/* Vehicle and Company filters for Bills/Vehicle Income reports */}
-            {(reportType === 'bills' || reportType === 'vehicle-income') && (
+            {/* Vehicle and Company filters for Bills/Vehicle Income/Vehicle Expenditure reports */}
+            {(reportType === 'bills' || reportType === 'vehicle-income' || reportType === 'vehicle-expenditure') && (
               <>
                 {reportType === 'bills' && (
                   <div className="flex flex-col gap-1.5">
@@ -1220,7 +1426,7 @@ export default function Reports({ reportType }) {
           </div>
         )}
         {data && !isLoading && (() => {
-          let rows = data.data ?? data.items ?? []
+          let rows = data?.data ?? data?.items ?? (Array.isArray(data) ? data : [])
           const challans = challansQuery.data?.items ?? []
 
           if (reportType === 'bills') {
@@ -1259,32 +1465,36 @@ export default function Reports({ reportType }) {
                   ? <AttendanceTable rows={rows} />
                   : reportType === 'ledger'
                     ? <LedgerReportTable rows={rows} />
-                    : reportType === 'bills'
-                      ? <BillsTable
-                        rows={rows}
-                        onViewDetails={(b) => setViewBill(b)}
-                        challans={challansQuery.data?.items ?? []}
-                        customers={customersQuery.data?.items ?? []}
-                        companies={companiesQuery.data?.items ?? []}
-                        trips={tripsQuery.data?.items ?? []}
-                        places={placesQuery.data?.items ?? []}
-                      />
-                      : reportType === 'trips'
-                        ? <TripsTable
+                    : reportType === 'products'
+                      ? <InventoryReportTable rows={rows} />
+                      : reportType === 'bills'
+                        ? <BillsTable
                           rows={rows}
+                          onViewDetails={(b) => setViewBill(b)}
+                          challans={challansQuery.data?.items ?? []}
                           customers={customersQuery.data?.items ?? []}
+                          companies={companiesQuery.data?.items ?? []}
+                          trips={tripsQuery.data?.items ?? []}
                           places={placesQuery.data?.items ?? []}
                         />
-                        : reportType === 'vehicle-income'
-                          ? <VehicleIncomeTable
+                        : reportType === 'trips'
+                          ? <TripsTable
                             rows={rows}
                             customers={customersQuery.data?.items ?? []}
                             places={placesQuery.data?.items ?? []}
-                            vehicles={vehiclesQuery.data?.items ?? []}
                           />
-                          : reportType === 'vehicle-expenditure'
-                            ? <VehicleExpenditureTable rows={rows} summary={data.summary} />
-                            : <GenericTable rows={rows} />
+                          : reportType === 'vehicle-income'
+                            ? <VehicleIncomeTable
+                              rows={rows}
+                              customers={customersQuery.data?.items ?? []}
+                              places={placesQuery.data?.items ?? []}
+                              vehicles={vehiclesQuery.data?.items ?? []}
+                            />
+                            : reportType === 'vehicle-expenditure'
+                              ? <VehicleExpenditureTable rows={rows} summary={data.summary} categorized_totals={data.categorized_totals} timeline={data.timeline} />
+                              : reportType === 'gst'
+                                ? <GstReportTable rows={rows} />
+                                : <GenericTable rows={rows} />
                 }</div>
             </div>
           )

@@ -2,6 +2,7 @@ import { api } from '../../services/axios.js'
 import { USE_MOCKS } from '../../utils/constants.js'
 
 const ALLOWED_FIELDS = [
+  'invoice_number',
   'product_id', 'supplier_id',
   'unit', 'unit_price', 'quantity',
   'purchase_price', 'gst_percentage', 'gst_amount', 'total_price',
@@ -34,6 +35,24 @@ export async function listPurchases() {
   } catch (err) { throw new Error(extractError(err, 'Failed to load purchases')) }
 }
 
+// New cleanPayload logic in purchaseAPI.js
+function cleanPayload(payload) {
+  const clean = {}
+  ALLOWED_FIELDS.forEach((f) => {
+    const v = payload[f]
+    if (v === undefined || v === null || v === '') return // Skip empty fields
+
+    // Strictly convert numerical fields
+    if (['unit_price', 'quantity', 'purchase_price', 'gst_percentage', 'gst_amount', 'total_price'].includes(f)) {
+      clean[f] = Number(v)
+    } else {
+      clean[f] = v
+    }
+  })
+  return clean
+}
+
+
 export async function createPurchase(payload) {
   try {
     if (USE_MOCKS) {
@@ -45,12 +64,14 @@ export async function createPurchase(payload) {
     const hasFile = payload.purchase_bill_file instanceof File
     if (hasFile) {
       const fd = new FormData()
-      ALLOWED_FIELDS.forEach((f) => { if (payload[f] != null && payload[f] !== '') fd.append(f, payload[f]) })
+      const clean = cleanPayload(payload)
+      Object.keys(clean).forEach((k) => fd.append(k, clean[k]))
+      if (hasFile) fd.append('purchase_bill_file', payload.purchase_bill_file)
+
       const { data } = await api.post('/purchase-details', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       return normalize(data?.data ?? data)
     }
-    const clean = {}
-    ALLOWED_FIELDS.forEach((f) => { if (payload[f] != null && payload[f] !== '') clean[f] = payload[f] })
+    const clean = cleanPayload(payload)
     const { data } = await api.post('/purchase-details', clean)
     return normalize(data?.data ?? data)
   } catch (err) { throw new Error(extractError(err, 'Failed to create purchase')) }
@@ -65,12 +86,14 @@ export async function updatePurchase(id, payload) {
     const hasFile = payload.purchase_bill_file instanceof File
     if (hasFile) {
       const fd = new FormData()
-      ALLOWED_FIELDS.forEach((f) => { if (payload[f] != null && payload[f] !== '') fd.append(f, payload[f]) })
+      const clean = cleanPayload(payload)
+      Object.keys(clean).forEach((k) => fd.append(k, clean[k]))
+      if (hasFile) fd.append('purchase_bill_file', payload.purchase_bill_file)
+
       const { data } = await api.patch(`/purchase-details/${id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
       return normalize(data?.data ?? data)
     }
-    const clean = {}
-    ALLOWED_FIELDS.forEach((f) => { if (payload[f] != null && payload[f] !== '') clean[f] = payload[f] })
+    const clean = cleanPayload(payload)
     const { data } = await api.patch(`/purchase-details/${id}`, clean)
     return normalize(data?.data ?? data)
   } catch (err) { throw new Error(extractError(err, 'Failed to update purchase')) }

@@ -39,7 +39,11 @@ export default function Products() {
   const filteredRows = useMemo(() => {
     if (!searchTerm) return allRows
     const q = searchTerm.toLowerCase()
-    return allRows.filter((p) => (p.product_name ?? '').toLowerCase().includes(q))
+    return allRows.filter((p) =>
+      (p.product_name ?? '').toLowerCase().includes(q) ||
+      (p.hsn_code ?? '').toLowerCase().includes(q) ||
+      (p.part_number ?? '').toLowerCase().includes(q)
+    )
   }, [allRows, searchTerm])
 
   const columns = useMemo(() => [
@@ -64,6 +68,16 @@ export default function Products() {
           </div>
         )
       },
+    },
+    {
+      key: 'hsn',
+      header: 'HSN / Part No.',
+      render: (r) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs font-bold text-zinc-900">{r.hsn_code || '—'}</span>
+          <span className="text-[10px] text-zinc-400 font-medium uppercase tracking-tight">{r.part_number || '—'}</span>
+        </div>
+      ),
     },
     {
       key: 'stock',
@@ -178,6 +192,8 @@ export default function Products() {
           title="Product Details"
           data={{
             'Product Name': view.record.product_name,
+            'HSN Code': view.record.hsn_code || '—',
+            'Part Number': view.record.part_number || '—',
             'Stock': view.record.stock,
             'Low Stock Alert': view.record.low_stock,
           }}

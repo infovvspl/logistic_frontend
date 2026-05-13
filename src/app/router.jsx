@@ -134,6 +134,7 @@ export const router = createBrowserRouter([
       { path: 'reports/bills', element: <Reports reportType="bills" /> },
       { path: 'reports/vehicle-income', element: <Reports reportType="vehicle-income" /> },
       { path: 'reports/vehicle-expenditure', element: <Reports reportType="vehicle-expenditure" /> },
+      { path: 'reports/gst', element: <Reports reportType="gst" /> },
     ],
   },
   { path: '*', element: <NotFound /> },

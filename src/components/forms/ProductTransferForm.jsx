@@ -3,6 +3,7 @@ import { FiSearch, FiX, FiCheckCircle, FiArrowRight } from 'react-icons/fi'
 import Input from '../ui/Input.jsx'
 import Select from '../ui/Select.jsx'
 import Button from '../ui/Button.jsx'
+import { useAuth } from '../../hooks/useAuth.js'
 
 const UNIT_OPTIONS = [
   { value: '', label: 'Select unit...' },
@@ -64,6 +65,7 @@ export default function ProductTransferForm({
   defaultValues, onSubmit, loading, serverError = null,
   products = [], vehicles = [],
 }) {
+  const { user } = useAuth()
   const isEdit = !!defaultValues
 
   const [form, setForm] = useState({
@@ -94,7 +96,10 @@ export default function ProductTransferForm({
     e.preventDefault()
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
-    onSubmit(form)
+    onSubmit({
+      ...form,
+      given_from: user?.id || user?._id || '',
+    })
   }
 
   return (
