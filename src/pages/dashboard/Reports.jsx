@@ -131,46 +131,143 @@ function AttendanceTable({ rows }) {
 function LedgerReportTable({ rows }) {
   if (!rows?.length) return <EmptyReport />
   const headers = ['Bill No', 'From', 'To', 'Amount', 'Txn Type', 'Purpose', 'Date', 'Time']
+
+  const exportPDF = (shouldDownload = false) => {
+    const doc = new jsPDF('landscape')
+    const pageWidth = doc.internal.pageSize.width
+    const pageHeight = doc.internal.pageSize.height
+    const margin = 14
+
+    // Header Section
+    doc.setFontSize(15).setFont('helvetica', 'bold')
+    doc.text('R.S.TRANSPORT', pageWidth / 2, margin, { align: 'center' })
+
+    doc.setFontSize(8).setFont('helvetica', 'normal')
+    doc.text('PROP:- DARSHAN SINGH  |  JAGANNATH AUTO NAGAR, ASKA ROAD, BERHAMPUR(GM)', pageWidth / 2, margin + 5, { align: 'center' })
+
+    doc.setDrawColor(200, 200, 200)
+    doc.line(margin, margin + 8, pageWidth - margin, margin + 8)
+
+    doc.setFontSize(11).setFont('helvetica', 'bold')
+    doc.text('LEDGER STATEMENT', pageWidth / 2, margin + 14, { align: 'center' })
+
+    doc.setDrawColor(0, 0, 0)
+    doc.line(margin, margin + 17, pageWidth - margin, margin + 17)
+
+    doc.setFontSize(8).setFont('helvetica', 'normal')
+    doc.text(`Report Date: ${new Date().toLocaleDateString('en-IN')}`, margin, margin + 22)
+
+    const tableBody = rows.map((r) => {
+      const dt = r.created_at ? new Date(r.created_at) : null
+      return [
+        r.bill_no || '—',
+        r.payer_name ?? r.payer_type ?? '—',
+        r.payee_name ?? r.payee_type ?? '—',
+        `Rs.${Number(r.amount || 0).toLocaleString('en-IN')}`,
+        (r.transaction_type ?? '—').replace(/_/g, ' ').toUpperCase(),
+        r.transaction_purpose_name ?? '—',
+        dt ? dt.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-') : '—',
+        dt ? dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '—'
+      ]
+    })
+
+    const totalAmount = rows.reduce((a, b) => a + (Number(b.amount) || 0), 0)
+    tableBody.push(['', '', 'TOTAL', `Rs.${totalAmount.toLocaleString('en-IN')}`, '', '', '', ''])
+
+    autoTable(doc, {
+      startY: margin + 26,
+      head: [headers],
+      body: tableBody,
+      theme: 'striped',
+      styles: { fontSize: 7, cellPadding: 2, font: 'helvetica' },
+      headStyles: { fillColor: [30, 30, 30], textColor: 255, fontStyle: 'bold', halign: 'center' },
+      columnStyles: {
+        0: { cellWidth: 20 },
+        1: { cellWidth: 'auto' },
+        2: { cellWidth: 'auto' },
+        3: { cellWidth: 30, halign: 'right', fontStyle: 'bold' },
+        4: { cellWidth: 25, halign: 'center' },
+        5: { cellWidth: 40 },
+        6: { cellWidth: 25, halign: 'center' },
+        7: { cellWidth: 25, halign: 'center' }
+      },
+      didParseCell: (d) => {
+        if (d.row.index === tableBody.length - 1) {
+          d.cell.styles.fontStyle = 'bold'
+          d.cell.styles.fillColor = [240, 240, 240]
+        }
+      },
+      didDrawPage: (d) => {
+        doc.setFontSize(7).setFont('helvetica', 'normal').setTextColor(150)
+        doc.text(`Page ${doc.internal.getCurrentPageInfo().pageNumber}`, pageWidth / 2, pageHeight - 8, { align: 'center' })
+      }
+    })
+
+    const finalY = doc.lastAutoTable.finalY + 10
+    doc.setFontSize(8).setFont('helvetica', 'bold').setTextColor(0)
+    doc.text('BANK: STATE BANK OF INDIA(ASKA RAOD) IFSC: SBIN0007931 A/C NO.:-33169091606', margin, finalY)
+
+    const signY = finalY + 15
+    doc.setFont('helvetica', 'normal')
+    doc.text('Prepared By', margin, signY + 5)
+    doc.text('Checked By', pageWidth / 2, signY + 5, { align: 'center' })
+    doc.text('Authorised Signatory', pageWidth - margin - 35, signY + 5)
+
+    if (shouldDownload) doc.save(`ledger-report-${Date.now()}.pdf`)
+    else window.open(doc.output('bloburl'), '_blank')
+  }
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-zinc-900 text-white">
-            {headers.map((h) => (
-              <th key={h} className="text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => {
-            const dt = r.created_at ? new Date(r.created_at) : null
-            const date = dt ? dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
-            const time = dt ? dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '—'
-            return (
-              <tr key={r.transaction_id ?? i} className="border-b border-zinc-50 hover:bg-violet-50/20 transition-colors">
-                <td className="px-5 py-4">
-                  {r.bill_no
-                    ? <span className="bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold px-2.5 py-1 rounded-lg text-xs">{r.bill_no}</span>
-                    : <span className="text-zinc-400 text-xs">—</span>}
-                </td>
-                <td className="px-5 py-4 font-semibold text-zinc-800 capitalize">{r.payer_name ?? r.payer_type ?? '—'}</td>
-                <td className="px-5 py-4 font-semibold text-zinc-800 capitalize">{r.payee_name ?? r.payee_type ?? '—'}</td>
-                <td className="px-5 py-4 font-black text-zinc-900 tabular-nums whitespace-nowrap">
-                  ₹{Number(r.amount || 0).toLocaleString('en-IN')}
-                </td>
-                <td className="px-5 py-4">
-                  <span className="px-2.5 py-1 rounded-lg bg-zinc-100 text-zinc-600 font-semibold text-xs capitalize">
-                    {(r.transaction_type ?? '—').replace(/_/g, ' ')}
-                  </span>
-                </td>
-                <td className="px-5 py-4 text-zinc-700 font-medium">{r.transaction_purpose_name ?? '—'}</td>
-                <td className="px-5 py-4 font-semibold text-zinc-800 whitespace-nowrap">{date}</td>
-                <td className="px-5 py-4 text-zinc-500 text-xs whitespace-nowrap">{time}</td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+    <div className="space-y-4 p-3">
+      <div className="flex justify-end gap-2 px-3">
+        <button onClick={() => exportPDF(false)} className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-700 rounded-xl hover:bg-zinc-200 font-semibold text-xs transition-all shadow-sm">
+          <FiEye size={14} /> Show PDF
+        </button>
+        <button onClick={() => exportPDF(true)} className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 font-semibold text-xs transition-all shadow-md active:scale-95">
+          <FiDownload size={14} /> Download PDF
+        </button>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-zinc-900 text-white">
+              {headers.map((h) => (
+                <th key={h} className="text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-50">
+            {rows.map((r, i) => {
+              const dt = r.created_at ? new Date(r.created_at) : null
+              const date = dt ? dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+              const time = dt ? dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '—'
+              return (
+                <tr key={r.transaction_id ?? i} className="hover:bg-violet-50/20 transition-colors">
+                  <td className="px-5 py-4">
+                    {r.bill_no
+                      ? <span className="bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold px-2.5 py-1 rounded-lg text-xs">{r.bill_no}</span>
+                      : <span className="text-zinc-400 text-xs">—</span>}
+                  </td>
+                  <td className="px-5 py-4 font-semibold text-zinc-800 capitalize">{r.payer_name ?? r.payer_type ?? '—'}</td>
+                  <td className="px-5 py-4 font-semibold text-zinc-800 capitalize">{r.payee_name ?? r.payee_type ?? '—'}</td>
+                  <td className="px-5 py-4 font-black text-zinc-900 tabular-nums whitespace-nowrap">
+                    ₹{Number(r.amount || 0).toLocaleString('en-IN')}
+                  </td>
+                  <td className="px-5 py-4">
+                    <span className="px-2.5 py-1 rounded-lg bg-zinc-100 text-zinc-600 font-semibold text-xs capitalize">
+                      {(r.transaction_type ?? '—').replace(/_/g, ' ')}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4 text-zinc-700 font-medium">{r.transaction_purpose_name ?? '—'}</td>
+                  <td className="px-5 py-4 font-semibold text-zinc-800 whitespace-nowrap">{date}</td>
+                  <td className="px-5 py-4 text-zinc-500 text-xs whitespace-nowrap">{time}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
@@ -842,69 +939,121 @@ function VehicleExpenditureTable({ rows, summary, categorized_totals, timeline }
   const exportPDF = (shouldDownload = false) => {
     const doc = new jsPDF('l', 'mm', 'a4')
     const pageWidth = doc.internal.pageSize.width
+    const pageHeight = doc.internal.pageSize.height
     const margin = 14
+    const rs = 'Rs.'
 
-    // Header Section
-    doc.setFontSize(14).setFont('helvetica', 'bold').text('R.S.TRANSPORT', pageWidth / 2, margin, { align: 'center' })
-    doc.setFontSize(10).setFont('helvetica', 'normal')
-    doc.text('PROP:- DARSHAN SINGH', margin, margin + 5)
-    doc.text('JAGANNATH AUTO NAGAR, ASKA ROAD, BERHAMPUR(GM)', margin, margin + 10)
+    // ── Header ──────────────────────────────────────────────────────────────
+    doc.setFontSize(15).setFont('helvetica', 'bold')
+    doc.text('R.S.TRANSPORT', pageWidth / 2, margin, { align: 'center' })
 
-    doc.line(margin, margin + 13, pageWidth - margin, margin + 13)
-    doc.setFont('helvetica', 'bold').text('VEHICLE EXPENDITURE STATEMENT', pageWidth / 2, margin + 18, { align: 'center' })
-    doc.line(margin, margin + 20, pageWidth - margin, margin + 20)
+    doc.setFontSize(8).setFont('helvetica', 'normal')
+    doc.text('PROP:- DARSHAN SINGH  |  JAGANNATH AUTO NAGAR, ASKA ROAD, BERHAMPUR(GM)', pageWidth / 2, margin + 5, { align: 'center' })
 
-    doc.setFontSize(9)
-    doc.text(`Target: ${summary?.vehicle || 'All Vehicles'}`, margin, margin + 25)
-    doc.text(`Report Date: ${new Date().toLocaleDateString('en-IN')}`, pageWidth - margin - 40, margin + 25)
+    doc.setDrawColor(180, 180, 180)
+    doc.line(margin, margin + 8, pageWidth - margin, margin + 8)
 
-    // Summary Section
-    let currentY = margin + 32
-    doc.setFontSize(10).setFont('helvetica', 'bold').text('SUMMARY', margin, currentY)
+    doc.setFontSize(11).setFont('helvetica', 'bold')
+    doc.text('VEHICLE EXPENDITURE STATEMENT', pageWidth / 2, margin + 14, { align: 'center' })
 
+    doc.setDrawColor(0, 0, 0)
+    doc.line(margin, margin + 17, pageWidth - margin, margin + 17)
+
+    doc.setFontSize(8).setFont('helvetica', 'normal')
+    doc.text(`Vehicle: ${summary?.vehicle || 'All Vehicles'}`, margin, margin + 22)
+    doc.text(`Report Date: ${new Date().toLocaleDateString('en-IN')}`, pageWidth - margin, margin + 22, { align: 'right' })
+
+    // ── Summary table (left half) ────────────────────────────────────────────
     const summaryData = [
-      ['Total Expenditure', `₹${Number(summary?.total_expenditure || 0).toLocaleString('en-IN')}`],
-      ['Spare Parts', `₹${Number(summary?.total_parts_cost || 0).toLocaleString('en-IN')}`],
-      ['Fuel', `₹${Number(summary?.total_fuel_cost || 0).toLocaleString('en-IN')}`],
-      ['Maintenance', `₹${Number(summary?.total_maintenance_cost || 0).toLocaleString('en-IN')}`],
-      ['Others', `₹${Number((summary?.total_staff_cost || 0) + (summary?.total_toll_cost || 0) + (summary?.total_other_cost || 0)).toLocaleString('en-IN')}`]
+      ['Spare Parts',  `${rs} ${Number(summary?.total_parts_cost || 0).toLocaleString('en-IN')}`],
+      ['Fuel',         `${rs} ${Number(summary?.total_fuel_cost || 0).toLocaleString('en-IN')}`],
+      ['Maintenance',  `${rs} ${Number(summary?.total_maintenance_cost || 0).toLocaleString('en-IN')}`],
+      ['Staff',        `${rs} ${Number(summary?.total_staff_cost || 0).toLocaleString('en-IN')}`],
+      ['Toll/Parking', `${rs} ${Number(summary?.total_toll_cost || 0).toLocaleString('en-IN')}`],
+      ['Other',        `${rs} ${Number(summary?.total_other_cost || 0).toLocaleString('en-IN')}`],
+      ['TOTAL',        `${rs} ${Number(summary?.total_expenditure || 0).toLocaleString('en-IN')}`],
     ]
 
     autoTable(doc, {
-      startY: currentY + 5,
+      startY: margin + 26,
       head: [['Category', 'Amount']],
       body: summaryData,
       theme: 'grid',
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [40, 40, 40] },
-      columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } },
-      margin: { right: pageWidth / 2 + 20 }
+      tableWidth: 90,
+      margin: { left: margin },
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [30, 30, 30], textColor: 255, fontStyle: 'bold', halign: 'center' },
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 40, halign: 'right', fontStyle: 'bold' },
+      },
+      didParseCell: (d) => {
+        if (d.row.index === summaryData.length - 1) {
+          d.cell.styles.fontStyle = 'bold'
+          d.cell.styles.fillColor = [240, 240, 240]
+        }
+      }
     })
+
+    // ── Main detail table ────────────────────────────────────────────────────
+    const pdfHeaders = ['#', 'Date', 'Vehicle', 'Type', 'Category', 'Description', 'Part Name', 'Qty', 'Amount', 'Source']
 
     const tableBody = data.map((r, i) => [
       i + 1,
-      r.date ? new Date(r.date).toLocaleDateString('en-IN') : '—',
-      r.vehicle_number || '—',
-      r.type || '—',
-      r.category || '—',
-      r.description || '—',
-      r.part_name || '—',
-      r.quantity || '—',
-      `₹${Number(r.amount || 0).toLocaleString('en-IN')}`,
-      r.source || '—'
+      r.date ? new Date(r.date).toLocaleDateString('en-IN') : '-',
+      r.vehicle_number || '-',
+      r.type || '-',
+      r.category || '-',
+      r.description || '-',
+      r.part_name && r.part_name !== '—' ? r.part_name : '-',
+      r.quantity && r.quantity !== '—' ? r.quantity : '-',
+      `${rs} ${Number(r.amount || 0).toLocaleString('en-IN')}`,
+      r.source || '-',
     ])
 
+    // Total row
+    const grandTotal = data.reduce((a, b) => a + Number(b.amount || 0), 0)
+    tableBody.push(['', '', '', '', '', '', '', 'TOTAL', `${rs} ${grandTotal.toLocaleString('en-IN')}`, ''])
+
     autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 10,
-      head: [headers],
+      startY: doc.lastAutoTable.finalY + 8,
+      head: [pdfHeaders],
       body: tableBody,
       theme: 'striped',
-      styles: { fontSize: 7, cellPadding: 2 },
-      headStyles: { fillColor: [0, 0, 0] },
-      columnStyles: { 8: { halign: 'right', fontStyle: 'bold' } }
+      styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
+      headStyles: { fillColor: [30, 30, 30], textColor: 255, fontStyle: 'bold', halign: 'center' },
+      alternateRowStyles: { fillColor: [250, 250, 250] },
+      columnStyles: {
+        0: { cellWidth: 8,  halign: 'center' },
+        1: { cellWidth: 22, halign: 'center' },
+        2: { cellWidth: 28 },
+        3: { cellWidth: 20, halign: 'center' },
+        4: { cellWidth: 24 },
+        5: { cellWidth: 'auto' },
+        6: { cellWidth: 30 },
+        7: { cellWidth: 18, halign: 'center' },
+        8: { cellWidth: 28, halign: 'right', fontStyle: 'bold' },
+        9: { cellWidth: 22, halign: 'center' },
+      },
+      didParseCell: (d) => {
+        // Bold + shaded total row
+        if (d.row.index === tableBody.length - 1) {
+          d.cell.styles.fontStyle = 'bold'
+          d.cell.styles.fillColor = [230, 230, 230]
+        }
+      },
+      // Page numbers in footer
+      didDrawPage: (d) => {
+        doc.setFontSize(7).setFont('helvetica', 'normal').setTextColor(150)
+        doc.text(
+          `Page ${doc.internal.getCurrentPageInfo().pageNumber}`,
+          pageWidth / 2, pageHeight - 8, { align: 'center' }
+        )
+        doc.setTextColor(0)
+      }
     })
 
-    if (shouldDownload) doc.save(`expenditure-report.pdf`)
+    if (shouldDownload) doc.save(`vehicle-expenditure-${new Date().toISOString().slice(0, 10)}.pdf`)
     else window.open(doc.output('bloburl'), '_blank')
   }
 

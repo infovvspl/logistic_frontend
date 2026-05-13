@@ -25,7 +25,7 @@ async function buildBillLookups() {
       api.get('/bills'),
       api.get('/challans'),
     ])
-    const bills    = billsRes.data?.data    ?? billsRes.data?.items    ?? (Array.isArray(billsRes.data)    ? billsRes.data    : [])
+    const bills = billsRes.data?.data ?? billsRes.data?.items ?? (Array.isArray(billsRes.data) ? billsRes.data : [])
     const challans = challansRes.data?.data ?? challansRes.data?.items ?? (Array.isArray(challansRes.data) ? challansRes.data : [])
 
     // bill UUID → bill_no
@@ -64,9 +64,9 @@ async function buildEntityMaps() {
     ])
     const toArr = (res) => res.data?.data ?? res.data?.items ?? (Array.isArray(res.data) ? res.data : [])
     const customers = toArr(custRes)
-    const users     = toArr(userRes)
+    const users = toArr(userRes)
     const companies = toArr(compRes)
-    const drivers   = toArr(driverRes)
+    const drivers = toArr(driverRes)
 
     const maps = { customer: new Map(), user: new Map(), company: new Map(), driver: new Map() }
     customers.forEach((c) => maps.customer.set(String(c.id), c.customer_name || c.name || c.id))
@@ -91,22 +91,22 @@ async function buildEntityMaps() {
   }
 }
 
-export const fetchAttendanceReport      = (filters) => fetchReport('attendance', filters)
-export const fetchSalaryReport          = (filters) => fetchReport('salary', filters)
-export const fetchProductsReport        = async (filters) => {
+export const fetchAttendanceReport = (filters) => fetchReport('attendance', filters)
+export const fetchSalaryReport = (filters) => fetchReport('salary', filters)
+export const fetchProductsReport = async (filters) => {
   try {
     return await productAPI.listProducts()
   } catch (err) {
     throw new Error(err.message || 'Failed to load products report')
   }
 }
-export const fetchPurchaseReport        = (filters) => fetchReport('purchase', filters)
+export const fetchPurchaseReport = (filters) => fetchReport('purchase', filters)
 export const fetchProductTransferReport = (filters) => fetchReport('product/transfers', filters)
-export const fetchTripsReport           = async (filters) => {
+export const fetchTripsReport = async (filters) => {
   try {
     const params = new URLSearchParams()
     Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v) })
-    
+
     // Use the trips endpoint directly for filtering
     const { data } = await api.get(`/trips?${params.toString()}`)
     return data
@@ -114,11 +114,11 @@ export const fetchTripsReport           = async (filters) => {
     throw new Error(extractError(err, 'Failed to load trips report'))
   }
 }
-export const fetchBillsReport          = async (filters) => {
+export const fetchBillsReport = async (filters) => {
   try {
     const params = new URLSearchParams()
     Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v) })
-    
+
     // Use the bills endpoint directly for filtering, not reports/bills
     const { data } = await api.get(`/bills?${params.toString()}`)
     return data
@@ -195,9 +195,9 @@ export async function fetchLedgerReport(filters) {
     const txnId = r.transaction_id ?? r.id
     const entityInfo = txnId ? txnEntityMap.get(String(txnId)) : null
     const payerType = entityInfo?.payer_type ?? r.payer_type
-    const payerId   = entityInfo?.payer_id   ?? r.payer_id
+    const payerId = entityInfo?.payer_id ?? r.payer_id
     const payeeType = entityInfo?.payee_type ?? r.payee_type
-    const payeeId   = entityInfo?.payee_id   ?? r.payee_id
+    const payeeId = entityInfo?.payee_id ?? r.payee_id
 
     enriched.payer_name = resolveName(payerType, payerId) ?? payerType ?? '—'
     enriched.payee_name = resolveName(payeeType, payeeId) ?? payeeType ?? '—'
@@ -205,7 +205,7 @@ export async function fetchLedgerReport(filters) {
     return enriched
   })
 
-  if (reportData?.data)  return { ...reportData, data: enriched }
+  if (reportData?.data) return { ...reportData, data: enriched }
   if (reportData?.items) return { ...reportData, items: enriched }
   return enriched
 }
@@ -225,11 +225,11 @@ export async function fetchProfitLoss(filters = {}) {
 export async function fetchVehicleIncomeReport(filters) {
   try {
     const params = new URLSearchParams()
-    Object.entries(filters).forEach(([k, v]) => { 
+    Object.entries(filters).forEach(([k, v]) => {
       // If filtering by vehicle, we'll handle it carefully
-      if (k !== 'vehicle_id' && v) params.set(k, v) 
+      if (k !== 'vehicle_id' && v) params.set(k, v)
     })
-    
+
     // Fetch everything needed for joining
     const [tripsRes, ledgerRes, assignmentsRes, vehiclesRes] = await Promise.all([
       api.get(`/trips?${params.toString()}`),
@@ -292,7 +292,7 @@ export async function fetchVehicleIncomeReport(filters) {
     const total_revenue = enrichedTrips.reduce((a, b) => a + b.revenue, 0)
     const total_expenses = enrichedTrips.reduce((a, b) => a + b.expenses, 0)
 
-    return { 
+    return {
       data: enrichedTrips,
       summary: {
         total_trips: enrichedTrips.length,
@@ -309,12 +309,13 @@ export async function fetchVehicleExpenditureReport(filters) {
   try {
     const vehicleId = filters.vehicle_id && filters.vehicle_id !== 'undefined' ? String(filters.vehicle_id) : null
 
-    const [ledgerRes, transfersRes, productsRes, vehiclesRes, purposesRes] = await Promise.all([
+    const [ledgerRes, transfersRes, productsRes, vehiclesRes, purposesRes, purchasesRes] = await Promise.all([
       api.get('/ledger'),
       api.get('/product-transfers'),
       api.get('/products'),
       api.get('/vehicles'),
-      api.get('/transaction-purposes')
+      api.get('/transaction-purposes'),
+      api.get('/purchase-details').catch(() => ({ data: [] })),
     ])
 
     const allLedger = ledgerRes.data?.data ?? ledgerRes.data?.items ?? (Array.isArray(ledgerRes.data) ? ledgerRes.data : [])
@@ -322,10 +323,25 @@ export async function fetchVehicleExpenditureReport(filters) {
     const products = productsRes.data?.items ?? (Array.isArray(productsRes.data) ? productsRes.data : [])
     const vehicles = vehiclesRes.data?.items ?? (Array.isArray(vehiclesRes.data) ? vehiclesRes.data : [])
     const purposes = purposesRes.data?.items ?? (Array.isArray(purposesRes.data) ? purposesRes.data : [])
+    const purchases = purchasesRes.data?.items ?? purchasesRes.data?.data ?? (Array.isArray(purchasesRes.data) ? purchasesRes.data : [])
 
     const vehicleMap = new Map(vehicles.map(v => [String(v.id), v]))
     const purposeMap = new Map(purposes.map(p => [String(p.id), p.transaction_purpose_name]))
     const productMap = new Map(products.map(p => [String(p.id), p]))
+
+    // Build product_id → latest unit_price from purchase records
+    // Sort by purchase date descending so the most recent price wins
+    const productPriceMap = new Map()
+    purchases
+      .slice()
+      .sort((a, b) => new Date(b.purchase_at || b.created_at || 0) - new Date(a.purchase_at || a.created_at || 0))
+      .forEach(p => {
+        const pid = String(p.product_id)
+        if (!productPriceMap.has(pid)) {
+          const price = Number(p.unit_price || p.purchase_price || 0)
+          if (price > 0) productPriceMap.set(pid, price)
+        }
+      })
 
     const matchDate = (rawDate) => {
       if (!rawDate) return true
@@ -333,13 +349,13 @@ export async function fetchVehicleExpenditureReport(filters) {
       if (isNaN(d.getTime())) return true
 
       if (filters.from && filters.to) {
-        const start = new Date(filters.from); start.setHours(0,0,0,0)
-        const end = new Date(filters.to); end.setHours(23,59,59,999)
+        const start = new Date(filters.from); start.setHours(0, 0, 0, 0)
+        const end = new Date(filters.to); end.setHours(23, 59, 59, 999)
         return d >= start && d <= end
       }
       if (filters.date) {
-        const target = new Date(filters.date); target.setHours(0,0,0,0)
-        const day = new Date(d); day.setHours(0,0,0,0)
+        const target = new Date(filters.date); target.setHours(0, 0, 0, 0)
+        const day = new Date(d); day.setHours(0, 0, 0, 0)
         return target.getTime() === day.getTime()
       }
       if (filters.month) {
@@ -363,18 +379,32 @@ export async function fetchVehicleExpenditureReport(filters) {
     const ledgerExpenses = allLedger
       .filter(l => {
         const vehicleMatch = !vehicleId || String(l.vehicle_id) === vehicleId
-        return vehicleMatch && matchDate(l.date || l.createdAt)
+        const dateField = l.date || l.created_at || l.createdAt
+        return vehicleMatch && matchDate(dateField)
       })
       .map(l => {
-        const purpose = purposeMap.get(String(l.transaction_purpose)) || l.purpose_name || ''
+        // transaction_purpose may be stored as an ID or as transaction_purpose_id
+        const purposeId = l.transaction_purpose || l.transaction_purpose_id
+        const purpose = (purposeId ? purposeMap.get(String(purposeId)) : null)
+          || l.transaction_purpose_name
+          || l.purpose_name
+          || ''
         const reason = l.remarks || purpose || 'General Expense'
+        const dateField = l.date || l.created_at || l.createdAt
+        const vehicleNumber = (l.vehicle_id
+          ? vehicleMap.get(String(l.vehicle_id))?.registration_number
+          : null)
+          || l.vehicle_number
+          || l.vehicle_registration_number
+          || (l.vehicle_id ? l.vehicle_id : null)
+          || '—'
         return {
           id: l.id,
-          date: l.date || l.createdAt,
-          vehicle_number: vehicleMap.get(String(l.vehicle_id))?.registration_number || '—',
+          date: dateField,
+          vehicle_number: vehicleNumber,
           type: 'Expense',
           category: categorize(purpose || reason),
-          description: reason,
+          description: purpose || reason,
           part_name: '—',
           quantity: '—',
           amount: Number(l.amount || 0),
@@ -386,18 +416,22 @@ export async function fetchVehicleExpenditureReport(filters) {
     const partsExpenses = allTransfers
       .filter(t => {
         const vehicleMatch = !vehicleId || String(t.given_to_vehicle) === vehicleId
-        return vehicleMatch && matchDate(t.date || t.createdAt)
+        const dateField = t.date || t.created_at || t.createdAt
+        return vehicleMatch && matchDate(dateField)
       })
       .map(t => {
         const product = productMap.get(String(t.product_id))
         const pName = product?.product_name || t.product_name || 'Part'
         const desc = t.remarks || product?.description || `Consumption of ${pName}`
-        const price = Number(product?.price || t.price || 0)
+        // Look up unit price from purchase records first, then fall back to transfer fields
+        const price = productPriceMap.get(String(t.product_id))
+          || Number(t.unit_price || t.price || 0)
         const qty = Number(t.quantity || 0)
         const v = vehicleMap.get(String(t.given_to_vehicle))
+        const dateField = t.date || t.created_at || t.createdAt
         return {
           id: t.id,
-          date: t.date || t.createdAt,
+          date: dateField,
           vehicle_number: v?.registration_number || t.given_to_vehicle_name || '—',
           type: 'Inventory',
           category: 'Spare Parts',
@@ -470,13 +504,13 @@ export async function fetchGstReport(filters) {
       if (isNaN(d.getTime())) return true
 
       if (filters.from && filters.to) {
-        const start = new Date(filters.from); start.setHours(0,0,0,0)
-        const end = new Date(filters.to); end.setHours(23,59,59,999)
+        const start = new Date(filters.from); start.setHours(0, 0, 0, 0)
+        const end = new Date(filters.to); end.setHours(23, 59, 59, 999)
         return d >= start && d <= end
       }
       if (filters.date) {
-        const target = new Date(filters.date); target.setHours(0,0,0,0)
-        const day = new Date(d); day.setHours(0,0,0,0)
+        const target = new Date(filters.date); target.setHours(0, 0, 0, 0)
+        const day = new Date(d); day.setHours(0, 0, 0, 0)
         return target.getTime() === day.getTime()
       }
       if (filters.month && filters.year) {
