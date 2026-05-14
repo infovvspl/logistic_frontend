@@ -10,6 +10,7 @@ import DashboardHome from '../pages/dashboard/DashboardHome.jsx'
 import Drivers from '../pages/dashboard/Drivers.jsx'
 import Helpers from '../pages/dashboard/Helpers.jsx'
 import Vehicles from '../pages/dashboard/Vehicles.jsx'
+import Repairs from '../pages/dashboard/Repairs.jsx'
 import Admins from '../pages/dashboard/Admins.jsx'
 import Roles from '../pages/dashboard/Roles.jsx'
 import Trips from '../pages/dashboard/Trips.jsx'
@@ -31,6 +32,7 @@ import ProductTransfers from '../pages/dashboard/ProductTransfers.jsx'
 import Reports from '../pages/dashboard/Reports.jsx'
 import BalanceSheet from '../pages/dashboard/BalanceSheet.jsx'
 import Expense from '../pages/dashboard/Expense.jsx'
+import Shifts from '../pages/dashboard/Shifts.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { usePermissions } from '../hooks/usePermissions.js'
 
@@ -101,6 +103,7 @@ export const router = createBrowserRouter([
       { path: 'drivers', element: <Drivers /> },
       { path: 'helpers', element: <Helpers /> },
       { path: 'vehicles', element: <Vehicles /> },
+      { path: 'repairs', element: <Repairs /> },
       { path: 'companies', element: <Companies /> },
       { path: 'customers', element: <Customers /> },
       { path: 'roles', element: <Roles /> },
@@ -121,6 +124,7 @@ export const router = createBrowserRouter([
       { path: 'attendance', element: <Attendance /> },
       { path: 'wages', element: <Wages /> },
       { path: 'salary', element: <Salary /> },
+      { path: 'shifts', element: <Shifts /> },
       { path: 'transaction-purposes', element: <TransactionPurposes /> },
       { path: 'product-transfers', element: <ProductTransfers /> },
       { path: 'balance-sheet', element: <BalanceSheet /> },
@@ -128,13 +132,15 @@ export const router = createBrowserRouter([
       { path: 'reports/salary', element: <Reports reportType="salary" /> },
       { path: 'reports/ledger', element: <Reports reportType="ledger" /> },
       { path: 'reports/products', element: <Reports reportType="products" /> },
-      { path: 'reports/purchase', element: <Reports reportType="purchase" /> },
-      { path: 'reports/product-transfers', element: <Reports reportType="product-transfers" /> },
+      // { path: 'reports/purchase', element: <Reports reportType="purchase" /> },
+      // { path: 'reports/product-transfers', element: <Reports reportType="product-transfers" /> },
       { path: 'reports/trips', element: <Reports reportType="trips" /> },
       { path: 'reports/bills', element: <Reports reportType="bills" /> },
       { path: 'reports/vehicle-income', element: <Reports reportType="vehicle-income" /> },
       { path: 'reports/vehicle-expenditure', element: <Reports reportType="vehicle-expenditure" /> },
       { path: 'reports/gst', element: <Reports reportType="gst" /> },
+      { path: 'reports/shiftwise-work', element: <Reports reportType="shiftwise-work" /> },
+      { path: 'reports/userwise', element: <Reports reportType="userwise" /> },
     ],
   },
   { path: '*', element: <NotFound /> },

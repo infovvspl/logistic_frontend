@@ -14,8 +14,8 @@ export default function BillForm({
   const isEdit = !!defaultValues
 
   const [form, setForm] = useState({
-    bill_no:     defaultValues?.bill_no     ?? '',
-    challan_id:  defaultValues?.challan_id  ?? '',
+    bill_no: defaultValues?.bill_no ?? '',
+    challan_id: defaultValues?.challan_id ?? '',
   })
   // multi-select only used in create mode
   const [selectedIds, setSelectedIds] = useState([])
@@ -77,7 +77,7 @@ export default function BillForm({
       onSubmit(form)
     } else {
       // one bill per selected challan
-      onSubmit({ bill_no: form.bill_no, challan_id: selectedIds })
+      onSubmit({ bill_no: form.bill_no, challan_ids: selectedIds })
     }
   }
 
@@ -192,13 +192,11 @@ export default function BillForm({
               const isSelected = selectedIds.includes(c.id)
               return (
                 <button key={c.id} type="button"
-                  className={`w-full px-3 py-2.5 text-left flex items-center gap-3 transition-colors ${
-                    isSelected ? 'bg-blue-50' : 'hover:bg-zinc-50'
-                  }`}
+                  className={`w-full px-3 py-2.5 text-left flex items-center gap-3 transition-colors ${isSelected ? 'bg-blue-50' : 'hover:bg-zinc-50'
+                    }`}
                   onClick={() => toggleChallan(c.id)}>
-                  <div className={`shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors ${
-                    isSelected ? 'bg-blue-500 border-blue-500' : 'border-zinc-300'
-                  }`}>
+                  <div className={`shrink-0 w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-zinc-300'
+                    }`}>
                     {isSelected && <FiCheck size={10} className="text-white stroke-[3]" />}
                   </div>
                   <div className="min-w-0">

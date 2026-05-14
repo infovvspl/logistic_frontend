@@ -9,11 +9,13 @@ export default function AttendanceForm({
   loading,
   serverError = null,
   users = [],
+  shifts = [],
 }) {
   const isEdit = !!defaultValues
 
   const [form, setForm] = useState({
     user_id:      defaultValues?.user_id      ?? '',
+    shift_id:     defaultValues?.shift_id     ?? '',
     punch_in_at:  defaultValues?.punch_in_at  ? new Date(defaultValues.punch_in_at).toISOString().slice(0, 16)  : '',
     punch_out_at: defaultValues?.punch_out_at ? new Date(defaultValues.punch_out_at).toISOString().slice(0, 16) : '',
   })
@@ -96,6 +98,20 @@ export default function AttendanceForm({
         </div>
         <Input label="Punch Out" type="datetime-local" leftIcon={<FiCalendar />}
           value={form.punch_out_at} onChange={(e) => set('punch_out_at', e.target.value)} />
+        <div className="space-y-1 sm:col-span-2">
+          <label className="block text-sm font-medium text-zinc-700">Shift</label>
+          <select
+            className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/15"
+            value={form.shift_id} onChange={(e) => set('shift_id', e.target.value)}
+          >
+            <option value="">Select Shift...</option>
+            {shifts.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.shift_name} ({s.start_time} - {s.end_time})
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Duration preview */}

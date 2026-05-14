@@ -4,7 +4,7 @@ import * as vehicleAPI from '../../features/vehicles/vehicleAPI.js'
 import * as companyAPI from '../../features/companies/companyAPI.js'
 import {
   FiClock, FiDollarSign, FiPackage, FiShoppingCart,
-  FiArrowRight, FiFileText, FiFilter, FiDownload, FiBarChart2, FiPrinter, FiEye, FiMap, FiSearch, FiTruck, FiTool
+  FiArrowRight, FiFileText, FiFilter, FiDownload, FiBarChart2, FiPrinter, FiEye, FiMap, FiSearch, FiTruck, FiTool, FiUsers
 } from 'react-icons/fi'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
@@ -30,6 +30,8 @@ const REPORT_CONFIG = {
   'vehicle-income': { label: 'Vehicle Income', icon: FiTruck, gradient: 'from-blue-500 to-indigo-600', fetcher: reportAPI.fetchVehicleIncomeReport },
   'vehicle-expenditure': { label: 'Vehicle Expenditure', icon: FiTool, gradient: 'from-rose-600 to-pink-700', fetcher: reportAPI.fetchVehicleExpenditureReport },
   gst: { label: 'GST', icon: FiFileText, gradient: 'from-emerald-600 to-teal-700', fetcher: reportAPI.fetchGstReport },
+  'shiftwise-work': { label: 'Shiftwise Work', icon: FiClock, gradient: 'from-fuchsia-500 to-purple-600', fetcher: reportAPI.fetchShiftwiseWorkReport },
+  'userwise': { label: 'Userwise', icon: FiUsers, gradient: 'from-sky-500 to-blue-600', fetcher: reportAPI.fetchUserwiseReport },
 }
 
 const DATE_MODES = [
@@ -1110,6 +1112,378 @@ function VehicleExpenditureTable({ rows, summary, categorized_totals, timeline }
   )
 }
 
+function UserwiseReportTable({ rows }) {
+  if (!rows?.length) return <EmptyReport />
+
+  const [expanded, setExpanded] = useState(null)
+
+  const fmtTime = (iso) => {
+    if (!iso) return '—'
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return '—'
+    return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+  }
+
+  const fmtDate = (iso) => {
+    if (!iso) return '—'
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return '—'
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+
+  const exportPDF = (shouldDownload = false) => {
+    const doc = new jsPDF('landscape')
+    const pageWidth = doc.internal.pageSize.width
+    const pageHeight = doc.internal.pageSize.height
+    const margin = 14
+
+    doc.setFontSize(15).setFont('helvetica', 'bold')
+    doc.text('R.S.TRANSPORT', pageWidth / 2, margin, { align: 'center' })
+    doc.setFontSize(8).setFont('helvetica', 'normal')
+    doc.text('PROP:- DARSHAN SINGH  |  JAGANNATH AUTO NAGAR, ASKA ROAD, BERHAMPUR(GM)', pageWidth / 2, margin + 5, { align: 'center' })
+    doc.setDrawColor(200, 200, 200)
+    doc.line(margin, margin + 8, pageWidth - margin, margin + 8)
+    doc.setFontSize(11).setFont('helvetica', 'bold')
+    doc.text('USERWISE ATTENDANCE REPORT', pageWidth / 2, margin + 14, { align: 'center' })
+    doc.setDrawColor(0, 0, 0)
+    doc.line(margin, margin + 17, pageWidth - margin, margin + 17)
+    doc.setFontSize(8).setFont('helvetica', 'normal')
+    doc.text(`Report Date: ${new Date().toLocaleDateString('en-IN')}`, margin, margin + 22)
+    doc.text(`Total Employees: ${rows.length}`, pageWidth - margin, margin + 22, { align: 'right' })
+
+    const tableBody = rows.map((r, i) => [
+      i + 1,
+      r.user_name || '—',
+      r.shifts || '—',
+      r.total_days,
+      r.days_present,
+      r.incomplete_days,
+      r.total_hours || '—'
+    ])
+
+    autoTable(doc, {
+      startY: margin + 26,
+      head: [['#', 'Employee', 'Shifts', 'Total Days', 'Present', 'Incomplete', 'Total Hours']],
+      body: tableBody,
+      theme: 'striped',
+      styles: { fontSize: 8, cellPadding: 2, font: 'helvetica' },
+      headStyles: { fillColor: [30, 30, 30], textColor: 255, fontStyle: 'bold', halign: 'center' },
+      columnStyles: {
+        0: { cellWidth: 8, halign: 'center' },
+        1: { cellWidth: 'auto' },
+        2: { cellWidth: 40 },
+        3: { cellWidth: 22, halign: 'center' },
+        4: { cellWidth: 22, halign: 'center' },
+        5: { cellWidth: 22, halign: 'center' },
+        6: { cellWidth: 25, halign: 'center' },
+      },
+      didDrawPage: () => {
+        doc.setFontSize(7).setFont('helvetica', 'normal').setTextColor(150)
+        doc.text(`Page ${doc.internal.getCurrentPageInfo().pageNumber}`, pageWidth / 2, pageHeight - 8, { align: 'center' })
+        doc.setTextColor(0)
+      }
+    })
+
+    const finalY = doc.lastAutoTable.finalY + 10
+    doc.setFontSize(8).setFont('helvetica', 'bold').setTextColor(0)
+    doc.text('BANK: STATE BANK OF INDIA(ASKA RAOD) IFSC: SBIN0007931 A/C NO.:-33169091606', margin, finalY)
+    const signY = finalY + 15
+    doc.setFont('helvetica', 'normal')
+    doc.text('Prepared By', margin, signY + 5)
+    doc.text('Checked By', pageWidth / 2, signY + 5, { align: 'center' })
+    doc.text('Authorised Signatory', pageWidth - margin - 35, signY + 5)
+
+    if (shouldDownload) doc.save(`userwise-report-${new Date().toISOString().slice(0, 10)}.pdf`)
+    else window.open(doc.output('bloburl'), '_blank')
+  }
+
+  return (
+    <div className="space-y-4 p-3">
+      <div className="flex justify-end gap-2 px-1">
+        <button onClick={() => exportPDF(false)} className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-700 rounded-xl hover:bg-zinc-200 font-semibold text-xs transition-all shadow-sm">
+          <FiEye size={14} /> Show PDF
+        </button>
+        <button onClick={() => exportPDF(true)} className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 font-semibold text-xs transition-all shadow-md active:scale-95">
+          <FiDownload size={14} /> Download PDF
+        </button>
+      </div>
+
+      <div className="overflow-x-auto rounded-2xl border border-zinc-100 shadow-sm">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-zinc-900 text-white">
+              {['#', 'Employee', 'Shifts', 'Total Days', 'Present', 'Incomplete', 'Total Hours', ''].map((h) => (
+                <th key={h} className="text-left px-4 py-3 font-black uppercase tracking-wider whitespace-nowrap border-r border-zinc-800 last:border-none">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-50">
+            {rows.map((r, i) => (
+              <>
+                <tr
+                  key={r.user_id}
+                  className="hover:bg-sky-50/20 transition-colors cursor-pointer"
+                  onClick={() => setExpanded(expanded === r.user_id ? null : r.user_id)}
+                >
+                  <td className="px-4 py-3 text-zinc-400 font-bold border-r border-zinc-50">{i + 1}</td>
+                  <td className="px-4 py-3 border-r border-zinc-50">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-white font-black text-[10px] shrink-0">
+                        {(r.user_name ?? 'U')[0].toUpperCase()}
+                      </div>
+                      <span className="font-semibold text-zinc-800">{r.user_name || '—'}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-zinc-600 font-medium border-r border-zinc-50">{r.shifts || '—'}</td>
+                  <td className="px-4 py-3 text-center font-bold text-zinc-700 border-r border-zinc-50">{r.total_days}</td>
+                  <td className="px-4 py-3 border-r border-zinc-50">
+                    <span className="bg-emerald-50 border border-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-lg">{r.days_present}</span>
+                  </td>
+                  <td className="px-4 py-3 border-r border-zinc-50">
+                    {r.incomplete_days > 0
+                      ? <span className="bg-amber-50 border border-amber-100 text-amber-600 font-bold px-2 py-0.5 rounded-lg">{r.incomplete_days}</span>
+                      : <span className="text-zinc-300">0</span>}
+                  </td>
+                  <td className="px-4 py-3 border-r border-zinc-50">
+                    {r.total_hours !== '—'
+                      ? <span className="bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-lg">{r.total_hours}</span>
+                      : <span className="text-zinc-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3 text-zinc-400 text-[10px] font-semibold">
+                    {expanded === r.user_id ? '▲ Hide' : '▼ Details'}
+                  </td>
+                </tr>
+                {expanded === r.user_id && (
+                  <tr key={`${r.user_id}-detail`} className="bg-sky-50/30">
+                    <td colSpan={8} className="px-6 py-4">
+                      <div className="rounded-xl border border-sky-100 overflow-hidden">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="bg-zinc-800 text-white">
+                              {['Date', 'Shift', 'Punch In', 'Punch Out', 'Duration', 'Status'].map(h => (
+                                <th key={h} className="text-left px-3 py-2 font-black uppercase tracking-wider whitespace-nowrap">{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-sky-50">
+                            {r.records.map((rec, j) => (
+                              <tr key={rec.id ?? j} className="hover:bg-white transition-colors">
+                                <td className="px-3 py-2 font-medium text-zinc-700">{fmtDate(rec.punch_in_at)}</td>
+                                <td className="px-3 py-2 font-semibold text-zinc-700">{rec.shift_name}</td>
+                                <td className="px-3 py-2 text-emerald-700 font-semibold">{fmtTime(rec.punch_in_at)}</td>
+                                <td className="px-3 py-2">
+                                  {rec.punch_out_at
+                                    ? <span className="text-rose-600 font-semibold">{fmtTime(rec.punch_out_at)}</span>
+                                    : <span className="text-zinc-300 italic">Not punched out</span>}
+                                </td>
+                                <td className="px-3 py-2">
+                                  {rec.work_duration
+                                    ? <span className="bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded">{rec.work_duration}</span>
+                                    : <span className="text-zinc-300">—</span>}
+                                </td>
+                                <td className="px-3 py-2">
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${rec.punch_out_at ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-600'}`}>
+                                    {rec.punch_out_at ? 'Present' : 'Incomplete'}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function ShiftwiseWorkTable({ rows }) {
+  if (!rows?.length) return <EmptyReport />
+
+  const headers = ['#', 'Employee', 'Shift', 'Shift Hours', 'Date', 'Punch In', 'Punch Out', 'Duration', 'Status']
+
+  const fmtTime = (iso) => {
+    if (!iso) return '—'
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return '—'
+    return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+  }
+
+  const fmtDate = (iso) => {
+    if (!iso) return '—'
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return '—'
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+
+  const exportPDF = (shouldDownload = false) => {
+    const doc = new jsPDF('landscape')
+    const pageWidth = doc.internal.pageSize.width
+    const pageHeight = doc.internal.pageSize.height
+    const margin = 14
+
+    doc.setFontSize(15).setFont('helvetica', 'bold')
+    doc.text('R.S.TRANSPORT', pageWidth / 2, margin, { align: 'center' })
+
+    doc.setFontSize(8).setFont('helvetica', 'normal')
+    doc.text('PROP:- DARSHAN SINGH  |  JAGANNATH AUTO NAGAR, ASKA ROAD, BERHAMPUR(GM)', pageWidth / 2, margin + 5, { align: 'center' })
+
+    doc.setDrawColor(200, 200, 200)
+    doc.line(margin, margin + 8, pageWidth - margin, margin + 8)
+
+    doc.setFontSize(11).setFont('helvetica', 'bold')
+    doc.text('SHIFTWISE WORK REPORT', pageWidth / 2, margin + 14, { align: 'center' })
+
+    doc.setDrawColor(0, 0, 0)
+    doc.line(margin, margin + 17, pageWidth - margin, margin + 17)
+
+    doc.setFontSize(8).setFont('helvetica', 'normal')
+    doc.text(`Report Date: ${new Date().toLocaleDateString('en-IN')}`, margin, margin + 22)
+    doc.text(`Total Records: ${rows.length}`, pageWidth - margin, margin + 22, { align: 'right' })
+
+    const tableBody = rows.map((r, i) => {
+      const punchIn = r.punch_in_at ? new Date(r.punch_in_at) : null
+      const punchOut = r.punch_out_at ? new Date(r.punch_out_at) : null
+      const dateStr = punchIn ? punchIn.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }).replace(/\//g, '-') : '—'
+      const inStr = punchIn ? punchIn.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '—'
+      const outStr = punchOut ? punchOut.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '—'
+      const status = r.punch_out_at ? 'Present' : 'Incomplete'
+      return [
+        i + 1,
+        r.user_name || '—',
+        r.shift_name || '—',
+        r.shift_start && r.shift_end ? `${r.shift_start} – ${r.shift_end}` : '—',
+        dateStr,
+        inStr,
+        outStr,
+        r.work_duration || '—',
+        status
+      ]
+    })
+
+    autoTable(doc, {
+      startY: margin + 26,
+      head: [['#', 'Employee', 'Shift', 'Shift Hours', 'Date', 'Punch In', 'Punch Out', 'Duration', 'Status']],
+      body: tableBody,
+      theme: 'striped',
+      styles: { fontSize: 7, cellPadding: 2, font: 'helvetica' },
+      headStyles: { fillColor: [30, 30, 30], textColor: 255, fontStyle: 'bold', halign: 'center' },
+      columnStyles: {
+        0: { cellWidth: 8, halign: 'center' },
+        1: { cellWidth: 'auto' },
+        2: { cellWidth: 30 },
+        3: { cellWidth: 28, halign: 'center' },
+        4: { cellWidth: 22, halign: 'center' },
+        5: { cellWidth: 22, halign: 'center' },
+        6: { cellWidth: 22, halign: 'center' },
+        7: { cellWidth: 20, halign: 'center' },
+        8: { cellWidth: 20, halign: 'center' },
+      },
+      didDrawPage: (d) => {
+        doc.setFontSize(7).setFont('helvetica', 'normal').setTextColor(150)
+        doc.text(`Page ${doc.internal.getCurrentPageInfo().pageNumber}`, pageWidth / 2, pageHeight - 8, { align: 'center' })
+        doc.setTextColor(0)
+      }
+    })
+
+    const finalY = doc.lastAutoTable.finalY + 10
+    doc.setFontSize(8).setFont('helvetica', 'bold').setTextColor(0)
+    doc.text('BANK: STATE BANK OF INDIA(ASKA RAOD) IFSC: SBIN0007931 A/C NO.:-33169091606', margin, finalY)
+
+    const signY = finalY + 15
+    doc.setFont('helvetica', 'normal')
+    doc.text('Prepared By', margin, signY + 5)
+    doc.text('Checked By', pageWidth / 2, signY + 5, { align: 'center' })
+    doc.text('Authorised Signatory', pageWidth - margin - 35, signY + 5)
+
+    if (shouldDownload) doc.save(`shiftwise-report-${new Date().toISOString().slice(0, 10)}.pdf`)
+    else window.open(doc.output('bloburl'), '_blank')
+  }
+
+  return (
+    <div className="space-y-4 p-3">
+      <div className="flex justify-end gap-2 px-1">
+        <button
+          onClick={() => exportPDF(false)}
+          className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-700 rounded-xl hover:bg-zinc-200 font-semibold text-xs transition-all shadow-sm"
+        >
+          <FiEye size={14} /> Show PDF
+        </button>
+        <button
+          onClick={() => exportPDF(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 font-semibold text-xs transition-all shadow-md active:scale-95"
+        >
+          <FiDownload size={14} /> Download PDF
+        </button>
+      </div>
+
+      <div className="overflow-x-auto rounded-2xl border border-zinc-100 shadow-sm">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-zinc-900 text-white">
+              {headers.map((h) => (
+                <th key={h} className="text-left px-4 py-3 font-black uppercase tracking-wider whitespace-nowrap border-r border-zinc-800 last:border-none">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-50">
+            {rows.map((r, i) => {
+              const punchIn = r.punch_in_at ? new Date(r.punch_in_at) : null
+              const isComplete = !!r.punch_out_at
+              return (
+                <tr key={r.id ?? i} className="hover:bg-fuchsia-50/20 transition-colors">
+                  <td className="px-4 py-3 text-zinc-400 font-bold border-r border-zinc-50">{i + 1}</td>
+                  <td className="px-4 py-3 border-r border-zinc-50">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center text-white font-black text-[10px] shrink-0">
+                        {(r.user_name ?? 'U')[0].toUpperCase()}
+                      </div>
+                      <span className="font-semibold text-zinc-800">{r.user_name || '—'}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 font-semibold text-zinc-700 border-r border-zinc-50">{r.shift_name || '—'}</td>
+                  <td className="px-4 py-3 text-zinc-500 whitespace-nowrap border-r border-zinc-50">
+                    {r.shift_start && r.shift_end
+                      ? <span className="px-2 py-0.5 rounded bg-zinc-100 text-zinc-600 font-semibold">{r.shift_start} – {r.shift_end}</span>
+                      : '—'}
+                  </td>
+                  <td className="px-4 py-3 font-medium text-zinc-700 whitespace-nowrap border-r border-zinc-50">
+                    {punchIn ? fmtDate(r.punch_in_at) : '—'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap border-r border-zinc-50">
+                    <span className="text-emerald-700 font-semibold">{fmtTime(r.punch_in_at)}</span>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap border-r border-zinc-50">
+                    {r.punch_out_at
+                      ? <span className="text-rose-600 font-semibold">{fmtTime(r.punch_out_at)}</span>
+                      : <span className="text-zinc-300 italic text-[10px]">Not punched out</span>}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap border-r border-zinc-50">
+                    {r.work_duration && r.work_duration !== '—'
+                      ? <span className="bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-lg">{r.work_duration}</span>
+                      : <span className="text-zinc-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase ${isComplete ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-600 border border-amber-100'}`}>
+                      {isComplete ? 'Present' : 'Incomplete'}
+                    </span>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 function GstReportTable({ rows }) {
   if (!rows?.length) return <EmptyReport />
 
@@ -1608,7 +1982,7 @@ export default function Reports({ reportType }) {
           const summary = data.summary ?? null
           return (
             <div className="space-y-6">
-              {summary && <SummaryCards summary={summary} gradient={config.gradient} />}
+              {summary && reportType !== 'bills' && reportType !== 'trips' && reportType !== 'shiftwise-work' && reportType !== 'userwise' && <SummaryCards summary={summary} gradient={config.gradient} />}
               <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-xl overflow-hidden">
                 {reportType === 'attendance'
                   ? <AttendanceTable rows={rows} />
@@ -1643,7 +2017,11 @@ export default function Reports({ reportType }) {
                               ? <VehicleExpenditureTable rows={rows} summary={data.summary} categorized_totals={data.categorized_totals} timeline={data.timeline} />
                               : reportType === 'gst'
                                 ? <GstReportTable rows={rows} />
-                                : <GenericTable rows={rows} />
+                                : reportType === 'shiftwise-work'
+                                  ? <ShiftwiseWorkTable rows={data?.data ?? rows} />
+                                  : reportType === 'userwise'
+                                    ? <UserwiseReportTable rows={data?.data ?? rows} />
+                                    : <GenericTable rows={rows} />
                 }</div>
             </div>
           )

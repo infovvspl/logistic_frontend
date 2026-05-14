@@ -102,8 +102,8 @@ function FileUpload({ label, fieldName, setValue, watch }) {
       )}
 
       <label className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-all ${hasAny
-          ? 'border-blue-200 bg-blue-50 hover:bg-blue-100'
-          : 'border-dashed border-zinc-300 bg-zinc-50 hover:border-blue-300 hover:bg-blue-50'
+        ? 'border-blue-200 bg-blue-50 hover:bg-blue-100'
+        : 'border-dashed border-zinc-300 bg-zinc-50 hover:border-blue-300 hover:bg-blue-50'
         }`}>
         <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${hasAny ? 'bg-blue-600' : 'bg-zinc-200'}`}>
           {hasAny
@@ -287,7 +287,7 @@ export default function VehicleForm({ defaultValues, onSubmit, loading, branches
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input
-          label="Registration Number" required placeholder="WB23AB1234"
+          label="Registration Number" required placeholder="OD23AB1234"
           error={errors.registration_number?.message}
           leftIcon={<FiHash />}
           {...register('registration_number', { required: 'Required' })}

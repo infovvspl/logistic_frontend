@@ -28,6 +28,7 @@ import {
 import { MdOutlineAccountBalance, MdAddBusiness, MdSwapHorizontalCircle } from "react-icons/md";
 import { PiCoinsFill } from "react-icons/pi";
 import { RiBillFill, RiMoneyRupeeCircleFill } from "react-icons/ri";
+import { GiAutoRepair } from "react-icons/gi";
 import { APP_NAME } from "../utils/constants.js";
 import { useAuth } from "../hooks/useAuth.js";
 import { usePermissions } from "../hooks/usePermissions.js";
@@ -46,13 +47,15 @@ const reportSubItems = [
   { to: "/dashboard/reports/salary", label: "Salary", icon: FaRupeeSign },
   { to: "/dashboard/reports/ledger", label: "Ledger", icon: MdOutlineAccountBalance },
   { to: "/dashboard/reports/products", label: "Inventory", icon: FiPackage },
-  { to: "/dashboard/reports/purchase", label: "Purchase", icon: FiShoppingCart },
-  { to: "/dashboard/reports/product-transfers", label: "Product Transfers", icon: FiArrowRight },
+  // { to: "/dashboard/reports/purchase", label: "Purchase", icon: FiShoppingCart },
+  // { to: "/dashboard/reports/product-transfers", label: "Product Transfers", icon: FiArrowRight },
   { to: "/dashboard/reports/trips", label: "Trips", icon: FiMap },
   { to: "/dashboard/reports/bills", label: "Bills", icon: FiClipboard },
   { to: "/dashboard/reports/vehicle-income", label: "Vehicle Income", icon: FaTruckFront },
   { to: "/dashboard/reports/vehicle-expenditure", label: "Vehicle Expenditure", icon: FiTool },
   { to: "/dashboard/reports/gst", label: "GST Report", icon: FiFileText },
+  { to: "/dashboard/reports/shiftwise-work", label: "Shiftwise", icon: FiFileText },
+  { to: "/dashboard/reports/userwise", label: "Userwise", icon: FiFileText },
 ];
 
 const navItems = [
@@ -61,6 +64,7 @@ const navItems = [
   { to: "/dashboard/drivers", label: "Drivers", icon: FaUserTie },
   { to: "/dashboard/helpers", label: "Helpers", icon: GrUserWorker },
   { to: "/dashboard/vehicles", label: "Vehicles", icon: FaTruckFront },
+  { to: "/dashboard/repairs", label: "Repair", icon: GiAutoRepair },
   { to: "/dashboard/companies", label: "Companies", icon: MdAddBusiness },
   { to: "/dashboard/customers", label: "Customers", icon: FaUsers },
   { to: "/dashboard/roles", label: "Roles", icon: FaUserGroup },
@@ -77,6 +81,7 @@ const navItems = [
   { to: "/dashboard/products", label: "Products", icon: BiSolidPackage },
   { to: "/dashboard/purchase", label: "Purchase", icon: FaShoppingCart },
   { to: "/dashboard/attendance", label: "Attendance", icon: FaClock },
+  { to: "/dashboard/shifts", label: "Shifts", icon: FaClock },
   { to: "/dashboard/wages", label: "Wages", icon: PiCoinsFill },
   { to: "/dashboard/salary", label: "Salary", icon: RiMoneyRupeeCircleFill },
   { to: "/dashboard/transaction-purposes", label: "Txn Purposes", icon: FaClipboardList },

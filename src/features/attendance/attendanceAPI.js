@@ -1,7 +1,7 @@
 import { api } from '../../services/axios.js'
 import { USE_MOCKS } from '../../utils/constants.js'
 
-const ALLOWED_FIELDS = ['user_id', 'punch_in_at', 'punch_out_at']
+const ALLOWED_FIELDS = ['user_id', 'shift_id', 'punch_in_at', 'punch_out_at']
 
 let mockAttendance = []
 

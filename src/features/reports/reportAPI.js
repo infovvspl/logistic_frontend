@@ -553,3 +553,223 @@ export async function fetchGstReport(filters) {
     throw new Error(extractError(err, 'Failed to load GST report'))
   }
 }
+
+export async function fetchUserwiseReport(filters) {
+  try {
+    const [attendanceRes, shiftsRes, usersRes] = await Promise.all([
+      api.get('/attendance'),
+      api.get('/shifts'),
+      api.get('/users')
+    ])
+
+    const attendance = attendanceRes.data?.items ?? attendanceRes.data?.data ?? (Array.isArray(attendanceRes.data) ? attendanceRes.data : [])
+    const shifts = shiftsRes.data?.items ?? shiftsRes.data?.data ?? (Array.isArray(shiftsRes.data) ? shiftsRes.data : [])
+    const users = usersRes.data?.items ?? usersRes.data?.data ?? (Array.isArray(usersRes.data) ? usersRes.data : [])
+
+    const shiftMap = new Map()
+    shifts.forEach(s => {
+      const id = s.id || s._id || s.shift_id
+      if (id) shiftMap.set(String(id), s)
+    })
+
+    const userMap = new Map()
+    users.forEach(u => {
+      const id = u.id || u._id || u.user_id
+      if (id) userMap.set(String(id), u)
+    })
+
+    const matchDate = (rawDate) => {
+      if (!rawDate) return true
+      const d = new Date(rawDate)
+      if (isNaN(d.getTime())) return true
+      if (filters.from && filters.to) {
+        const start = new Date(filters.from); start.setHours(0, 0, 0, 0)
+        const end = new Date(filters.to); end.setHours(23, 59, 59, 999)
+        return d >= start && d <= end
+      }
+      if (filters.date) {
+        const target = new Date(filters.date); target.setHours(0, 0, 0, 0)
+        const day = new Date(d); day.setHours(0, 0, 0, 0)
+        return target.getTime() === day.getTime()
+      }
+      if (filters.month) {
+        const [yr, mo] = filters.month.split('-').map(Number)
+        return d.getFullYear() === yr && (d.getMonth() + 1) === mo
+      }
+      if (filters.year) return d.getFullYear() === Number(filters.year)
+      return true
+    }
+
+    const filtered = attendance.filter(a => matchDate(a.punch_in_at || a.created_at))
+
+    // Group by user
+    const userGroups = new Map()
+    filtered.forEach(a => {
+      const userId = String(a.user_id)
+      const user = userMap.get(userId)
+      const userName = user?.name || user?.email || userId
+
+      if (!userGroups.has(userId)) {
+        userGroups.set(userId, {
+          user_id: userId,
+          user_name: userName,
+          records: []
+        })
+      }
+
+      const shift = shiftMap.get(String(a.shift_id))
+      let duration = null
+      let durationMs = 0
+      if (a.punch_in_at && a.punch_out_at) {
+        const inTime = new Date(a.punch_in_at)
+        const outTime = new Date(a.punch_out_at)
+        durationMs = outTime - inTime
+        const h = Math.floor(durationMs / (1000 * 60 * 60))
+        const m = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60))
+        duration = `${h}h ${m}m`
+      }
+
+      userGroups.get(userId).records.push({
+        ...a,
+        shift_name: shift?.shift_name || '—',
+        shift_start: shift?.start_time || '—',
+        shift_end: shift?.end_time || '—',
+        work_duration: duration,
+        duration_ms: durationMs
+      })
+    })
+
+    // Summarise per user
+    const rows = Array.from(userGroups.values()).map(g => {
+      const totalMs = g.records.reduce((a, r) => a + (r.duration_ms || 0), 0)
+      const totalH = Math.floor(totalMs / (1000 * 60 * 60))
+      const totalM = Math.floor((totalMs % (1000 * 60 * 60)) / (1000 * 60))
+      const present = g.records.filter(r => r.punch_out_at).length
+      const incomplete = g.records.length - present
+      const shifts = [...new Set(g.records.map(r => r.shift_name).filter(s => s !== '—'))]
+      return {
+        user_id: g.user_id,
+        user_name: g.user_name,
+        total_days: g.records.length,
+        days_present: present,
+        incomplete_days: incomplete,
+        total_hours: totalMs > 0 ? `${totalH}h ${totalM}m` : '—',
+        shifts: shifts.join(', ') || '—',
+        records: g.records
+      }
+    })
+
+    return { data: rows }
+  } catch (err) {
+    throw new Error(extractError(err, 'Failed to load userwise report'))
+  }
+}
+
+export async function fetchShiftwiseWorkReport(filters) {
+  try {
+    const [attendanceRes, shiftsRes, usersRes] = await Promise.all([
+      api.get('/attendance'),
+      api.get('/shifts'),
+      api.get('/users')
+    ])
+
+    const attendance = attendanceRes.data?.items ?? attendanceRes.data?.data ?? (Array.isArray(attendanceRes.data) ? attendanceRes.data : [])
+    const shifts = shiftsRes.data?.items ?? shiftsRes.data?.data ?? (Array.isArray(shiftsRes.data) ? shiftsRes.data : [])
+    const users = usersRes.data?.items ?? usersRes.data?.data ?? (Array.isArray(usersRes.data) ? usersRes.data : [])
+
+    // Create maps for quick lookup
+    const shiftMap = new Map()
+    shifts.forEach(s => {
+      const id = s.id || s._id || s.shift_id
+      if (id) shiftMap.set(String(id), s)
+    })
+
+    const userMap = new Map()
+    users.forEach(u => {
+      const id = u.id || u._id || u.user_id
+      if (id) userMap.set(String(id), u)
+    })
+
+    // Helper for date matching
+    const matchDate = (rawDate) => {
+      if (!rawDate) return true
+      const d = new Date(rawDate)
+      if (isNaN(d.getTime())) return true
+
+      if (filters.from && filters.to) {
+        const start = new Date(filters.from); start.setHours(0, 0, 0, 0)
+        const end = new Date(filters.to); end.setHours(23, 59, 59, 999)
+        return d >= start && d <= end
+      }
+      if (filters.date) {
+        const target = new Date(filters.date); target.setHours(0, 0, 0, 0)
+        const day = new Date(d); day.setHours(0, 0, 0, 0)
+        return target.getTime() === day.getTime()
+      }
+      if (filters.month) {
+        const [yr, mo] = filters.month.split('-').map(Number)
+        return d.getFullYear() === yr && (d.getMonth() + 1) === mo
+      }
+      if (filters.year) return d.getFullYear() === Number(filters.year)
+      return true
+    }
+
+    // Filter attendance by date
+    const filteredAttendance = attendance.filter(a => matchDate(a.punch_in_at || a.created_at))
+
+    // Enrich attendance with shift and user details
+    const enriched = filteredAttendance.map(a => {
+      const shift = shiftMap.get(String(a.shift_id))
+      const user = userMap.get(String(a.user_id))
+      
+      // Calculate work duration
+      let duration = '—'
+      if (a.punch_in_at && a.punch_out_at) {
+        const inTime = new Date(a.punch_in_at)
+        const outTime = new Date(a.punch_out_at)
+        const diffMs = outTime - inTime
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+        const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+        duration = `${diffHours}h ${diffMins}m`
+      }
+
+      return {
+        ...a,
+        user_name: user?.name || user?.email || '—',
+        shift_name: shift?.shift_name || '—',
+        shift_start: shift?.start_time || '—',
+        shift_end: shift?.end_time || '—',
+        work_duration: duration,
+        date: a.punch_in_at || a.created_at
+      }
+    })
+
+    // Group by shift for summary
+    const shiftSummary = new Map()
+    enriched.forEach(a => {
+      const shiftName = a.shift_name
+      if (!shiftSummary.has(shiftName)) {
+        shiftSummary.set(shiftName, {
+          shift_name: shiftName,
+          total_workers: 0,
+          worker_names: []
+        })
+      }
+      const summary = shiftSummary.get(shiftName)
+      summary.total_workers++
+      if (!summary.worker_names.includes(a.user_name)) {
+        summary.worker_names.push(a.user_name)
+      }
+    })
+
+    return {
+      data: enriched,
+      summary: {
+        total_attendance: enriched.length,
+        shift_summary: Array.from(shiftSummary.values())
+      }
+    }
+  } catch (err) {
+    throw new Error(extractError(err, 'Failed to load shiftwise work report'))
+  }
+}

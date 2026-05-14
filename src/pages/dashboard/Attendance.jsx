@@ -12,6 +12,7 @@ import PageStatCard from '../../components/common/PageStatCard.jsx'
 import AttendanceForm from '../../components/forms/AttendanceForm.jsx'
 import * as attendanceAPI from '../../features/attendance/attendanceAPI.js'
 import * as userAPI from '../../features/users/userAPI.js'
+import * as shiftAPI from '../../features/shifts/shiftAPI.js'
 
 function formatDT(v) {
   if (!v) return '—'
@@ -53,6 +54,7 @@ export default function Attendance() {
 
   const attendanceQuery = useQuery({ queryKey: ['attendance'], queryFn: attendanceAPI.listAttendance })
   const usersQuery      = useQuery({ queryKey: ['users'],      queryFn: userAPI.listUsers })
+  const shiftsQuery     = useQuery({ queryKey: ['shifts'],     queryFn: shiftAPI.listShifts })
 
   const createMutation = useMutation({
     mutationFn: attendanceAPI.createAttendance,
@@ -68,7 +70,9 @@ export default function Attendance() {
   })
 
   const users = usersQuery.data?.items ?? []
+  const shifts = shiftsQuery.data?.items ?? []
   const userById = useMemo(() => { const m = new Map(); users.forEach((u) => m.set(String(u.id), u)); return m }, [users])
+  const shiftById = useMemo(() => { const m = new Map(); shifts.forEach((s) => m.set(String(s.id), s)); return m }, [shifts])
 
   const allRows = attendanceQuery.data?.items ?? []
   const todayCount = allRows.filter((r) => {
@@ -209,6 +213,14 @@ export default function Attendance() {
         return dur
           ? <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100">{dur}</span>
           : <span className="text-xs text-zinc-400">—</span>
+      },
+    },
+    {
+      key: 'shift',
+      header: 'Shift',
+      render: (r) => {
+        const s = shiftById.get(String(r.shift_id))
+        return s ? <span className="text-xs font-medium text-zinc-600">{s.shift_name}</span> : <span className="text-xs text-zinc-400">—</span>
       },
     },
     {
@@ -408,6 +420,7 @@ export default function Attendance() {
         <AttendanceForm
           defaultValues={modal.record}
           users={users}
+          shifts={shifts}
           loading={createMutation.isPending || updateMutation.isPending}
           serverError={createMutation.error?.message ?? updateMutation.error?.message ?? null}
           onSubmit={async (values) => {
@@ -432,6 +445,7 @@ export default function Attendance() {
             title="Attendance Details"
             data={{
               'User': u?.name || u?.email || r.user_id,
+              'Shift': shiftById.get(String(r.shift_id))?.shift_name || '—',
               'Punch In': formatDT(r.punch_in_at),
               'Punch Out': formatDT(r.punch_out_at),
               'Duration': calcDuration(r.punch_in_at, r.punch_out_at) || '—',
