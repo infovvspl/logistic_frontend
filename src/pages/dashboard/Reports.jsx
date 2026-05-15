@@ -15,6 +15,7 @@ import * as challanAPI from '../../features/challans/challanAPI.js'
 import * as tripAPI from '../../features/trips/tripAPI.js'
 import * as customerAPI from '../../features/customers/customerAPI.js'
 import * as placeAPI from '../../features/places/placeAPI.js'
+import * as txnPurposeAPI from '../../features/transactionPurposes/transactionPurposeAPI.js'
 import Modal from '../../components/ui/Modal.jsx'
 import Table from '../../components/ui/Table.jsx'
 
@@ -23,6 +24,7 @@ const REPORT_CONFIG = {
   bills: { label: 'Bills', icon: FiFileText, gradient: 'from-orange-500 to-red-600', fetcher: reportAPI.fetchBillsReport },
   salary: { label: 'Salary', icon: FaRupeeSign, gradient: 'from-emerald-500 to-teal-600', fetcher: reportAPI.fetchSalaryReport },
   ledger: { label: 'Ledger', icon: MdOutlineAccountBalance, gradient: 'from-violet-500 to-purple-600', fetcher: reportAPI.fetchLedgerReport },
+  'expense-report': { label: 'Expense', icon: MdOutlineAccountBalance, gradient: 'from-orange-500 to-red-600', fetcher: reportAPI.fetchExpenseReport },
   products: { label: 'Inventory', icon: FiPackage, gradient: 'from-amber-500 to-orange-600', fetcher: reportAPI.fetchProductsReport },
   purchase: { label: 'Purchase', icon: FiShoppingCart, gradient: 'from-pink-500 to-rose-600', fetcher: reportAPI.fetchPurchaseReport },
   'product-transfers': { label: 'Product Transfers', icon: FiArrowRight, gradient: 'from-cyan-500 to-sky-600', fetcher: reportAPI.fetchProductTransferReport },
@@ -1112,6 +1114,187 @@ function VehicleExpenditureTable({ rows, summary, categorized_totals, timeline }
   )
 }
 
+function ExpenseReportTable({ rows }) {
+  if (!rows?.length) return <EmptyReport />
+
+  const fmtDate = (iso) => {
+    if (!iso) return '—'
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return '—'
+    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
+
+  const fmtTime = (iso) => {
+    if (!iso) return '—'
+    const d = new Date(iso)
+    if (isNaN(d.getTime())) return '—'
+    return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+  }
+
+  const total = rows.reduce((a, r) => a + (Number(r.amount) || 0), 0)
+
+  const headers = ['#', 'Date', 'Time', 'Expense Head', 'Purpose', 'Amount', 'Method', 'Bill No', 'Vehicle', 'Payer']
+
+  const exportPDF = (shouldDownload = false) => {
+    const doc = new jsPDF('landscape')
+    const pageWidth = doc.internal.pageSize.width
+    const pageHeight = doc.internal.pageSize.height
+    const margin = 14
+
+    doc.setFontSize(15).setFont('helvetica', 'bold')
+    doc.text('R.S.TRANSPORT', pageWidth / 2, margin, { align: 'center' })
+    doc.setFontSize(8).setFont('helvetica', 'normal')
+    doc.text('PROP:- DARSHAN SINGH  |  JAGANNATH AUTO NAGAR, ASKA ROAD, BERHAMPUR(GM)', pageWidth / 2, margin + 5, { align: 'center' })
+    doc.setDrawColor(200, 200, 200)
+    doc.line(margin, margin + 8, pageWidth - margin, margin + 8)
+    doc.setFontSize(11).setFont('helvetica', 'bold')
+    doc.text('EXPENSE REPORT', pageWidth / 2, margin + 14, { align: 'center' })
+    doc.setDrawColor(0, 0, 0)
+    doc.line(margin, margin + 17, pageWidth - margin, margin + 17)
+    doc.setFontSize(8).setFont('helvetica', 'normal')
+    doc.text(`Report Date: ${new Date().toLocaleDateString('en-IN')}`, margin, margin + 22)
+    doc.text(`Total Records: ${rows.length}  |  Total Amount: Rs.${total.toLocaleString('en-IN')}`, pageWidth - margin, margin + 22, { align: 'right' })
+
+    const tableBody = rows.map((r, i) => {
+      const dt = r.created_at || r.date
+      return [
+        i + 1,
+        fmtDate(dt),
+        fmtTime(dt),
+        r.expense_head || '—',
+        r.purpose_name || '—',
+        `Rs.${Number(r.amount || 0).toLocaleString('en-IN')}`,
+        (r.transaction_type || '—').replace(/_/g, ' '),
+        r.bill_no || '—',
+        r.vehicle_number || '—',
+        r.payer_name || '—',
+      ]
+    })
+    tableBody.push(['', '', '', '', 'TOTAL', `Rs.${total.toLocaleString('en-IN')}`, '', '', '', ''])
+
+    autoTable(doc, {
+      startY: margin + 26,
+      head: [['#', 'Date', 'Time', 'Expense Head', 'Purpose', 'Amount', 'Method', 'Bill No', 'Vehicle', 'Payer']],
+      body: tableBody,
+      theme: 'striped',
+      styles: { fontSize: 7, cellPadding: 2, font: 'helvetica' },
+      headStyles: { fillColor: [30, 30, 30], textColor: 255, fontStyle: 'bold', halign: 'center' },
+      columnStyles: {
+        0: { cellWidth: 8, halign: 'center' },
+        1: { cellWidth: 22, halign: 'center' },
+        2: { cellWidth: 20, halign: 'center' },
+        3: { cellWidth: 'auto' },
+        4: { cellWidth: 35 },
+        5: { cellWidth: 28, halign: 'right', fontStyle: 'bold' },
+        6: { cellWidth: 22, halign: 'center' },
+        7: { cellWidth: 20, halign: 'center' },
+        8: { cellWidth: 25 },
+        9: { cellWidth: 'auto' },
+      },
+      didParseCell: (d) => {
+        if (d.row.index === tableBody.length - 1) {
+          d.cell.styles.fontStyle = 'bold'
+          d.cell.styles.fillColor = [240, 240, 240]
+        }
+      },
+      didDrawPage: () => {
+        doc.setFontSize(7).setFont('helvetica', 'normal').setTextColor(150)
+        doc.text(`Page ${doc.internal.getCurrentPageInfo().pageNumber}`, pageWidth / 2, pageHeight - 8, { align: 'center' })
+        doc.setTextColor(0)
+      }
+    })
+
+    const finalY = doc.lastAutoTable.finalY + 10
+    doc.setFontSize(8).setFont('helvetica', 'bold').setTextColor(0)
+    doc.text('BANK: STATE BANK OF INDIA(ASKA RAOD) IFSC: SBIN0007931 A/C NO.:-33169091606', margin, finalY)
+    const signY = finalY + 15
+    doc.setFont('helvetica', 'normal')
+    doc.text('Prepared By', margin, signY + 5)
+    doc.text('Checked By', pageWidth / 2, signY + 5, { align: 'center' })
+    doc.text('Authorised Signatory', pageWidth - margin - 35, signY + 5)
+
+    if (shouldDownload) doc.save(`expense-report-${new Date().toISOString().slice(0, 10)}.pdf`)
+    else window.open(doc.output('bloburl'), '_blank')
+  }
+
+  return (
+    <div className="space-y-4 p-3">
+      <div className="flex items-center justify-between px-1">
+        <div className="flex items-center gap-3">
+          <div className="bg-orange-50 border border-orange-100 rounded-xl px-4 py-2">
+            <span className="text-[10px] font-black text-orange-400 uppercase tracking-widest">Total</span>
+            <p className="text-lg font-black text-orange-600 tabular-nums">₹{total.toLocaleString('en-IN')}</p>
+          </div>
+          <div className="bg-zinc-50 border border-zinc-100 rounded-xl px-4 py-2">
+            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Records</span>
+            <p className="text-lg font-black text-zinc-700">{rows.length}</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => exportPDF(false)} className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-700 rounded-xl hover:bg-zinc-200 font-semibold text-xs transition-all shadow-sm">
+            <FiEye size={14} /> Show PDF
+          </button>
+          <button onClick={() => exportPDF(true)} className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-xl hover:bg-zinc-800 font-semibold text-xs transition-all shadow-md active:scale-95">
+            <FiDownload size={14} /> Download PDF
+          </button>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto rounded-2xl border border-zinc-100 shadow-sm">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-zinc-900 text-white">
+              {headers.map((h) => (
+                <th key={h} className="text-left px-4 py-3 font-black uppercase tracking-wider whitespace-nowrap border-r border-zinc-800 last:border-none">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-50">
+            {rows.map((r, i) => {
+              const dt = r.created_at || r.date
+              return (
+                <tr key={r.id ?? i} className="hover:bg-orange-50/20 transition-colors">
+                  <td className="px-4 py-3 text-zinc-400 font-bold border-r border-zinc-50">{i + 1}</td>
+                  <td className="px-4 py-3 font-medium text-zinc-700 whitespace-nowrap border-r border-zinc-50">{fmtDate(dt)}</td>
+                  <td className="px-4 py-3 text-zinc-500 whitespace-nowrap border-r border-zinc-50">{fmtTime(dt)}</td>
+                  <td className="px-4 py-3 border-r border-zinc-50">
+                    {r.expense_head
+                      ? <span className="px-2.5 py-1 rounded-lg bg-orange-50 border border-orange-100 text-orange-700 font-semibold">{r.expense_head}</span>
+                      : <span className="text-zinc-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3 font-medium text-zinc-700 border-r border-zinc-50">{r.purpose_name || '—'}</td>
+                  <td className="px-4 py-3 font-black text-zinc-900 tabular-nums whitespace-nowrap border-r border-zinc-50">
+                    ₹{Number(r.amount || 0).toLocaleString('en-IN')}
+                  </td>
+                  <td className="px-4 py-3 border-r border-zinc-50">
+                    <span className="px-2 py-0.5 rounded-lg bg-zinc-100 text-zinc-600 font-semibold capitalize">
+                      {(r.transaction_type || '—').replace(/_/g, ' ')}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 font-mono text-zinc-600 border-r border-zinc-50">{r.bill_no || '—'}</td>
+                  <td className="px-4 py-3 border-r border-zinc-50">
+                    {r.vehicle_number
+                      ? <span className="px-2 py-0.5 rounded bg-zinc-100 text-zinc-600 font-bold">{r.vehicle_number}</span>
+                      : <span className="text-zinc-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3 font-medium text-zinc-700 capitalize">{r.payer_name || '—'}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+          <tfoot className="bg-zinc-50 border-t-2 border-zinc-200">
+            <tr>
+              <td colSpan={5} className="px-4 py-3 text-right text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Total Expense</td>
+              <td className="px-4 py-3 font-black text-orange-600 text-sm">₹{total.toLocaleString('en-IN')}</td>
+              <td colSpan={4}></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  )
+}
+
 function UserwiseReportTable({ rows }) {
   if (!rows?.length) return <EmptyReport />
 
@@ -1712,6 +1895,7 @@ export default function Reports({ reportType }) {
   const [selectedPlace, setSelectedPlace] = useState('')
   const [searchBillNo, setSearchBillNo] = useState('')
   const [viewBill, setViewBill] = useState(null)
+  const [selectedPurpose, setSelectedPurpose] = useState('')
 
   // Fetch vehicles and companies for challans report
   const vehiclesQuery = useQuery({
@@ -1748,6 +1932,12 @@ export default function Reports({ reportType }) {
     queryKey: ['places'],
     queryFn: placeAPI.listPlaces,
     enabled: reportType === 'bills' || reportType === 'trips' || reportType === 'vehicle-income'
+  })
+
+  const txnPurposesQuery = useQuery({
+    queryKey: ['transaction-purposes'],
+    queryFn: txnPurposeAPI.listTransactionPurposes,
+    enabled: reportType === 'expense-report'
   })
 
   const filters = useMemo(
@@ -1928,6 +2118,23 @@ export default function Reports({ reportType }) {
               </>
             )}
 
+            {/* Transaction Purpose filter for Expense report */}
+            {reportType === 'expense-report' && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">Transaction Purpose</label>
+                <select
+                  value={selectedPurpose}
+                  onChange={(e) => { setSelectedPurpose(e.target.value) }}
+                  className="px-4 py-2.5 rounded-xl border border-zinc-200 text-sm font-medium text-zinc-700 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-400 min-w-[180px]"
+                >
+                  <option value="">All Purposes</option>
+                  {(txnPurposesQuery.data?.items ?? []).map(p => (
+                    <option key={p.id} value={p.id}>{p.transaction_purpose_name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <button onClick={handleGenerate} disabled={isLoading}
               className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white transition-all active:scale-95 shadow-md bg-gradient-to-r ${config.gradient} hover:opacity-90 disabled:opacity-60`}>
               <FiBarChart2 size={15} />
@@ -1979,10 +2186,16 @@ export default function Reports({ reportType }) {
             }
           }
 
+          if (reportType === 'expense-report' && selectedPurpose) {
+            rows = rows.filter(r =>
+              String(r.transaction_purpose || r.transaction_purpose_id) === String(selectedPurpose)
+            )
+          }
+
           const summary = data.summary ?? null
           return (
             <div className="space-y-6">
-              {summary && reportType !== 'bills' && reportType !== 'trips' && reportType !== 'shiftwise-work' && reportType !== 'userwise' && <SummaryCards summary={summary} gradient={config.gradient} />}
+              {summary && reportType !== 'bills' && reportType !== 'trips' && reportType !== 'shiftwise-work' && reportType !== 'userwise' && reportType !== 'expense-report' && <SummaryCards summary={summary} gradient={config.gradient} />}
               <div className="bg-white rounded-[2rem] border border-zinc-100 shadow-xl overflow-hidden">
                 {reportType === 'attendance'
                   ? <AttendanceTable rows={rows} />
@@ -2018,10 +2231,12 @@ export default function Reports({ reportType }) {
                               : reportType === 'gst'
                                 ? <GstReportTable rows={rows} />
                                 : reportType === 'shiftwise-work'
-                                  ? <ShiftwiseWorkTable rows={data?.data ?? rows} />
+                                  ? <ShiftwiseWorkTable rows={rows} />
                                   : reportType === 'userwise'
-                                    ? <UserwiseReportTable rows={data?.data ?? rows} />
-                                    : <GenericTable rows={rows} />
+                                    ? <UserwiseReportTable rows={rows} />
+                                    : reportType === 'expense-report'
+                                      ? <ExpenseReportTable rows={rows} />
+                                      : <GenericTable rows={rows} />
                 }</div>
             </div>
           )

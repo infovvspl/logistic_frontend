@@ -43,9 +43,10 @@ import { BiSolidPackage } from "react-icons/bi";
 // import Img from "../../public"
 
 const reportSubItems = [
-  { to: "/dashboard/reports/attendance", label: "Attendance", icon: FiClock },
+  // { to: "/dashboard/reports/attendance", label: "Attendance", icon: FiClock },
   { to: "/dashboard/reports/salary", label: "Salary", icon: FaRupeeSign },
   { to: "/dashboard/reports/ledger", label: "Ledger", icon: MdOutlineAccountBalance },
+  { to: "/dashboard/reports/expense-report", label: "Expense", icon: FiFileText },
   { to: "/dashboard/reports/products", label: "Inventory", icon: FiPackage },
   // { to: "/dashboard/reports/purchase", label: "Purchase", icon: FiShoppingCart },
   // { to: "/dashboard/reports/product-transfers", label: "Product Transfers", icon: FiArrowRight },
@@ -54,8 +55,8 @@ const reportSubItems = [
   { to: "/dashboard/reports/vehicle-income", label: "Vehicle Income", icon: FaTruckFront },
   { to: "/dashboard/reports/vehicle-expenditure", label: "Vehicle Expenditure", icon: FiTool },
   { to: "/dashboard/reports/gst", label: "GST Report", icon: FiFileText },
-  { to: "/dashboard/reports/shiftwise-work", label: "Shiftwise", icon: FiFileText },
-  { to: "/dashboard/reports/userwise", label: "Userwise", icon: FiFileText },
+  { to: "/dashboard/reports/shiftwise-work", label: "Shiftwise", icon: FiClock },
+  { to: "/dashboard/reports/userwise", label: "Userwise", icon: FiClock },
 ];
 
 const navItems = [
@@ -125,10 +126,17 @@ export default function DashboardLayout() {
       n.end ? location.pathname === n.to : location.pathname.startsWith(n.to),
     );
 
+  const superAdminOnlyRoutes = [
+    '/dashboard/admins',
+    '/dashboard/roles',
+    '/dashboard/companies',
+    '/dashboard/shifts',
+  ];
+
   const visibleNavGroups = navGroups.map((group) => ({
     ...group,
     items: group.items.filter(
-      (item) => item.to !== '/dashboard/admins' || isSuperAdmin
+      (item) => !superAdminOnlyRoutes.includes(item.to) || isSuperAdmin
     ),
   }));
 

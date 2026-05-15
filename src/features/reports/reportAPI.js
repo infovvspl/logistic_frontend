@@ -554,6 +554,85 @@ export async function fetchGstReport(filters) {
   }
 }
 
+export async function fetchExpenseReport(filters) {
+  try {
+    const [ledgerRes, purposesRes, usersRes, customersRes, companiesRes, vehiclesRes] = await Promise.all([
+      api.get('/ledger?type=expense'),
+      api.get('/transaction-purposes'),
+      api.get('/users').catch(() => ({ data: [] })),
+      api.get('/customers').catch(() => ({ data: [] })),
+      api.get('/companies').catch(() => ({ data: [] })),
+      api.get('/vehicles').catch(() => ({ data: [] })),
+    ])
+
+    const toArr = (res) => res.data?.items ?? res.data?.data ?? (Array.isArray(res.data) ? res.data : [])
+    const expenses = toArr(ledgerRes)
+    const purposes = toArr(purposesRes)
+    const users = toArr(usersRes)
+    const customers = toArr(customersRes)
+    const companies = toArr(companiesRes)
+    const vehicles = toArr(vehiclesRes)
+
+    const purposeMap = new Map(purposes.map(p => [String(p.id), p.transaction_purpose_name]))
+    const userMap = new Map(users.map(u => [String(u.id), u.name || u.email || u.id]))
+    const customerMap = new Map(customers.map(c => [String(c.id), c.customer_name || c.name || c.id]))
+    const companyMap = new Map(companies.map(c => [String(c.id), c.name || c.id]))
+    const vehicleMap = new Map(vehicles.map(v => [String(v.id), v.registration_number || v.id]))
+
+    const resolveName = (type, id) => {
+      if (!id) return null
+      if (type === 'user') return userMap.get(String(id)) || null
+      if (type === 'customer') return customerMap.get(String(id)) || null
+      if (type === 'company') return companyMap.get(String(id)) || null
+      for (const m of [userMap, customerMap, companyMap]) {
+        const n = m.get(String(id)); if (n) return n
+      }
+      return null
+    }
+
+    const matchDate = (rawDate) => {
+      if (!rawDate) return true
+      const d = new Date(rawDate)
+      if (isNaN(d.getTime())) return true
+      if (filters.from && filters.to) {
+        const start = new Date(filters.from); start.setHours(0, 0, 0, 0)
+        const end = new Date(filters.to); end.setHours(23, 59, 59, 999)
+        return d >= start && d <= end
+      }
+      if (filters.date) {
+        const target = new Date(filters.date); target.setHours(0, 0, 0, 0)
+        const day = new Date(d); day.setHours(0, 0, 0, 0)
+        return target.getTime() === day.getTime()
+      }
+      if (filters.month) {
+        const [yr, mo] = filters.month.split('-').map(Number)
+        return d.getFullYear() === yr && (d.getMonth() + 1) === mo
+      }
+      if (filters.year) return d.getFullYear() === Number(filters.year)
+      return true
+    }
+
+    const filtered = expenses.filter(e => matchDate(e.created_at || e.date))
+
+    const enriched = filtered.map(e => ({
+      ...e,
+      purpose_name: purposeMap.get(String(e.transaction_purpose || e.transaction_purpose_id)) || e.expense_head || '—',
+      payer_name: resolveName(e.payer_type, e.payer_id) || e.payer_type || '—',
+      vehicle_number: e.vehicle_id ? vehicleMap.get(String(e.vehicle_id)) || e.vehicle_id : null,
+    }))
+
+    const total = enriched.reduce((a, b) => a + (Number(b.amount) || 0), 0)
+
+    return {
+      data: enriched,
+      purposes,
+      summary: { total_expenses: enriched.length, total_amount: total }
+    }
+  } catch (err) {
+    throw new Error(extractError(err, 'Failed to load expense report'))
+  }
+}
+
 export async function fetchUserwiseReport(filters) {
   try {
     const [attendanceRes, shiftsRes, usersRes] = await Promise.all([

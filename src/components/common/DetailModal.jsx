@@ -1,6 +1,14 @@
 import Modal from '../ui/Modal.jsx'
 import { formatDate } from '../../utils/formatDate.js'
 
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/api\/?$/, '')
+
+function resolveUrl(url) {
+  if (!url || typeof url !== 'string') return url
+  // Replace any localhost or 127.0.0.1 origin with the configured API base
+  return url.replace(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/, API_BASE)
+}
+
 const SKIP_KEYS = ['id', '_id', 'role_id', 'branch_id', 'company_id', 'vehicle_id', 'user_id', 'created_at', 'updated_at',
   'customer_id', 'vehicle_assign_to_driver_id', 'fcm_token', '__v', 'created_by', 'updated_by']
 
@@ -89,8 +97,10 @@ export default function DetailModal({ open, onClose, title, data, extraSections 
   if (!data) return null
 
   const imageEntry = Object.entries(data).find(([k, v]) => isProfileImageKey(k) && isValidUrl(v))
-  const imageUrl = imageEntry?.[1] ?? null
-  const docImages = Object.entries(data).filter(([k, v]) => DOC_IMAGE_KEYS.includes(k) && isDocUrl(v))
+  const imageUrl = imageEntry ? resolveUrl(imageEntry[1]) : null
+  const docImages = Object.entries(data)
+    .filter(([k, v]) => DOC_IMAGE_KEYS.includes(k) && isDocUrl(v))
+    .map(([k, v]) => [k, resolveUrl(v)])
   const entries = Object.entries(data).filter(
     ([k, v]) => !SKIP_KEYS.includes(k) && !isImageKey(k) && typeof v !== 'object'
   )

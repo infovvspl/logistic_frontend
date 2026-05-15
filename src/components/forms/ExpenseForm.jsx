@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { FiCheckCircle, FiSearch, FiX } from 'react-icons/fi'
 import Input from '../ui/Input.jsx'
 import Select from '../ui/Select.jsx'
@@ -42,6 +42,7 @@ export default function ExpenseForm({
     expense_head: defaultValues?.expense_head ?? '',
     payer_type: 'company', // Always company
     payer_id: companies[0]?.id ?? '', // First company as default
+    company_id: defaultValues?.company_id ?? '', // Backend may require explicit company_id
     bill_no: defaultValues?.bill_no ?? '',
     vehicle_id: defaultValues?.vehicle_id ?? '',
     customer_id: defaultValues?.customer_id ?? '',
@@ -51,9 +52,23 @@ export default function ExpenseForm({
   })
   const [errors, setErrors] = useState({})
 
+  // When companies load after mount, default payer/company if user hasn't chosen yet.
+  // Keep edit mode untouched.
+  useEffect(() => {
+    if (isEdit) return
+    if (form.payer_id) return
+    const firstId = companies[0]?.id
+    if (!firstId) return
+    setForm((prev) => (prev.payer_id ? prev : { ...prev, payer_id: firstId, company_id: prev.company_id || firstId }))
+  }, [companies, form.payer_id, form.company_id, isEdit])
+
   const set = (key, val) => {
     setForm((prev) => ({ ...prev, [key]: val }))
-    setErrors((e) => ({ ...e, [key]: '' }))
+    setErrors((e) => ({
+      ...e,
+      [key]: '',
+      ...(key === 'customer_id' || key === 'driver_id' ? { payee_id: '' } : null),
+    }))
   }
 
   // Filter users to get only drivers
@@ -112,6 +127,7 @@ export default function ExpenseForm({
     if (!form.expense_head?.trim()) e.expense_head = 'Required'
     if (!form.amount || Number(form.amount) <= 0) e.amount = 'Enter a valid amount'
     if (!form.payer_id) e.payer_id = 'Required'
+    if (!form.driver_id && !form.customer_id) e.payee_id = 'Select a customer or driver'
     return e
   }
 
@@ -120,11 +136,16 @@ export default function ExpenseForm({
     const errs = validate()
     if (Object.keys(errs).length) { setErrors(errs); return }
     
+    const payee_type = form.driver_id ? 'user' : 'customer'
+    const payee_id = form.driver_id || form.customer_id
+
     const payload = {
       ...form,
       amount: Number(form.amount),
       payer_type: 'company',
-      payee_type: 'user', // Expense is paid from company to someone
+      company_id: form.company_id || form.payer_id,
+      payee_type,
+      payee_id,
     }
     
     onSubmit(payload)
@@ -180,31 +201,32 @@ export default function ExpenseForm({
 
       <SectionDivider label="Payer Information" />
       
-      <div className="space-y-2">
-        <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-zinc-600">Payer:</span>
-            <span className="text-sm font-bold text-zinc-900">Company</span>
-            {selectedCompany && (
-              <span className="text-sm text-zinc-700">({selectedCompany.name})</span>
-            )}
-          </div>
-        </div>
-        {companies.length > 1 && (
-          <Select
-            label="Select Company"
-            options={companies.map(c => ({ value: c.id, label: c.name }))}
-            value={form.payer_id}
-            onChange={(e) => set('payer_id', e.target.value)}
-          />
-        )}
-      </div>
-
-      <SectionDivider label="Additional Information" />
-
-      {/* Customer picker */}
-      <div className="space-y-1.5">
-        <span className="text-sm font-medium text-zinc-800">Customer</span>
+      <div className="space-y-2"> 
+        <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200"> 
+          <div className="flex items-center gap-2"> 
+            <span className="text-sm font-medium text-zinc-600">Payer:</span> 
+            <span className="text-sm font-bold text-zinc-900">Company</span> 
+            {selectedCompany && ( 
+              <span className="text-sm text-zinc-700">({selectedCompany.name})</span> 
+            )} 
+          </div> 
+        </div> 
+        {companies.length > 1 && ( 
+          <Select 
+            label="Select Company" 
+            options={companies.map(c => ({ value: c.id, label: c.name }))} 
+            value={form.payer_id} 
+            onChange={(e) => { set('payer_id', e.target.value); set('company_id', e.target.value) }} 
+          /> 
+        )} 
+        {errors.payer_id && <p className="text-xs font-medium text-rose-600">{errors.payer_id}</p>}
+      </div> 
+ 
+      <SectionDivider label="Additional Information" /> 
+ 
+      {/* Customer picker */} 
+      <div className="space-y-1.5"> 
+        <span className="text-sm font-medium text-zinc-800">Customer</span> 
         {selectedCustomer ? (
           <div className="flex items-center justify-between rounded-xl border border-orange-100 bg-orange-50 px-3 py-2.5 text-sm text-orange-700">
             <div className="min-w-0">
@@ -236,8 +258,9 @@ export default function ExpenseForm({
               )}
             </div>
           </div>
-        )}
-      </div>
+        )} 
+        {errors.payee_id && <p className="text-xs font-medium text-rose-600">{errors.payee_id}</p>}
+      </div> 
 
       {/* Vehicle picker */}
       <div className="space-y-1.5">
