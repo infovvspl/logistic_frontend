@@ -44,7 +44,7 @@ import { BiSolidPackage } from "react-icons/bi";
 
 const reportSubItems = [
   // { to: "/dashboard/reports/attendance", label: "Attendance", icon: FiClock },
-  { to: "/dashboard/reports/salary", label: "Salary", icon: FaRupeeSign },
+  // { to: "/dashboard/reports/salary", label: "Salary", icon: FaRupeeSign },
   { to: "/dashboard/reports/ledger", label: "Ledger", icon: MdOutlineAccountBalance },
   { to: "/dashboard/reports/expense-report", label: "Expense", icon: FiFileText },
   { to: "/dashboard/reports/products", label: "Inventory", icon: FiPackage },
@@ -78,33 +78,82 @@ const navItems = [
   { to: "/dashboard/bills", label: "Bills", icon: RiBillFill },
   { to: "/dashboard/ledger", label: "Ledger", icon: MdOutlineAccountBalance },
   { to: "/dashboard/expense", label: "Expense", icon: MdOutlineAccountBalance },
+  { to: "/dashboard/json", label: "JSON", icon: FiFileText },
+  { to: "/dashboard/transaction-purposes", label: "Txn Purposes", icon: FaClipboardList },
   { to: "/dashboard/suppliers", label: "Suppliers", icon: FaTruckLoading },
   { to: "/dashboard/products", label: "Products", icon: BiSolidPackage },
   { to: "/dashboard/purchase", label: "Purchase", icon: FaShoppingCart },
+  { to: "/dashboard/product-transfers", label: "Product Transfers", icon: MdSwapHorizontalCircle },
   { to: "/dashboard/attendance", label: "Attendance", icon: FaClock },
   { to: "/dashboard/shifts", label: "Shifts", icon: FaClock },
   { to: "/dashboard/wages", label: "Wages", icon: PiCoinsFill },
   { to: "/dashboard/salary", label: "Salary", icon: RiMoneyRupeeCircleFill },
-  { to: "/dashboard/transaction-purposes", label: "Txn Purposes", icon: FaClipboardList },
   { to: "/dashboard/product-transfers", label: "Product Transfers", icon: MdSwapHorizontalCircle },
-  { to: "/dashboard/balance-sheet", label: "Balance Sheet", icon: MdBalance },
+  // { to: "/dashboard/balance-sheet", label: "Balance Sheet", icon: MdBalance },
   // Reports is handled as an expandable group, not a plain nav item
 ];
+
+function pickNavItems(...tos) {
+  const byTo = new Map(navItems.map((i) => [i.to, i]))
+  return tos.map((to) => byTo.get(to)).filter(Boolean)
+}
 
 const navGroups = [
   {
     label: "Main",
-    items: [navItems[0]],
+    items: pickNavItems("/dashboard"),
   },
   {
     label: "People",
-    items: [navItems[1], navItems[2], navItems[3], navItems[7]],
+    items: pickNavItems(
+      "/dashboard/admins",
+      "/dashboard/drivers",
+      "/dashboard/helpers",
+      "/dashboard/customers",
+      "/dashboard/roles",
+    ),
   },
   {
     label: "Operations",
-    items: [navItems[4], navItems[5], navItems[6], navItems[8], navItems[9],
-    navItems[10], navItems[11], navItems[12], navItems[13], navItems[14],
-    navItems[15], navItems[16], navItems[17], navItems[18], navItems[19], navItems[20], navItems[21], navItems[22], navItems[23], navItems[24]],
+    items: pickNavItems(
+      "/dashboard/vehicles",
+      "/dashboard/repairs",
+      "/dashboard/companies",
+      "/dashboard/trips",
+      "/dashboard/challans",
+      "/dashboard/bills",
+      "/dashboard/ledger",
+      "/dashboard/expense",
+    ),
+  },
+  {
+    label: "Data",
+    items: pickNavItems(
+      "/dashboard/places",
+      "/dashboard/consignments",
+      "/dashboard/metrics",
+      "/dashboard/rate-charts",
+      "/dashboard/transaction-purposes",
+      "/dashboard/json",
+    ),
+  },
+  {
+    label: "Inventory",
+    items: pickNavItems(
+      "/dashboard/suppliers",
+      "/dashboard/products",
+      "/dashboard/purchase",
+      "/dashboard/product-transfers",
+    ),
+  },
+  {
+    label: "HR",
+    items: pickNavItems(
+      "/dashboard/attendance",
+      "/dashboard/shifts",
+      "/dashboard/wages",
+      "/dashboard/salary",
+    ),
   },
 ];
 

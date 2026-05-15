@@ -33,6 +33,7 @@ import Reports from '../pages/dashboard/Reports.jsx'
 import BalanceSheet from '../pages/dashboard/BalanceSheet.jsx'
 import Expense from '../pages/dashboard/Expense.jsx'
 import Shifts from '../pages/dashboard/Shifts.jsx'
+import JsonBuilder from '../pages/dashboard/JsonBuilder.jsx'
 import { useAuth } from '../hooks/useAuth.js'
 import { usePermissions } from '../hooks/usePermissions.js'
 
@@ -121,6 +122,7 @@ export const router = createBrowserRouter([
       { path: 'suppliers', element: <Suppliers /> },
       { path: 'products', element: <Products /> },
       { path: 'purchase', element: <Purchase /> },
+      { path: 'product-transfers', element: <ProductTransfers /> },
       { path: 'attendance', element: <Attendance /> },
       { path: 'wages', element: <Wages /> },
       { path: 'salary', element: <Salary /> },
@@ -142,6 +144,7 @@ export const router = createBrowserRouter([
       { path: 'reports/gst', element: <Reports reportType="gst" /> },
       { path: 'reports/shiftwise-work', element: <Reports reportType="shiftwise-work" /> },
       { path: 'reports/userwise', element: <Reports reportType="userwise" /> },
+      { path: 'json', element: <JsonBuilder /> },
     ],
   },
   { path: '*', element: <NotFound /> },
